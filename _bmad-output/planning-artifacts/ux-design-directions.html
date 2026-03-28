@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dblumi — Design Directions</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #080809;
+    color: #E8E8F2;
+    min-height: 100vh;
+  }
+
+  /* ===== NAVIGATION ===== */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: #0C0C0F;
+    border-bottom: 1px solid #1E1E2E;
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .nav-logo { font-size: 18px; font-weight: 700; color: #41cd2a; letter-spacing: -0.5px; }
+  .nav-logo span { color: #E8E8F2; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 6px 16px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: #6B6B80;
+    border: 1px solid transparent; transition: all 0.15s;
+  }
+  .nav-tab:hover { color: #E8E8F2; background: #141418; }
+  .nav-tab.active { color: #41cd2a; background: #41cd2a1a; border-color: #41cd2a40; }
+  .nav-hint { margin-left: auto; font-size: 12px; color: #6B6B80; }
+
+  /* ===== CONTENT ===== */
+  .content { padding-top: 57px; }
+  .direction { display: none; }
+  .direction.active { display: block; }
+
+  /* ===== DIRECTION LABEL ===== */
+  .direction-header {
+    background: #0C0C0F;
+    border-bottom: 1px solid #1E1E2E;
+    padding: 16px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .direction-badge {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 4px;
+  }
+  .direction-title { font-size: 15px; font-weight: 600; color: #E8E8F2; }
+  .direction-desc { font-size: 13px; color: #6B6B80; }
+
+  /* ===== SHARED MOCKUP STRUCTURE ===== */
+  .mockup {
+    height: calc(100vh - 57px - 57px);
+    display: grid;
+    grid-template-rows: 40px 1fr;
+    overflow: hidden;
+  }
+
+  /* ===== DIRECTION A — Terminal Pro ===== */
+  .dir-a { background: #080809; }
+  .dir-a .topbar {
+    background: #0A0A0D; border-bottom: 1px solid #1a1a2a;
+    display: flex; align-items: center; gap: 0; height: 40px;
+  }
+  .dir-a .logo-zone {
+    padding: 0 16px; height: 100%; display: flex; align-items: center;
+    border-right: 1px solid #1a1a2a; min-width: 220px;
+  }
+  .dir-a .logo { font-size: 14px; font-weight: 700; color: #41cd2a; font-family: 'JetBrains Mono', monospace; }
+  .dir-a .conn-selector {
+    padding: 0 12px; height: 100%; display: flex; align-items: center; gap: 8px;
+    cursor: pointer; border-right: 1px solid #1a1a2a;
+  }
+  .dir-a .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: #41cd2a; }
+  .dir-a .conn-name { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #E8E8F2; }
+  .dir-a .conn-arrow { font-size: 10px; color: #6B6B80; margin-left: 4px; }
+  .dir-a .topbar-actions { margin-left: auto; padding: 0 12px; display: flex; gap: 8px; }
+  .dir-a .topbar-btn {
+    padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    cursor: pointer; border: 1px solid #1a1a2a; background: transparent; color: #6B6B80;
+  }
+  .dir-a .topbar-btn.primary { border-color: #41cd2a40; color: #41cd2a; background: #41cd2a0d; }
+
+  .dir-a .body { display: grid; grid-template-columns: 220px 1fr; overflow: hidden; }
+
+  .dir-a .sidebar {
+    background: #0A0A0D; border-right: 1px solid #1a1a2a;
+    overflow-y: auto; padding: 8px 0;
+  }
+  .dir-a .sidebar-section { padding: 4px 0; }
+  .dir-a .sidebar-header {
+    padding: 4px 12px; font-size: 10px; font-weight: 600;
+    color: #41cd2a; letter-spacing: 0.1em; text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dir-a .sidebar-item {
+    padding: 4px 12px 4px 20px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    color: #8888a0; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: all 0.1s;
+  }
+  .dir-a .sidebar-item:hover { color: #E8E8F2; background: #141418; }
+  .dir-a .sidebar-item.active { color: #41cd2a; background: #41cd2a0d; }
+  .dir-a .sidebar-item .type { font-size: 10px; color: #41cd2a60; margin-left: auto; }
+
+  .dir-a .main { display: grid; grid-template-rows: 1fr 1fr; overflow: hidden; }
+  .dir-a .editor-zone { border-bottom: 1px solid #1a1a2a; display: flex; flex-direction: column; }
+  .dir-a .editor-toolbar {
+    padding: 4px 12px; background: #0E0E14; border-bottom: 1px solid #1a1a2a;
+    display: flex; align-items: center; gap: 8px; height: 28px;
+  }
+  .dir-a .toolbar-label { font-size: 10px; color: #41cd2a; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .dir-a .toolbar-actions { margin-left: auto; display: flex; gap: 6px; }
+  .dir-a .toolbar-btn {
+    padding: 2px 8px; border-radius: 3px; font-size: 10px;
+    font-family: 'JetBrains Mono', monospace; cursor: pointer;
+    border: 1px solid #1a1a2a; background: transparent; color: #6B6B80;
+  }
+  .dir-a .toolbar-btn.run { border-color: #41cd2a60; color: #41cd2a; background: #41cd2a0d; }
+  .dir-a .editor-content {
+    flex: 1; padding: 12px; font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.7; overflow: auto;
+    background: #080809;
+  }
+  .kw { color: #41cd2a; }
+  .fn { color: #7dd3fc; }
+  .str { color: #fbbf24; }
+  .cm { color: #4a4a5a; }
+  .tb { color: #e879f9; }
+  .nm { color: #E8E8F2; }
+
+  .dir-a .results-zone { display: flex; flex-direction: column; overflow: hidden; }
+  .dir-a .results-toolbar {
+    padding: 4px 12px; background: #0E0E14; border-bottom: 1px solid #1a1a2a;
+    display: flex; align-items: center; gap: 8px; height: 28px;
+  }
+  .dir-a .results-count { font-size: 10px; color: #41cd2a; font-family: 'JetBrains Mono', monospace; }
+  .dir-a .results-table-wrap { flex: 1; overflow: auto; }
+  .dir-a .results-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .dir-a .results-table th {
+    padding: 6px 12px; text-align: left; font-size: 10px; font-weight: 600;
+    color: #41cd2a; border-bottom: 1px solid #1a1a2a; background: #0A0A0D;
+    letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
+  }
+  .dir-a .results-table td {
+    padding: 5px 12px; border-bottom: 1px solid #12121a; color: #8888a0;
+    white-space: nowrap;
+  }
+  .dir-a .results-table tr:hover td { background: #0E0E14; color: #E8E8F2; }
+  .dir-a .results-table td.num { color: #41cd2a80; }
+
+  /* ===== DIRECTION B — Refined Dark ===== */
+  .dir-b { background: #0C0C0F; }
+  .dir-b .topbar {
+    background: #0F0F13; border-bottom: 1px solid #1E1E2E;
+    display: flex; align-items: center; gap: 0; height: 40px;
+  }
+  .dir-b .logo-zone {
+    padding: 0 20px; height: 100%; display: flex; align-items: center;
+    border-right: 1px solid #1E1E2E; min-width: 240px; gap: 8px;
+  }
+  .dir-b .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #41cd2a; box-shadow: 0 0 8px #41cd2a80; }
+  .dir-b .logo { font-size: 15px; font-weight: 700; color: #E8E8F2; letter-spacing: -0.3px; }
+  .dir-b .logo em { color: #41cd2a; font-style: normal; }
+  .dir-b .conn-selector {
+    padding: 0 16px; height: 100%; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; border-right: 1px solid #1E1E2E;
+  }
+  .dir-b .conn-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: #41cd2a12; border: 1px solid #41cd2a30;
+    padding: 4px 10px; border-radius: 6px;
+  }
+  .dir-b .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: #41cd2a; }
+  .dir-b .conn-name { font-size: 13px; color: #E8E8F2; font-weight: 500; }
+  .dir-b .topbar-right { margin-left: auto; padding: 0 16px; display: flex; align-items: center; gap: 8px; }
+  .dir-b .kbd {
+    font-size: 11px; color: #6B6B80; background: #141418;
+    border: 1px solid #1E1E2E; border-radius: 4px; padding: 2px 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .dir-b .avatar { width: 26px; height: 26px; border-radius: 50%; background: #41cd2a30; border: 1px solid #41cd2a60; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #41cd2a; }
+
+  .dir-b .body { display: grid; grid-template-columns: 240px 1fr; overflow: hidden; }
+
+  .dir-b .sidebar {
+    background: #0C0C0F; border-right: 1px solid #1E1E2E;
+    overflow-y: auto; padding: 12px 8px;
+  }
+  .dir-b .sidebar-search {
+    margin: 0 4px 12px; display: flex; align-items: center; gap: 8px;
+    background: #141418; border: 1px solid #1E1E2E; border-radius: 6px;
+    padding: 6px 10px;
+  }
+  .dir-b .sidebar-search input {
+    background: transparent; border: none; outline: none;
+    font-size: 12px; color: #E8E8F2; width: 100%;
+  }
+  .dir-b .sidebar-search input::placeholder { color: #6B6B80; }
+  .dir-b .sidebar-section-label {
+    padding: 4px 8px; font-size: 11px; font-weight: 600;
+    color: #6B6B80; letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .dir-b .sidebar-item {
+    padding: 5px 8px; font-size: 13px; color: #8888a0;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    border-radius: 6px; transition: all 0.1s; margin-bottom: 1px;
+  }
+  .dir-b .sidebar-item:hover { color: #E8E8F2; background: #141418; }
+  .dir-b .sidebar-item.active { color: #E8E8F2; background: #1A1A22; }
+  .dir-b .sidebar-item .icon { font-size: 12px; color: #6B6B80; width: 14px; text-align: center; }
+  .dir-b .sidebar-item.active .icon { color: #41cd2a; }
+
+  .dir-b .main { display: grid; grid-template-rows: 1fr 1fr; overflow: hidden; }
+  .dir-b .editor-zone { border-bottom: 1px solid #1E1E2E; display: flex; flex-direction: column; background: #0C0C0F; }
+  .dir-b .editor-tabs {
+    display: flex; align-items: center; gap: 0;
+    background: #0F0F13; border-bottom: 1px solid #1E1E2E; height: 34px;
+  }
+  .dir-b .editor-tab {
+    padding: 0 16px; height: 100%; display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #6B6B80; cursor: pointer; border-right: 1px solid #1E1E2E;
+    transition: all 0.1s;
+  }
+  .dir-b .editor-tab:hover { color: #E8E8F2; }
+  .dir-b .editor-tab.active { color: #E8E8F2; background: #0C0C0F; border-bottom: 2px solid #41cd2a; }
+  .dir-b .editor-tab .dot { width: 5px; height: 5px; border-radius: 50%; background: #41cd2a; }
+  .dir-b .editor-actions {
+    margin-left: auto; padding: 0 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .dir-b .run-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: #41cd2a; color: #0C0C0F; font-size: 12px; font-weight: 600;
+    padding: 5px 12px; border-radius: 6px; cursor: pointer; border: none;
+  }
+  .dir-b .editor-content {
+    flex: 1; padding: 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.7; overflow: auto;
+  }
+  .dir-b .results-zone { display: flex; flex-direction: column; overflow: hidden; }
+  .dir-b .results-header {
+    padding: 8px 16px; background: #0F0F13; border-bottom: 1px solid #1E1E2E;
+    display: flex; align-items: center; gap: 12px; height: 36px;
+  }
+  .dir-b .results-stat { font-size: 12px; }
+  .dir-b .results-stat strong { color: #41cd2a; }
+  .dir-b .results-stat span { color: #6B6B80; }
+  .dir-b .results-export { margin-left: auto; font-size: 12px; color: #6B6B80; cursor: pointer; padding: 4px 8px; border-radius: 4px; border: 1px solid #1E1E2E; }
+  .dir-b .results-table-wrap { flex: 1; overflow: auto; }
+  .dir-b .results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .dir-b .results-table th {
+    padding: 8px 16px; text-align: left; font-size: 11px; font-weight: 600;
+    color: #6B6B80; border-bottom: 1px solid #1E1E2E; background: #0F0F13;
+    white-space: nowrap; letter-spacing: 0.03em;
+  }
+  .dir-b .results-table td {
+    padding: 7px 16px; border-bottom: 1px solid #141418; color: #8888a0;
+    white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  .dir-b .results-table tr:hover td { background: #141418; color: #E8E8F2; }
+  .dir-b .results-table td.num { color: #41cd2a; }
+
+  /* ===== DIRECTION C — Luminescent ===== */
+  .dir-c { background: #090B0E; }
+  .dir-c .topbar {
+    background: #0B0D11; border-bottom: 1px solid #162016;
+    display: flex; align-items: center; gap: 0; height: 40px;
+  }
+  .dir-c .logo-zone {
+    padding: 0 20px; height: 100%; display: flex; align-items: center;
+    border-right: 1px solid #162016; min-width: 240px;
+  }
+  .dir-c .logo { font-size: 15px; font-weight: 800; letter-spacing: -0.5px; }
+  .dir-c .logo-db { color: #E8E8F2; }
+  .dir-c .logo-lumi { color: #41cd2a; text-shadow: 0 0 20px #41cd2a60; }
+  .dir-c .conn-selector {
+    padding: 0 16px; height: 100%; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; border-right: 1px solid #162016;
+  }
+  .dir-c .conn-name { font-size: 13px; color: #E8E8F2; }
+  .dir-c .conn-env {
+    font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+    background: #41cd2a1a; color: #41cd2a; border: 1px solid #41cd2a30;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .dir-c .topbar-right { margin-left: auto; padding: 0 16px; display: flex; align-items: center; gap: 10px; }
+  .dir-c .copilot-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: #41cd2a15; border: 1px solid #41cd2a30;
+    padding: 5px 12px; border-radius: 6px; cursor: pointer;
+    font-size: 12px; color: #41cd2a; font-weight: 500;
+  }
+  .dir-c .copilot-btn .spark { font-size: 13px; }
+
+  .dir-c .body { display: grid; grid-template-columns: 240px 1fr 300px; overflow: hidden; }
+
+  .dir-c .sidebar {
+    background: #0B0D11; border-right: 1px solid #162016;
+    overflow-y: auto; padding: 12px 0;
+  }
+  .dir-c .sidebar-section { margin-bottom: 8px; }
+  .dir-c .sidebar-section-header {
+    padding: 6px 16px; font-size: 11px; font-weight: 600;
+    color: #41cd2a90; letter-spacing: 0.06em; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dir-c .sidebar-item {
+    padding: 5px 16px 5px 28px; font-size: 13px; color: #7a8a7a;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: all 0.1s;
+  }
+  .dir-c .sidebar-item:hover { color: #E8E8F2; background: #41cd2a08; }
+  .dir-c .sidebar-item.active { color: #41cd2a; background: #41cd2a10; }
+  .dir-c .sidebar-item .badge {
+    margin-left: auto; font-size: 10px;
+    background: #1a2a1a; color: #41cd2a80;
+    padding: 1px 6px; border-radius: 10px;
+  }
+
+  .dir-c .main { display: grid; grid-template-rows: 1fr 1fr; overflow: hidden; border-right: 1px solid #162016; }
+  .dir-c .editor-zone { border-bottom: 1px solid #162016; display: flex; flex-direction: column; }
+  .dir-c .editor-header {
+    padding: 0 16px; background: #0D0F13; border-bottom: 1px solid #162016;
+    display: flex; align-items: center; gap: 12px; height: 36px;
+  }
+  .dir-c .editor-title { font-size: 12px; color: #6B6B80; }
+  .dir-c .editor-title strong { color: #E8E8F2; }
+  .dir-c .run-btn {
+    margin-left: auto; display: flex; align-items: center; gap: 6px;
+    background: #41cd2a; color: #050905; font-size: 12px; font-weight: 700;
+    padding: 5px 14px; border-radius: 6px; cursor: pointer; border: none;
+    box-shadow: 0 0 12px #41cd2a40;
+  }
+  .dir-c .editor-content {
+    flex: 1; padding: 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.7; overflow: auto; background: #090B0E;
+  }
+  .dir-c .results-zone { display: flex; flex-direction: column; overflow: hidden; background: #090B0E; }
+  .dir-c .results-header {
+    padding: 8px 16px; background: #0D0F13; border-bottom: 1px solid #162016;
+    display: flex; align-items: center; gap: 12px; height: 36px;
+  }
+  .dir-c .results-count { font-size: 12px; color: #41cd2a; font-weight: 600; }
+  .dir-c .results-time { font-size: 11px; color: #6B6B80; }
+  .dir-c .results-table-wrap { flex: 1; overflow: auto; }
+  .dir-c .results-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dir-c .results-table th {
+    padding: 7px 14px; text-align: left; font-size: 10px; font-weight: 600;
+    color: #41cd2a80; border-bottom: 1px solid #162016; background: #0B0D11;
+    white-space: nowrap; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .dir-c .results-table td {
+    padding: 6px 14px; border-bottom: 1px solid #0F1210; color: #7a8a7a;
+    font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+  }
+  .dir-c .results-table tr:hover td { background: #0F1210; color: #E8E8F2; }
+  .dir-c .results-table td.num { color: #41cd2a; }
+
+  /* Copilote panel */
+  .dir-c .copilot-panel {
+    background: #0B0D11; display: flex; flex-direction: column;
+    border-left: 1px solid #162016;
+  }
+  .dir-c .copilot-header {
+    padding: 10px 16px; border-bottom: 1px solid #162016;
+    display: flex; align-items: center; gap: 8px; height: 36px;
+  }
+  .dir-c .copilot-title { font-size: 13px; font-weight: 600; color: #41cd2a; }
+  .dir-c .copilot-model { margin-left: auto; font-size: 10px; color: #41cd2a60; background: #41cd2a10; padding: 2px 8px; border-radius: 10px; }
+  .dir-c .copilot-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .dir-c .msg { display: flex; gap: 8px; }
+  .dir-c .msg-avatar { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; margin-top: 2px; }
+  .dir-c .msg-avatar.ai { background: #41cd2a20; color: #41cd2a; border: 1px solid #41cd2a40; }
+  .dir-c .msg-avatar.user { background: #1E1E2E; color: #E8E8F2; }
+  .dir-c .msg-content { font-size: 12px; line-height: 1.6; color: #8888a0; }
+  .dir-c .msg-content.user { color: #E8E8F2; }
+  .dir-c .msg-code { margin-top: 6px; background: #090B0E; border: 1px solid #162016; border-radius: 6px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6; }
+  .dir-c .msg-insert { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #41cd2a; background: #41cd2a10; border: 1px solid #41cd2a30; padding: 3px 8px; border-radius: 4px; cursor: pointer; }
+  .dir-c .copilot-input-zone { padding: 12px; border-top: 1px solid #162016; }
+  .dir-c .copilot-input {
+    background: #141418; border: 1px solid #41cd2a30; border-radius: 8px;
+    padding: 10px 12px; display: flex; align-items: flex-end; gap: 8px;
+  }
+  .dir-c .copilot-input textarea {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: 12px; color: #E8E8F2; resize: none; min-height: 20px; max-height: 80px;
+    font-family: inherit; line-height: 1.5;
+  }
+  .dir-c .copilot-input textarea::placeholder { color: #6B6B80; }
+  .dir-c .send-btn { width: 24px; height: 24px; border-radius: 4px; background: #41cd2a; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #050905; font-weight: 700; flex-shrink: 0; }
+
+  /* ===== COMMAND MENU OVERLAY ===== */
+  .cmd-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 200;
+    background: #00000080; backdrop-filter: blur(4px);
+    align-items: flex-start; justify-content: center; padding-top: 120px;
+  }
+  .cmd-overlay.show { display: flex; }
+  .cmd-box {
+    width: 560px; background: #141418; border: 1px solid #1E1E2E;
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 24px 60px #000000b0, 0 0 0 1px #41cd2a20;
+  }
+  .cmd-search {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+    border-bottom: 1px solid #1E1E2E;
+  }
+  .cmd-search-icon { font-size: 16px; color: #6B6B80; }
+  .cmd-search input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: 14px; color: #E8E8F2;
+  }
+  .cmd-search input::placeholder { color: #6B6B80; }
+  .cmd-search .kbd { font-size: 11px; color: #6B6B80; background: #1E1E2E; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+  .cmd-section { padding: 6px 0; border-bottom: 1px solid #1E1E2E; }
+  .cmd-section:last-child { border-bottom: none; }
+  .cmd-section-label { padding: 6px 14px; font-size: 11px; font-weight: 600; color: #6B6B80; letter-spacing: 0.06em; text-transform: uppercase; }
+  .cmd-item {
+    padding: 8px 14px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; transition: all 0.1s;
+  }
+  .cmd-item:hover, .cmd-item.active { background: #1A1A22; }
+  .cmd-item-icon { width: 28px; height: 28px; border-radius: 6px; background: #1E1E2E; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .cmd-item.active .cmd-item-icon { background: #41cd2a15; }
+  .cmd-item-label { flex: 1; font-size: 13px; color: #E8E8F2; }
+  .cmd-item-meta { font-size: 11px; color: #6B6B80; }
+  .cmd-item.active .cmd-item-meta { color: #41cd2a; }
+  .cmd-item-dot { width: 6px; height: 6px; border-radius: 50%; background: #41cd2a; }
+  .cmd-footer { padding: 8px 14px; display: flex; align-items: center; gap: 12px; background: #0F0F13; }
+  .cmd-footer-hint { font-size: 11px; color: #6B6B80; display: flex; align-items: center; gap: 4px; }
+  .cmd-footer-hint .kbd { font-size: 10px; background: #1E1E2E; padding: 1px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ===== CONTEXT MENU ===== */
+  .ctx-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 200;
+  }
+  .ctx-overlay.show { display: block; }
+  .ctx-menu {
+    position: absolute; top: 260px; left: 280px;
+    width: 220px; background: #141418;
+    border: 1px solid #1E1E2E; border-radius: 8px;
+    overflow: hidden; box-shadow: 0 16px 40px #000000a0;
+    padding: 4px 0;
+  }
+  .ctx-header { padding: 6px 12px; font-size: 11px; color: #6B6B80; border-bottom: 1px solid #1E1E2E; margin-bottom: 2px; font-family: 'JetBrains Mono', monospace; }
+  .ctx-item {
+    padding: 7px 12px; font-size: 13px; color: #8888a0;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+    transition: all 0.1s;
+  }
+  .ctx-item:hover { background: #1A1A22; color: #E8E8F2; }
+  .ctx-item.highlight { color: #41cd2a; }
+  .ctx-item.highlight:hover { background: #41cd2a10; }
+  .ctx-item.danger { color: #EF444480; }
+  .ctx-item.danger:hover { background: #EF44440d; color: #EF4444; }
+  .ctx-sep { height: 1px; background: #1E1E2E; margin: 3px 0; }
+  .ctx-item .shortcut { font-size: 11px; color: #6B6B80; font-family: 'JetBrains Mono', monospace; }
+
+  /* ===== TOGGLE BUTTONS ===== */
+  .toggle-row {
+    display: flex; gap: 8px; padding: 12px 24px;
+    background: #0C0C0F; border-bottom: 1px solid #1E1E2E;
+    align-items: center;
+  }
+  .toggle-btn {
+    padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    border: 1px solid #1E1E2E; background: transparent; color: #6B6B80;
+    transition: all 0.15s;
+  }
+  .toggle-btn:hover { color: #E8E8F2; border-color: #2E2E3E; }
+  .toggle-btn.on { border-color: #41cd2a40; color: #41cd2a; background: #41cd2a0d; }
+  .toggle-label { font-size: 12px; color: #6B6B80; margin-left: 8px; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1E1E2E; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2E2E3E; }
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav class="nav">
+  <div class="nav-logo">db<span>lumi</span></div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showDir('a')">A — Terminal Pro</div>
+    <div class="nav-tab" onclick="showDir('b')">B — Refined Dark</div>
+    <div class="nav-tab" onclick="showDir('c')">C — Luminescent</div>
+  </div>
+  <div class="nav-hint">Cliquez sur les onglets pour comparer · Cmd+K pour le Command Menu · Clic droit sur une table</div>
+</nav>
+
+<div class="content">
+
+  <!-- ===== DIRECTION A ===== -->
+  <div class="direction active" id="dir-a">
+    <div class="direction-header">
+      <span class="direction-badge" style="background:#41cd2a15;color:#41cd2a;border:1px solid #41cd2a30">A</span>
+      <span class="direction-title">Terminal Pro</span>
+      <span class="direction-desc">Dense, monospace partout, énergie terminal — pour les développeurs qui vivent dans le CLI</span>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn on" onclick="toggleCmd()">⌘K Command Menu</button>
+      <button class="toggle-btn" onclick="toggleCtx()">Clic droit → Context Menu</button>
+      <span class="toggle-label">Cliquez pour voir les overlays</span>
+    </div>
+    <div class="mockup dir-a">
+      <div class="topbar">
+        <div class="logo-zone">
+          <span class="logo">dblumi</span>
+        </div>
+        <div class="conn-selector">
+          <div class="conn-dot"></div>
+          <span class="conn-name">production_db</span>
+          <span class="conn-arrow">▾</span>
+        </div>
+        <div style="padding:0 12px;font-size:11px;font-family:'JetBrains Mono',monospace;color:#6B6B80;border-right:1px solid #1a1a2a;">PostgreSQL 16</div>
+        <div class="topbar-actions">
+          <button class="topbar-btn">history</button>
+          <button class="topbar-btn">library</button>
+          <button class="topbar-btn primary">+ new</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="sidebar">
+          <div class="sidebar-section">
+            <div class="sidebar-header">Tables <span style="color:#41cd2a60">47</span></div>
+            <div class="sidebar-item">▸ customers <span class="type">2.4M</span></div>
+            <div class="sidebar-item active">▸ orders <span class="type">8.1M</span></div>
+            <div class="sidebar-item">▸ order_items <span class="type">24M</span></div>
+            <div class="sidebar-item">▸ products <span class="type">12k</span></div>
+            <div class="sidebar-item">▸ categories <span class="type">156</span></div>
+            <div class="sidebar-item">▸ users <span class="type">94k</span></div>
+            <div class="sidebar-item">▸ sessions <span class="type">1.2M</span></div>
+            <div class="sidebar-item">▸ payments <span class="type">6.8M</span></div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-header">Views <span style="color:#41cd2a60">8</span></div>
+            <div class="sidebar-item">▸ v_active_orders</div>
+            <div class="sidebar-item">▸ v_customer_stats</div>
+          </div>
+        </div>
+        <div class="main">
+          <div class="editor-zone">
+            <div class="editor-toolbar">
+              <span class="toolbar-label">QUERY_01.sql</span>
+              <div class="toolbar-actions">
+                <button class="toolbar-btn">format</button>
+                <button class="toolbar-btn">explain</button>
+                <button class="toolbar-btn run">▶ run</button>
+              </div>
+            </div>
+            <div class="editor-content">
+              <span class="cm">-- Clients avec plus de 3 commandes ce mois</span><br>
+              <span class="kw">SELECT</span> c.name,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">COUNT</span>(o.id) <span class="kw">AS</span> order_count,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">SUM</span>(o.total) <span class="kw">AS</span> revenue<br>
+              <span class="kw">FROM</span> <span class="tb">customers</span> c<br>
+              <span class="kw">JOIN</span> <span class="tb">orders</span> o <span class="kw">ON</span> o.customer_id = c.id<br>
+              <span class="kw">WHERE</span> o.created_at &gt;= <span class="fn">date_trunc</span>(<span class="str">'month'</span>, <span class="fn">NOW</span>())<br>
+              <span class="kw">GROUP BY</span> c.id, c.name<br>
+              <span class="kw">HAVING</span> <span class="fn">COUNT</span>(o.id) &gt; <span class="nm">3</span><br>
+              <span class="kw">ORDER BY</span> order_count <span class="kw">DESC</span>
+            </div>
+          </div>
+          <div class="results-zone">
+            <div class="results-toolbar">
+              <span class="results-count">● 127 rows · 42ms</span>
+            </div>
+            <div class="results-table-wrap">
+              <table class="results-table">
+                <thead><tr><th>#</th><th>name</th><th>order_count</th><th>revenue</th></tr></thead>
+                <tbody>
+                  <tr><td class="num">1</td><td>Acme Corp</td><td class="num">24</td><td class="num">48,920.00</td></tr>
+                  <tr><td class="num">2</td><td>TechStart SAS</td><td class="num">18</td><td class="num">32,150.00</td></tr>
+                  <tr><td class="num">3</td><td>Studio Bleu</td><td class="num">15</td><td class="num">28,400.00</td></tr>
+                  <tr><td class="num">4</td><td>DataForge</td><td class="num">12</td><td class="num">21,800.00</td></tr>
+                  <tr><td class="num">5</td><td>NovaSoft</td><td class="num">11</td><td class="num">19,650.00</td></tr>
+                  <tr><td class="num">6</td><td>BrightLabs</td><td class="num">9</td><td class="num">16,200.00</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTION B ===== -->
+  <div class="direction" id="dir-b">
+    <div class="direction-header">
+      <span class="direction-badge" style="background:#3b82f615;color:#3b82f6;border:1px solid #3b82f630">B</span>
+      <span class="direction-title">Refined Dark</span>
+      <span class="direction-desc">Équilibré, respirant, modern devtool — inspire confiance et élégance discrète</span>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn on" onclick="toggleCmd()">⌘K Command Menu</button>
+      <button class="toggle-btn" onclick="toggleCtx()">Clic droit → Context Menu</button>
+    </div>
+    <div class="mockup dir-b">
+      <div class="topbar">
+        <div class="logo-zone">
+          <div class="logo-dot"></div>
+          <span class="logo">db<em>lumi</em></span>
+        </div>
+        <div class="conn-selector">
+          <div class="conn-pill">
+            <div class="conn-dot"></div>
+            <span class="conn-name">production</span>
+            <span style="color:#6B6B80;font-size:11px">▾</span>
+          </div>
+        </div>
+        <div style="padding:0 16px;font-size:12px;color:#6B6B80;border-right:1px solid #1E1E2E;">PostgreSQL · staging</div>
+        <div class="topbar-right">
+          <span class="kbd">⌘K</span>
+          <div class="avatar">M</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="sidebar">
+          <div class="sidebar-search">
+            <span style="font-size:12px;color:#6B6B80">⌕</span>
+            <input placeholder="Rechercher..." readonly>
+          </div>
+          <div class="sidebar-section-label">Tables</div>
+          <div class="sidebar-item"><span class="icon">▦</span> customers</div>
+          <div class="sidebar-item active"><span class="icon">▦</span> orders</div>
+          <div class="sidebar-item"><span class="icon">▦</span> order_items</div>
+          <div class="sidebar-item"><span class="icon">▦</span> products</div>
+          <div class="sidebar-item"><span class="icon">▦</span> categories</div>
+          <div class="sidebar-item"><span class="icon">▦</span> users</div>
+          <div class="sidebar-item"><span class="icon">▦</span> payments</div>
+          <div style="height:12px"></div>
+          <div class="sidebar-section-label">Saved Queries</div>
+          <div class="sidebar-item"><span class="icon">✦</span> Top clients mois</div>
+          <div class="sidebar-item"><span class="icon">✦</span> Orders by status</div>
+        </div>
+        <div class="main">
+          <div class="editor-zone">
+            <div class="editor-tabs">
+              <div class="editor-tab active">
+                <div class="dot"></div>
+                top_clients.sql
+              </div>
+              <div class="editor-tab">new_query.sql</div>
+              <div class="editor-actions">
+                <button class="run-btn">▶ Run</button>
+              </div>
+            </div>
+            <div class="editor-content">
+              <span class="cm">-- Clients avec plus de 3 commandes ce mois</span><br>
+              <span class="kw">SELECT</span> c.name,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">COUNT</span>(o.id) <span class="kw">AS</span> order_count,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">SUM</span>(o.total) <span class="kw">AS</span> revenue<br>
+              <span class="kw">FROM</span> <span class="tb">customers</span> c<br>
+              <span class="kw">JOIN</span> <span class="tb">orders</span> o <span class="kw">ON</span> o.customer_id = c.id<br>
+              <span class="kw">WHERE</span> o.created_at &gt;= <span class="fn">date_trunc</span>(<span class="str">'month'</span>, <span class="fn">NOW</span>())<br>
+              <span class="kw">GROUP BY</span> c.id, c.name<br>
+              <span class="kw">HAVING</span> <span class="fn">COUNT</span>(o.id) &gt; <span class="nm">3</span><br>
+              <span class="kw">ORDER BY</span> order_count <span class="kw">DESC</span>
+            </div>
+          </div>
+          <div class="results-zone">
+            <div class="results-header">
+              <span class="results-stat"><strong>127</strong> <span>rows</span></span>
+              <span class="results-stat"><span>42ms</span></span>
+              <button class="results-export">Export CSV</button>
+            </div>
+            <div class="results-table-wrap">
+              <table class="results-table">
+                <thead><tr><th>name</th><th>order_count</th><th>revenue</th></tr></thead>
+                <tbody>
+                  <tr><td>Acme Corp</td><td class="num">24</td><td class="num">48 920,00 €</td></tr>
+                  <tr><td>TechStart SAS</td><td class="num">18</td><td class="num">32 150,00 €</td></tr>
+                  <tr><td>Studio Bleu</td><td class="num">15</td><td class="num">28 400,00 €</td></tr>
+                  <tr><td>DataForge</td><td class="num">12</td><td class="num">21 800,00 €</td></tr>
+                  <tr><td>NovaSoft</td><td class="num">11</td><td class="num">19 650,00 €</td></tr>
+                  <tr><td>BrightLabs</td><td class="num">9</td><td class="num">16 200,00 €</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DIRECTION C ===== -->
+  <div class="direction" id="dir-c">
+    <div class="direction-header">
+      <span class="direction-badge" style="background:#41cd2a15;color:#41cd2a;border:1px solid #41cd2a40">C</span>
+      <span class="direction-title">Luminescent</span>
+      <span class="direction-desc">Accent vert utilisé de façon plus expressive — copilote visible, identité forte, "lumi" assumé</span>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn on" onclick="toggleCmd()">⌘K Command Menu</button>
+      <button class="toggle-btn" onclick="toggleCtx()">Clic droit → Context Menu</button>
+    </div>
+    <div class="mockup dir-c">
+      <div class="topbar">
+        <div class="logo-zone">
+          <span class="logo"><span class="logo-db">db</span><span class="logo-lumi">lumi</span></span>
+        </div>
+        <div class="conn-selector">
+          <span class="conn-name">production_db</span>
+          <span class="conn-env">prod</span>
+        </div>
+        <div class="topbar-right">
+          <button class="copilot-btn"><span class="spark">✦</span> Copilote</button>
+          <div style="width:26px;height:26px;border-radius:50%;background:#1E1E2E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#E8E8F2;cursor:pointer">M</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="sidebar">
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">Tables</div>
+            <div class="sidebar-item">□ customers <span class="badge">2.4M</span></div>
+            <div class="sidebar-item active">□ orders <span class="badge">8.1M</span></div>
+            <div class="sidebar-item">□ order_items <span class="badge">24M</span></div>
+            <div class="sidebar-item">□ products</div>
+            <div class="sidebar-item">□ categories</div>
+            <div class="sidebar-item">□ users</div>
+            <div class="sidebar-item">□ payments</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">Saved</div>
+            <div class="sidebar-item">✦ Top clients mois</div>
+            <div class="sidebar-item">✦ Orders by status</div>
+          </div>
+        </div>
+        <div class="main">
+          <div class="editor-zone">
+            <div class="editor-header">
+              <span class="editor-title">Query · <strong>top_clients.sql</strong></span>
+              <button class="run-btn">▶ Run</button>
+            </div>
+            <div class="editor-content">
+              <span class="cm">-- Clients avec plus de 3 commandes ce mois</span><br>
+              <span class="kw">SELECT</span> c.name,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">COUNT</span>(o.id) <span class="kw">AS</span> order_count,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">SUM</span>(o.total) <span class="kw">AS</span> revenue<br>
+              <span class="kw">FROM</span> <span class="tb">customers</span> c<br>
+              <span class="kw">JOIN</span> <span class="tb">orders</span> o <span class="kw">ON</span> o.customer_id = c.id<br>
+              <span class="kw">WHERE</span> o.created_at &gt;= <span class="fn">date_trunc</span>(<span class="str">'month'</span>, <span class="fn">NOW</span>())<br>
+              <span class="kw">GROUP BY</span> c.id, c.name<br>
+              <span class="kw">HAVING</span> <span class="fn">COUNT</span>(o.id) &gt; <span class="nm">3</span><br>
+              <span class="kw">ORDER BY</span> order_count <span class="kw">DESC</span>
+            </div>
+          </div>
+          <div class="results-zone">
+            <div class="results-header">
+              <span class="results-count">127 rows</span>
+              <span class="results-time">42ms</span>
+            </div>
+            <div class="results-table-wrap">
+              <table class="results-table">
+                <thead><tr><th>name</th><th>order_count</th><th>revenue</th></tr></thead>
+                <tbody>
+                  <tr><td>Acme Corp</td><td class="num">24</td><td class="num">48 920 €</td></tr>
+                  <tr><td>TechStart SAS</td><td class="num">18</td><td class="num">32 150 €</td></tr>
+                  <tr><td>Studio Bleu</td><td class="num">15</td><td class="num">28 400 €</td></tr>
+                  <tr><td>DataForge</td><td class="num">12</td><td class="num">21 800 €</td></tr>
+                  <tr><td>NovaSoft</td><td class="num">11</td><td class="num">19 650 €</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- COPILOTE PANEL -->
+        <div class="copilot-panel">
+          <div class="copilot-header">
+            <span class="copilot-title">✦ Copilote</span>
+            <span class="copilot-model">claude-sonnet</span>
+          </div>
+          <div class="copilot-messages">
+            <div class="msg">
+              <div class="msg-avatar user">M</div>
+              <div class="msg-content user">quels sont les clients qui ont commandé plus de 3 fois ce mois ?</div>
+            </div>
+            <div class="msg">
+              <div class="msg-avatar ai">✦</div>
+              <div class="msg-content">
+                Je génère une requête sur tes tables <strong style="color:#E8E8F2">customers</strong> et <strong style="color:#E8E8F2">orders</strong> :
+                <div class="msg-code">
+                  <span class="kw">SELECT</span> c.name, <span class="fn">COUNT</span>(o.id)...<br>
+                  <span class="kw">FROM</span> <span class="tb">customers</span> c<br>
+                  <span class="kw">JOIN</span> <span class="tb">orders</span> o...<br>
+                  <span class="kw">HAVING</span> <span class="fn">COUNT</span>() &gt; <span class="nm">3</span>
+                </div>
+                <div class="msg-insert">↗ Insérer dans l'éditeur</div>
+              </div>
+            </div>
+          </div>
+          <div class="copilot-input-zone">
+            <div class="copilot-input">
+              <textarea placeholder="Posez une question sur votre base..." rows="1" readonly></textarea>
+              <button class="send-btn">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COMMAND MENU OVERLAY -->
+<div class="cmd-overlay" id="cmd-overlay" onclick="hideCmd(event)">
+  <div class="cmd-box" onclick="event.stopPropagation()">
+    <div class="cmd-search">
+      <span class="cmd-search-icon">⌕</span>
+      <input placeholder="Rechercher ou taper une commande..." autofocus>
+      <span class="kbd">esc</span>
+    </div>
+    <div class="cmd-section">
+      <div class="cmd-section-label">Connexions</div>
+      <div class="cmd-item active">
+        <div class="cmd-item-icon">🔌</div>
+        <span class="cmd-item-label">production_db</span>
+        <div class="cmd-item-dot"></div>
+        <span class="cmd-item-meta">active</span>
+      </div>
+      <div class="cmd-item">
+        <div class="cmd-item-icon">🔌</div>
+        <span class="cmd-item-label">staging_db</span>
+        <span class="cmd-item-meta">PostgreSQL</span>
+      </div>
+      <div class="cmd-item">
+        <div class="cmd-item-icon">🔌</div>
+        <span class="cmd-item-label">local_dev</span>
+        <span class="cmd-item-meta">MySQL</span>
+      </div>
+    </div>
+    <div class="cmd-section">
+      <div class="cmd-section-label">Requêtes sauvegardées</div>
+      <div class="cmd-item">
+        <div class="cmd-item-icon">✦</div>
+        <span class="cmd-item-label">Top clients ce mois</span>
+        <span class="cmd-item-meta">partagée</span>
+      </div>
+      <div class="cmd-item">
+        <div class="cmd-item-icon">✦</div>
+        <span class="cmd-item-label">Orders by status</span>
+        <span class="cmd-item-meta">partagée</span>
+      </div>
+    </div>
+    <div class="cmd-section">
+      <div class="cmd-section-label">Tables</div>
+      <div class="cmd-item">
+        <div class="cmd-item-icon">▦</div>
+        <span class="cmd-item-label">customers</span>
+        <span class="cmd-item-meta">2.4M rows</span>
+      </div>
+      <div class="cmd-item">
+        <div class="cmd-item-icon">▦</div>
+        <span class="cmd-item-label">orders</span>
+        <span class="cmd-item-meta">8.1M rows</span>
+      </div>
+    </div>
+    <div class="cmd-footer">
+      <span class="cmd-footer-hint"><span class="kbd">↑↓</span> naviguer</span>
+      <span class="cmd-footer-hint"><span class="kbd">↵</span> sélectionner</span>
+      <span class="cmd-footer-hint"><span class="kbd">esc</span> fermer</span>
+    </div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-overlay" id="ctx-overlay" onclick="hideCtx()">
+  <div class="ctx-menu">
+    <div class="ctx-header">orders</div>
+    <div class="ctx-item highlight">✦ Demander au copilote</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item">SELECT * FROM orders LIMIT 100 <span class="shortcut">⌘↵</span></div>
+    <div class="ctx-item">Voir la structure</div>
+    <div class="ctx-item">Copier le nom <span class="shortcut">⌘C</span></div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item">Statistiques (8.1M rows)</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item danger">Vider la table (TRUNCATE)</div>
+  </div>
+</div>
+
+<script>
+  function showDir(d) {
+    document.querySelectorAll('.direction').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('dir-' + d).classList.add('active');
+    document.querySelectorAll('.nav-tab')[['a','b','c'].indexOf(d)].classList.add('active');
+    // reset toggle buttons
+    document.querySelectorAll('.toggle-btn').forEach((btn, i) => {
+      btn.classList.toggle('on', i === 0);
+    });
+  }
+
+  function toggleCmd() {
+    document.getElementById('cmd-overlay').classList.toggle('show');
+    document.getElementById('ctx-overlay').classList.remove('show');
+    document.querySelectorAll('.toggle-btn')[0].classList.toggle('on');
+    document.querySelectorAll('.toggle-btn')[1].classList.remove('on');
+  }
+
+  function toggleCtx() {
+    document.getElementById('ctx-overlay').classList.toggle('show');
+    document.getElementById('cmd-overlay').classList.remove('show');
+    document.querySelectorAll('.toggle-btn')[1].classList.toggle('on');
+    document.querySelectorAll('.toggle-btn')[0].classList.remove('on');
+  }
+
+  function hideCmd(e) {
+    document.getElementById('cmd-overlay').classList.remove('show');
+    document.querySelectorAll('.toggle-btn')[0].classList.remove('on');
+  }
+
+  function hideCtx() {
+    document.getElementById('ctx-overlay').classList.remove('show');
+    document.querySelectorAll('.toggle-btn')[1].classList.remove('on');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { hideCmd(); hideCtx(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); toggleCmd(); }
+  });
+</script>
+</body>
+</html>
