@@ -13,6 +13,9 @@ stepsCompleted:
   - step-09-functional
   - step-10-nonfunctional
   - step-11-polish
+  - step-e-01-discovery
+  - step-e-02-review
+  - step-e-03-edit
 inputDocuments:
   - "_bmad-output/planning-artifacts/product-brief-dblumi.md"
   - "_bmad-output/planning-artifacts/product-brief-dblumi-distillate.md"
@@ -22,6 +25,10 @@ classification:
   domain: developer_tooling
   complexity: medium
   projectContext: greenfield
+lastEdited: '2026-03-28'
+editHistory:
+  - date: '2026-03-28'
+    changes: 'Ajout aperçu de données inline sur les tables avec édition et insertion de lignes (FR11a-FR11d), mise à jour Product Scope MVP et User Journey Lucas'
 ---
 
 # Product Requirements Document — dblumi
@@ -93,7 +100,7 @@ Philosophie : chaque feature est finie à 100 % ou absente. La qualité prime su
 |---|---|
 | **Connexions** | PostgreSQL + MySQL, connexions globales (AES-256, write-once) + personnelles, groupes + RBAC |
 | **Éditeur SQL** | DQL/DML/DDL complet, coloration syntaxique, autocomplétion schéma, guardrails sur requêtes destructives |
-| **Schéma** | Navigation tables/colonnes/index/relations/clés étrangères |
+| **Schéma** | Navigation tables/colonnes/index/relations/clés étrangères, aperçu des données inline, édition et insertion de lignes |
 | **IA** | Copilote Claude natif au schéma, NL→SQL, SQL→explication, streaming tokens, clé partagée + BYOK |
 | **Bibliothèque** | Requêtes Favorites / Shared / Private, sauvegarde, recherche, exécution directe |
 | **Auth & Équipe** | Login local + SSO OAuth (GitHub, Google), invitation email, groupes, RBAC (admin/éditeur/lecteur), déprovisionnement |
@@ -135,7 +142,7 @@ Philosophie : chaque feature est finie à 100 % ou absente. La qualité prime su
 
 Lucas est ingénieur backend depuis 5 ans. Il vient d'intégrer une startup de 12 personnes. Jour 1, il reçoit un email d'invitation dblumi. Il clique, se connecte via SSO GitHub en un clic. Il est dans l'interface — les connexions staging et production de l'équipe sont là. Sans avoir jamais demandé un mot de passe.
 
-Il clique sur "staging". Le schéma s'affiche en moins de 2 secondes : 47 tables. Il ouvre le copilote : *"montre-moi les commandes passées des 7 derniers jours avec le nom du client"*. Le copilote génère le SQL exact avec les bonnes jointures. Les résultats arrivent. Il comprend le modèle de données en 10 minutes.
+Il clique sur "staging". Le schéma s'affiche en moins de 2 secondes : 47 tables. Il clique sur la table `orders` — les premières lignes apparaissent immédiatement. Il comprend la structure en quelques secondes. Il ouvre le copilote : *"montre-moi les commandes passées des 7 derniers jours avec le nom du client"*. Le copilote génère le SQL exact avec les bonnes jointures. Les résultats arrivent. Il comprend le modèle de données en 10 minutes.
 
 **Moment "aha" :** Le copilote connaissait ses tables. Ce n'était pas du SQL générique.
 
@@ -200,6 +207,10 @@ Alex voit le Show HN de dblumi. Il clique "Live Demo". En 5 secondes, il est dan
 - **FR09 :** Un utilisateur peut rechercher des tables ou colonnes par nom dans le schéma
 - **FR10 :** Un utilisateur peut visualiser les statistiques d'une table (nombre de lignes estimé, taille)
 - **FR11 :** Le système charge et affiche le schéma complet d'une base jusqu'à 500 tables en moins de 2 secondes
+- **FR11a :** Un utilisateur peut ouvrir l'aperçu des données d'une table : les premières lignes s'affichent avec pagination et tri par colonne
+- **FR11b :** Un utilisateur peut éditer une ligne existante directement depuis l'aperçu : les valeurs sont modifiables en inline et la sauvegarde génère un UPDATE ciblé sur la clé primaire
+- **FR11c :** Un utilisateur peut insérer une nouvelle ligne depuis l'aperçu via un formulaire généré automatiquement à partir du schéma de la table (types, nullabilité, valeurs par défaut)
+- **FR11d :** Toute modification ou insertion depuis l'aperçu déclenche une confirmation modale avant exécution, avec affichage du SQL généré ; les utilisateurs en rôle lecteur n'ont accès qu'à la lecture
 
 ### Éditeur SQL
 

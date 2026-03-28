@@ -1,49 +1,41 @@
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
-import { jwtVerify, type JWTPayload } from 'jose'
-import { config } from '../config.js'
+import { verifyToken, extractToken } from '../lib/jwt.js'
+import { isTokenRevoked } from '../services/auth.service.js'
 import type { UserRole } from '@dblumi/shared'
 
-type AuthEnv = {
+export type AuthVariables = {
   Variables: {
     userId: string
     userEmail: string
     userRole: UserRole
+    jti: string
   }
 }
 
-const secret = new TextEncoder().encode(config.JWT_SECRET)
-
-export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
-  const authHeader = c.req.header('Authorization')
-  const cookieToken = getCookie(c.req.raw)
-
-  const token = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice(7)
-    : cookieToken
+export const authMiddleware = createMiddleware<AuthVariables>(async (c, next) => {
+  const token = extractToken(c.req.raw)
 
   if (!token) {
     throw new HTTPException(401, { message: 'Authentication required' })
   }
 
-  let payload: JWTPayload
+  let payload
   try {
-    const result = await jwtVerify(token, secret)
-    payload = result.payload
+    payload = await verifyToken(token)
   } catch {
     throw new HTTPException(401, { message: 'Invalid or expired token' })
   }
 
-  c.set('userId', payload['sub'] as string)
-  c.set('userEmail', payload['email'] as string)
-  c.set('userRole', payload['role'] as UserRole)
+  // Revocation check
+  if (payload.jti && await isTokenRevoked(payload.jti)) {
+    throw new HTTPException(401, { message: 'Token has been revoked' })
+  }
+
+  c.set('userId', payload.sub)
+  c.set('userEmail', payload.email)
+  c.set('userRole', payload.role)
+  c.set('jti', payload.jti)
 
   await next()
 })
-
-function getCookie(request: Request): string | undefined {
-  const cookie = request.headers.get('cookie')
-  if (!cookie) return undefined
-  const match = cookie.match(/dblumi_token=([^;]+)/)
-  return match?.[1]
-}
