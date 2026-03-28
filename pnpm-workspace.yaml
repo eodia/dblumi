@@ -1,0 +1,4 @@
+packages:
+  - 'src/web'
+  - 'src/api'
+  - 'src/shared'

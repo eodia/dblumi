@@ -1,0 +1,24 @@
+{
+  "name": "dblumi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open source web database client with AI copilot",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,green \"pnpm --filter @dblumi/api dev\" \"pnpm --filter @dblumi/web dev\"",
+    "build": "pnpm --filter @dblumi/shared build && pnpm --filter @dblumi/web build && pnpm --filter @dblumi/api build",
+    "start": "pnpm --filter @dblumi/api start",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}

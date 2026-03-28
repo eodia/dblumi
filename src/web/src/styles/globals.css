@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* ===== dblumi Design Tokens ===== */
+@theme {
+  /* Colors */
+  --color-bg-root:      #121314;
+  --color-bg-surface:   #171717;
+  --color-bg-raised:    #1C1C1F;
+  --color-bg-overlay:   #27272A;
+
+  --color-border-subtle:  #222323;
+  --color-border-default: #3F3F46;
+
+  --color-text-primary:   #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-text-muted:     #71717A;
+
+  --color-accent:        #41cd2a;
+  --color-accent-hover:  #36b022;
+
+  /* Typography */
+  --font-ui:   'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ===== Base ===== */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-bg-root);
+    color: var(--color-text-primary);
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  :root {
+    color-scheme: dark;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-bg-overlay);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-default);
+  }
+}

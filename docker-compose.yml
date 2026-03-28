@@ -1,0 +1,23 @@
+name: dblumi
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - dblumi-data:/data
+    environment:
+      - DATABASE_PATH=/data/dblumi.db
+      - DBLUMI_ENCRYPTION_KEY=${DBLUMI_ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+    restart: unless-stopped
+
+volumes:
+  dblumi-data:

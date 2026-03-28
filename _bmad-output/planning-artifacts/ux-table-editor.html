@@ -8,7 +8,6 @@
   @import url('https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.css');
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ===== COLOR SYSTEM ===== */
   :root {
     --bg-root:      #121314;
     --bg-surface:   #171717;
@@ -18,6 +17,7 @@
 
     --border-subtle:  #222323;
     --border-default: #3F3F46;
+    --border-focus:   #52525B;
 
     --text-primary:   #FAFAFA;
     --text-secondary: #A1A1AA;
@@ -25,16 +25,20 @@
 
     --accent:        #41cd2a;
     --accent-hover:  #36b022;
-    --accent-muted:  #41cd2a80;
-    --accent-subtle: #41cd2a15;
-    --accent-border: #41cd2a30;
+    --accent-muted:  rgba(65,205,42,0.5);
+    --accent-subtle: rgba(65,205,42,0.08);
+    --accent-border: rgba(65,205,42,0.18);
+    --accent-glow:   rgba(65,205,42,0.12);
 
     --danger:        #EF4444;
-    --danger-subtle: #EF444415;
-    --danger-border: #EF444430;
-    --warning:       #f59e0b;
+    --danger-subtle: rgba(239,68,68,0.08);
+    --danger-border: rgba(239,68,68,0.2);
+    --warning:       #F59E0B;
+    --warning-subtle:rgba(245,158,11,0.06);
+    --warning-border:rgba(245,158,11,0.18);
     --info:          #3B82F6;
-    --info-subtle:   #3B82F615;
+    --info-subtle:   rgba(59,130,246,0.06);
+    --info-border:   rgba(59,130,246,0.18);
 
     --font-ui:   'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
@@ -44,6 +48,7 @@
     --text-md:   14px;
     --radius:    6px;
     --radius-sm: 4px;
+    --shadow-sheet: -20px 0 50px rgba(0,0,0,0.5), -4px 0 16px rgba(0,0,0,0.3);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -53,24 +58,11 @@
     color: var(--text-primary);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
   }
 
-  /* ===== SHARED COMPONENTS ===== */
-  .badge {
-    display: inline-flex; align-items: center; gap: 3px;
-    font-size: var(--text-xs); font-weight: 600; padding: 2px 6px;
-    border-radius: 3px; letter-spacing: 0.04em; text-transform: uppercase;
-  }
-  .badge-dev { background: var(--accent-subtle); color: var(--accent); border: 1px solid var(--accent-border); }
-  .badge-prod { background: #EF444415; color: #EF4444; border: 1px solid #EF444430; }
-  .badge-type {
-    font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0;
-    text-transform: none; padding: 1px 5px;
-    background: var(--bg-overlay); color: var(--text-secondary);
-    border: 1px solid var(--border-subtle); border-radius: 3px;
-  }
-
+  /* ===== RESET INPUTS ===== */
   input, select, textarea {
     font-family: var(--font-ui);
     font-size: var(--text-md);
@@ -79,22 +71,28 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     outline: none;
-    transition: border-color 0.12s;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
   input:focus, select:focus, textarea:focus {
-    border-color: var(--border-default);
-    box-shadow: 0 0 0 2px var(--accent-subtle);
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-glow);
   }
   input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
   select {
-    appearance: none;
-    cursor: pointer;
+    appearance: none; cursor: pointer;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2371717A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 8px center;
     padding-right: 26px !important;
   }
+
+  /* ===== SVG ICON HELPERS ===== */
+  .icon-svg {
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .icon-svg svg { display: block; }
 
   /* ===== MENUBAR ===== */
   .menubar {
@@ -106,77 +104,61 @@
   }
   .menu-logo { font-size: 15px; font-weight: 800; letter-spacing: -0.5px; margin-right: 16px; }
   .menu-logo .db { color: var(--text-primary); }
-  .menu-logo .lumi { color: var(--accent); text-shadow: 0 0 16px #41cd2a40; }
+  .menu-logo .lumi { color: var(--accent); text-shadow: 0 0 16px rgba(65,205,42,0.25); }
   .menu-item {
     padding: 4px 10px; font-size: var(--text-sm); color: var(--text-secondary);
     border-radius: 4px; cursor: pointer; transition: all 0.12s; user-select: none; font-weight: 500;
   }
   .menu-item:hover { color: var(--text-primary); background: var(--bg-raised); }
   .menu-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .badge-env {
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+    background: var(--accent-subtle); color: var(--accent); border: 1px solid var(--accent-border);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
 
   /* ===== APP SHELL (background — dimmed) ===== */
   .app-bg {
     position: fixed; top: 36px; left: 0; right: 0; bottom: 0;
     display: grid; grid-template-columns: 260px 1fr 320px;
     overflow: hidden;
-    filter: brightness(0.45) saturate(0.6);
-    pointer-events: none;
-    user-select: none;
+    filter: brightness(0.4) saturate(0.5);
+    pointer-events: none; user-select: none;
   }
-
-  /* Sidebar ghost */
-  .ghost-sb {
-    background: var(--bg-surface);
-    border-right: 1px solid var(--border-subtle);
-  }
+  .ghost-sb { background: var(--bg-surface); border-right: 1px solid var(--border-subtle); }
   .ghost-sb-hd {
     padding: 12px; border-bottom: 1px solid var(--border-subtle);
     display: flex; align-items: center; gap: 10px;
   }
   .ghost-icon { width: 32px; height: 32px; border-radius: 6px; background: var(--bg-overlay); }
-  .ghost-lines { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .ghost-lines { flex: 1; display: flex; flex-direction: column; gap: 5px; }
   .ghost-line { height: 8px; border-radius: 3px; background: var(--bg-overlay); }
-  .ghost-nav { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
-  .ghost-nav-item { height: 28px; border-radius: 5px; background: var(--bg-raised); margin-bottom: 2px; }
-  .ghost-nav-item.active { background: var(--bg-overlay); }
-
-  /* Main ghost */
-  .ghost-main {
-    background: var(--bg-root);
-    display: flex; flex-direction: column;
-  }
-  .ghost-toolbar {
-    height: 40px; background: var(--bg-raised);
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .ghost-editor {
-    flex: 1; padding: 20px;
-    display: flex; flex-direction: column; gap: 6px;
-  }
+  .ghost-nav { padding: 8px; display: flex; flex-direction: column; gap: 3px; }
+  .ghost-nav-item { height: 28px; border-radius: 5px; background: var(--bg-raised); }
+  .ghost-nav-item.hi { background: var(--bg-overlay); }
+  .ghost-main { background: var(--bg-root); display: flex; flex-direction: column; }
+  .ghost-toolbar { height: 40px; background: var(--bg-raised); border-bottom: 1px solid var(--border-subtle); }
+  .ghost-editor { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 7px; }
   .ghost-code-line { height: 10px; border-radius: 3px; background: var(--bg-raised); }
-
-  /* Copilot ghost */
-  .ghost-cp {
-    background: var(--bg-surface);
-    border-left: 1px solid var(--border-subtle);
-  }
+  .ghost-cp { background: var(--bg-surface); border-left: 1px solid var(--border-subtle); }
 
   /* ===== BACKDROP ===== */
   .backdrop {
     position: fixed; top: 36px; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.55);
     z-index: 50;
+    backdrop-filter: blur(1px);
   }
 
-  /* ===== SHEET PANEL ===== */
+  /* ===== SHEET ===== */
   .sheet {
-    position: fixed; top: 36px; right: 0; bottom: 0;
-    width: 680px;
+    position: fixed; top: 36px; right: 0; bottom: 24px;
+    width: 720px; max-width: calc(100vw - 260px);
     background: var(--bg-sheet);
     border-left: 1px solid var(--border-default);
     z-index: 100;
     display: flex; flex-direction: column;
-    box-shadow: -24px 0 60px rgba(0,0,0,0.5);
+    box-shadow: var(--shadow-sheet);
   }
 
   /* Sheet header */
@@ -184,246 +166,356 @@
     padding: 20px 24px 16px;
     border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
-    display: flex; align-items: flex-start; justify-content: space-between;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
   }
-  .sheet-title-group {}
-  .sheet-breadcrumb {
-    display: flex; align-items: center; gap: 6px;
-    font-size: var(--text-sm); color: var(--text-muted); margin-bottom: 6px;
+  .sheet-title-row {
+    display: flex; align-items: center; gap: 10px;
   }
-  .sheet-breadcrumb .sep { color: var(--border-default); }
-  .sheet-breadcrumb .current { color: var(--text-secondary); }
-  .sheet-title {
-    font-size: 18px; font-weight: 700; color: var(--text-primary);
-    letter-spacing: -0.3px;
-  }
-  .sheet-close {
-    width: 28px; height: 28px; border-radius: var(--radius-sm);
+  .sheet-title-icon {
+    width: 36px; height: 36px; border-radius: var(--radius);
+    background: var(--accent-subtle); border: 1px solid var(--accent-border);
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: var(--text-muted); font-size: 16px;
-    transition: all 0.12s; background: transparent; border: none;
     flex-shrink: 0;
   }
-  .sheet-close:hover { background: var(--bg-overlay); color: var(--text-primary); }
+  .sheet-title-text {}
+  .sheet-breadcrumb {
+    display: flex; align-items: center; gap: 5px;
+    font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .sheet-breadcrumb .sep { color: var(--border-default); font-size: 9px; }
+  .sheet-breadcrumb .crumb { transition: color 0.12s; cursor: default; }
+  .sheet-breadcrumb .crumb:hover { color: var(--text-secondary); }
+  .sheet-breadcrumb .current { color: var(--text-secondary); }
+  .sheet-title {
+    font-size: 17px; font-weight: 700; color: var(--text-primary);
+    letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px;
+  }
+  .sheet-close {
+    width: 30px; height: 30px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-muted);
+    transition: all 0.12s; background: transparent; border: 1px solid transparent;
+    flex-shrink: 0;
+  }
+  .sheet-close:hover { background: var(--bg-overlay); color: var(--text-primary); border-color: var(--border-subtle); }
+
+  /* Sheet tabs */
+  .sheet-tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 24px;
+    flex-shrink: 0;
+  }
+  .sheet-tab {
+    padding: 10px 16px 9px; font-size: var(--text-sm); font-weight: 500;
+    color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.12s; margin-bottom: -1px; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sheet-tab:hover { color: var(--text-secondary); }
+  .sheet-tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+  .sheet-tab .tab-count {
+    font-size: 10px; padding: 0 5px; min-width: 18px; height: 16px;
+    border-radius: 8px; background: var(--bg-overlay); color: var(--text-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 600;
+  }
+  .sheet-tab.active .tab-count { background: var(--accent-subtle); color: var(--accent); }
 
   /* Sheet body */
   .sheet-body {
     flex: 1; overflow-y: auto; padding: 20px 24px;
-    display: flex; flex-direction: column; gap: 24px;
+    display: flex; flex-direction: column; gap: 20px;
   }
   .sheet-body::-webkit-scrollbar { width: 6px; }
   .sheet-body::-webkit-scrollbar-track { background: transparent; }
   .sheet-body::-webkit-scrollbar-thumb { background: var(--bg-overlay); border-radius: 3px; }
   .sheet-body::-webkit-scrollbar-thumb:hover { background: var(--border-default); }
 
-  /* Form groups */
+  /* Tab panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ===== FORM ===== */
   .form-group { display: flex; flex-direction: column; gap: 6px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .form-label {
     font-size: var(--text-sm); font-weight: 500; color: var(--text-secondary);
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 5px;
   }
-  .form-label .required { color: var(--danger); }
-  .form-hint { font-size: var(--text-xs); color: var(--text-muted); }
-  .form-input {
-    padding: 8px 10px; width: 100%;
-  }
+  .form-label .required { color: var(--danger); font-size: 13px; line-height: 1; }
+  .form-label .optional { color: var(--text-muted); font-weight: 400; }
+  .form-hint { font-size: var(--text-xs); color: var(--text-muted); line-height: 1.4; }
+  .form-input { padding: 8px 10px; width: 100%; }
   .form-textarea {
-    padding: 8px 10px; width: 100%; min-height: 64px;
+    padding: 8px 10px; width: 100%; min-height: 56px;
     resize: vertical; line-height: 1.5;
   }
 
-  /* Toggle / Switch */
+  /* ===== TOGGLE / SWITCH ===== */
   .toggle-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 14px;
-    background: var(--bg-raised);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius);
-    gap: 16px;
+    background: var(--bg-raised); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius); gap: 16px;
+    transition: border-color 0.12s;
   }
+  .toggle-row:hover { border-color: var(--border-default); }
   .toggle-info { flex: 1; }
   .toggle-label {
     font-size: var(--text-md); font-weight: 500; color: var(--text-primary);
     display: flex; align-items: center; gap: 8px;
   }
-  .toggle-desc { font-size: var(--text-sm); color: var(--text-muted); margin-top: 2px; }
-  .toggle-desc a { color: var(--accent); text-decoration: none; }
+  .toggle-desc { font-size: var(--text-sm); color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+  .toggle-desc a { color: var(--accent); text-decoration: none; font-weight: 500; }
   .toggle-desc a:hover { text-decoration: underline; }
 
   .switch {
-    position: relative; width: 36px; height: 20px; flex-shrink: 0; cursor: pointer;
+    position: relative; width: 38px; height: 22px; flex-shrink: 0; cursor: pointer;
   }
-  .switch input { opacity: 0; width: 0; height: 0; }
   .switch-track {
     position: absolute; inset: 0;
     background: var(--bg-overlay); border: 1px solid var(--border-default);
-    border-radius: 10px; transition: all 0.2s;
+    border-radius: 11px; transition: all 0.2s ease;
   }
   .switch-thumb {
     position: absolute; top: 3px; left: 3px;
-    width: 12px; height: 12px;
-    background: var(--text-muted); border-radius: 50%; transition: all 0.2s;
+    width: 14px; height: 14px;
+    background: var(--text-muted); border-radius: 50%;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
-  .switch.on .switch-track { background: var(--accent-subtle); border-color: var(--accent-border); }
-  .switch.on .switch-thumb { background: var(--accent); transform: translateX(16px); }
+  .switch.on .switch-track { background: var(--accent); border-color: var(--accent); }
+  .switch.on .switch-thumb { background: #fff; transform: translateX(16px); }
 
-  /* Section divider */
-  .section-divider {
+  /* ===== COLUMNS SECTION ===== */
+  .section-header {
     display: flex; align-items: center; gap: 10px;
-    margin: 4px 0;
+    padding-bottom: 6px;
   }
-  .section-divider-label {
+  .section-header-label {
     font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary);
-    white-space: nowrap; display: flex; align-items: center; gap: 6px;
+    white-space: nowrap; display: flex; align-items: center; gap: 7px;
+    letter-spacing: 0.02em;
   }
-  .section-divider-line {
-    flex: 1; height: 1px; background: var(--border-subtle);
-  }
-  .section-divider-count {
-    font-size: var(--text-xs); color: var(--text-muted);
+  .section-header-line { flex: 1; height: 1px; background: var(--border-subtle); }
+  .section-header-count {
+    font-size: 10px; color: var(--text-muted);
     background: var(--bg-overlay); border: 1px solid var(--border-subtle);
-    border-radius: 10px; padding: 0px 6px; font-weight: 500;
+    border-radius: 10px; padding: 1px 7px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
-
-  /* Columns table */
-  .columns-area { display: flex; flex-direction: column; gap: 2px; }
 
   .col-header {
     display: grid;
-    grid-template-columns: 16px 1fr 140px 120px 28px 28px 28px;
-    gap: 6px; align-items: center;
-    padding: 0 8px 4px;
-    font-size: var(--text-xs); font-weight: 600;
-    color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase;
+    grid-template-columns: 20px 1fr 132px 116px 30px 30px 30px;
+    gap: 4px; align-items: center;
+    padding: 0 6px 6px;
+    font-size: 10px; font-weight: 600;
+    color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase;
   }
+  .col-header > div { padding: 0 2px; }
+
+  .columns-area { display: flex; flex-direction: column; gap: 1px; }
 
   .col-row {
     display: grid;
-    grid-template-columns: 16px 1fr 140px 120px 28px 28px 28px;
-    gap: 6px; align-items: center;
-    padding: 5px 8px;
+    grid-template-columns: 20px 1fr 132px 116px 30px 30px 30px;
+    gap: 4px; align-items: center;
+    padding: 4px 6px;
     border-radius: var(--radius-sm);
     border: 1px solid transparent;
     background: var(--bg-raised);
-    margin-bottom: 3px;
-    transition: border-color 0.1s, background 0.1s;
+    transition: all 0.1s;
+    position: relative;
   }
-  .col-row:hover { border-color: var(--border-subtle); }
-  .col-row.is-pk { border-color: var(--accent-border); background: var(--accent-subtle); }
-  .col-row.is-pk .col-name-input { color: var(--accent); }
+  .col-row:hover { border-color: var(--border-subtle); background: #1e1e22; }
+  .col-row.is-pk {
+    border-color: var(--accent-border);
+    background: var(--accent-subtle);
+  }
+  .col-row.is-pk:hover { background: rgba(65,205,42,0.1); }
 
+  /* Drag handle */
   .col-drag {
-    cursor: grab; color: var(--text-muted); font-size: 12px;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0.5;
+    cursor: grab; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.12s;
+    color: var(--text-muted);
   }
-  .col-row:hover .col-drag { opacity: 1; }
+  .col-row:hover .col-drag { opacity: 0.6; }
+  .col-row:hover .col-drag:hover { opacity: 1; }
 
+  /* Column inputs */
   .col-name-input {
-    padding: 5px 8px; font-family: var(--font-mono); font-size: 12px;
+    padding: 5px 8px; font-family: var(--font-mono); font-size: 12px; font-weight: 500;
     background: var(--bg-root); border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm); width: 100%; color: var(--text-primary);
-    font-weight: 500;
+    border-radius: 3px; width: 100%; color: var(--text-primary);
+    transition: border-color 0.12s, box-shadow 0.12s;
   }
-  .col-name-input:focus {
-    border-color: var(--border-default);
-    box-shadow: 0 0 0 2px var(--accent-subtle);
-  }
-  .col-name-input::placeholder { color: var(--text-muted); font-weight: 400; }
+  .col-name-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--accent-glow); }
+  .col-name-input::placeholder { color: var(--text-muted); font-weight: 400; font-style: italic; }
+  .col-row.is-pk .col-name-input { color: var(--accent); font-weight: 600; }
 
   .col-type-select {
     padding: 5px 8px; font-family: var(--font-mono); font-size: 11px;
     background: var(--bg-root); border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm); width: 100%;
-    color: var(--text-secondary);
+    border-radius: 3px; width: 100%; color: var(--text-secondary);
   }
 
   .col-default-input {
     padding: 5px 8px; font-family: var(--font-mono); font-size: 11px;
     background: var(--bg-root); border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm); width: 100%;
-    color: var(--text-muted);
+    border-radius: 3px; width: 100%; color: var(--text-muted);
   }
-  .col-default-input::placeholder { color: var(--text-muted); font-weight: 400; }
+  .col-default-input.has-value { color: var(--text-secondary); }
+  .col-default-input::placeholder { font-style: italic; }
 
-  .col-toggle-btn {
-    width: 28px; height: 26px; border-radius: var(--radius-sm);
+  /* Toggle buttons (PK, NN) */
+  .col-btn {
+    width: 30px; height: 28px; border-radius: var(--radius-sm);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; border: 1px solid var(--border-subtle);
-    background: transparent; transition: all 0.12s; font-size: 12px;
-    color: var(--text-muted);
-    position: relative;
+    background: transparent; transition: all 0.12s;
+    color: var(--text-muted); position: relative;
   }
-  .col-toggle-btn:hover { border-color: var(--border-default); color: var(--text-primary); background: var(--bg-overlay); }
-  .col-toggle-btn.active-pk {
-    border-color: var(--accent-border); background: var(--accent-subtle); color: var(--accent);
+  .col-btn:hover {
+    border-color: var(--border-default); color: var(--text-secondary);
+    background: var(--bg-overlay);
   }
-  .col-toggle-btn.active-nn {
-    border-color: var(--border-default); background: var(--bg-overlay); color: var(--text-primary);
+
+  /* PK active */
+  .col-btn.pk-on {
+    border-color: var(--accent-border);
+    background: var(--accent-subtle);
+    color: var(--accent);
   }
-  .col-toggle-btn[title]:hover::after {
-    content: attr(title);
+  .col-btn.pk-on:hover { background: rgba(65,205,42,0.14); }
+  .col-btn.pk-on svg { filter: drop-shadow(0 0 4px rgba(65,205,42,0.4)); }
+
+  /* NN active */
+  .col-btn.nn-on {
+    border-color: var(--border-default);
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+
+  /* Tooltip */
+  .col-btn[data-tip]:hover::after {
+    content: attr(data-tip);
     position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
     background: var(--bg-overlay); border: 1px solid var(--border-default);
     color: var(--text-secondary); font-size: 10px; font-family: var(--font-ui);
-    padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none;
-    z-index: 10;
+    padding: 3px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none;
+    z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-weight: 500; letter-spacing: 0.01em;
   }
-  .col-delete-btn {
-    width: 28px; height: 26px; border-radius: var(--radius-sm);
+
+  /* Delete button */
+  .col-del {
+    width: 30px; height: 28px; border-radius: var(--radius-sm);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; border: 1px solid transparent;
-    background: transparent; transition: all 0.12s; font-size: 13px;
+    background: transparent; transition: all 0.12s;
     color: var(--text-muted); opacity: 0;
   }
-  .col-row:hover .col-delete-btn { opacity: 1; }
-  .col-delete-btn:hover { border-color: var(--danger-border); background: var(--danger-subtle); color: var(--danger); }
+  .col-row:hover .col-del { opacity: 0.6; }
+  .col-del:hover {
+    opacity: 1 !important;
+    border-color: var(--danger-border); background: var(--danger-subtle); color: var(--danger);
+  }
 
-  /* Add column button */
+  /* Add column */
   .add-col-btn {
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px; border-radius: var(--radius);
+    padding: 8px 12px; border-radius: var(--radius);
     border: 1px dashed var(--border-subtle);
     background: transparent; color: var(--text-muted);
-    font-size: var(--text-sm); font-family: var(--font-ui);
-    cursor: pointer; transition: all 0.15s; width: 100%;
-    margin-top: 4px;
+    font-size: var(--text-sm); font-weight: 500; font-family: var(--font-ui);
+    cursor: pointer; transition: all 0.15s; width: 100%; margin-top: 6px;
   }
   .add-col-btn:hover {
-    border-color: var(--accent-border); background: var(--accent-subtle); color: var(--accent);
+    border-color: var(--accent-border);
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border-style: solid;
   }
 
-  /* Info banner */
-  .info-banner {
-    display: flex; gap: 10px; padding: 10px 12px;
-    background: var(--info-subtle); border: 1px solid #3B82F630;
-    border-radius: var(--radius); font-size: var(--text-sm); color: #93C5FD;
+  /* ===== BANNERS ===== */
+  .banner {
+    display: flex; gap: 10px; padding: 11px 14px;
+    border-radius: var(--radius); font-size: var(--text-sm); line-height: 1.5;
   }
-  .info-banner .icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .banner .banner-icon { flex-shrink: 0; margin-top: 1px; }
+  .banner-info {
+    background: var(--info-subtle); border: 1px solid var(--info-border); color: #93C5FD;
+  }
+  .banner-warning {
+    background: var(--warning-subtle); border: 1px solid var(--warning-border); color: #FCD34D;
+  }
 
-  /* Warning banner */
-  .warning-banner {
-    display: flex; gap: 10px; padding: 10px 12px;
-    background: #f59e0b10; border: 1px solid #f59e0b30;
-    border-radius: var(--radius); font-size: var(--text-sm); color: #FCD34D;
+  /* ===== CONSTRAINT PLACEHOLDERS ===== */
+  .constraint-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-radius: var(--radius);
+    border: 1px solid var(--border-subtle); background: var(--bg-raised);
+    cursor: pointer; transition: all 0.12s;
   }
-  .warning-banner .icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .constraint-card:hover { border-color: var(--border-default); background: #1e1e22; }
+  .constraint-icon {
+    width: 36px; height: 36px; border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-overlay); border: 1px solid var(--border-subtle);
+    color: var(--text-muted); flex-shrink: 0;
+  }
+  .constraint-info { flex: 1; }
+  .constraint-name { font-size: var(--text-md); font-weight: 500; color: var(--text-primary); }
+  .constraint-desc { font-size: var(--text-sm); color: var(--text-muted); margin-top: 2px; }
+  .constraint-arrow { color: var(--text-muted); }
+  .constraint-card:hover .constraint-arrow { color: var(--text-secondary); }
 
-  /* Tabs inside sheet */
-  .sheet-tabs {
-    display: flex; gap: 1px;
-    border-bottom: 1px solid var(--border-subtle);
-    padding: 0 24px;
-    flex-shrink: 0;
+  /* ===== SQL PREVIEW ===== */
+  .sql-preview {
+    background: var(--bg-root); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius); padding: 14px 16px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--text-secondary); line-height: 1.8;
+    overflow-x: auto; white-space: pre;
+    tab-size: 2;
   }
-  .sheet-tab {
-    padding: 8px 14px; font-size: var(--text-sm); font-weight: 500;
-    color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent;
-    transition: all 0.12s; margin-bottom: -1px; user-select: none;
+  .sql-kw { color: #569CD6; font-weight: 500; }
+  .sql-type { color: #4EC9B0; }
+  .sql-val { color: #CE9178; }
+  .sql-name { color: #DCDCAA; }
+  .sql-comment { color: var(--text-muted); font-style: italic; }
+  .sql-copy-bar {
+    display: flex; justify-content: flex-end; margin-top: 8px;
   }
-  .sheet-tab:hover { color: var(--text-secondary); }
-  .sheet-tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius);
+    font-size: var(--text-md); font-weight: 500; font-family: var(--font-ui);
+    cursor: pointer; transition: all 0.12s; border: 1px solid transparent;
+    user-select: none; white-space: nowrap;
+  }
+  .btn-ghost {
+    background: transparent; color: var(--text-secondary); border-color: var(--border-subtle);
+  }
+  .btn-ghost:hover { background: var(--bg-overlay); color: var(--text-primary); border-color: var(--border-default); }
+  .btn-primary {
+    background: var(--accent); color: #0a0a0a; border-color: var(--accent);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(65,205,42,0.15);
+  }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: 0 2px 8px rgba(65,205,42,0.25); }
+  .btn-primary:disabled {
+    background: var(--bg-overlay); color: var(--text-muted);
+    border-color: var(--border-subtle); cursor: not-allowed;
+    box-shadow: none;
+  }
+  .btn-sm { padding: 5px 10px; font-size: var(--text-sm); border-radius: var(--radius-sm); }
 
   /* Sheet footer */
   .sheet-footer {
@@ -433,89 +525,39 @@
     flex-shrink: 0;
     background: var(--bg-sheet);
   }
-  .sheet-footer-left { display: flex; align-items: center; gap: 10px; }
+  .sheet-footer-left { display: flex; align-items: center; gap: 12px; }
   .sheet-footer-right { display: flex; align-items: center; gap: 8px; }
+  .footer-status {
+    font-size: var(--text-sm); color: var(--text-muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 6px var(--accent);
+    flex-shrink: 0;
+  }
+  .kbd-hint {
+    font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);
+    background: var(--bg-raised); border: 1px solid var(--border-subtle);
+    border-radius: 3px; padding: 2px 5px;
+  }
 
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px; border-radius: var(--radius);
-    font-size: var(--text-md); font-weight: 500; font-family: var(--font-ui);
-    cursor: pointer; transition: all 0.12s; border: 1px solid transparent;
-    user-select: none;
-  }
-  .btn-ghost {
-    background: transparent; color: var(--text-secondary); border-color: var(--border-subtle);
-  }
-  .btn-ghost:hover { background: var(--bg-overlay); color: var(--text-primary); border-color: var(--border-default); }
-  .btn-primary {
-    background: var(--accent); color: #000; border-color: var(--accent);
-    font-weight: 600;
-  }
-  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-  .btn-primary:disabled {
-    background: var(--accent-subtle); color: var(--text-muted);
-    border-color: var(--accent-border); cursor: not-allowed;
-  }
-  .btn-danger {
-    background: transparent; color: var(--danger); border-color: var(--danger-border);
-  }
-  .btn-danger:hover { background: var(--danger-subtle); }
-
-  .btn-sm { padding: 5px 10px; font-size: var(--text-sm); }
-
-  /* SQL preview area */
-  .sql-preview {
-    background: var(--bg-root); border: 1px solid var(--border-subtle);
-    border-radius: var(--radius); padding: 12px 14px;
-    font-family: var(--font-mono); font-size: 12px;
-    color: var(--text-secondary); line-height: 1.7;
-    overflow-x: auto;
-  }
-  .sql-kw { color: #569CD6; }
-  .sql-type { color: #4EC9B0; }
-  .sql-val { color: #CE9178; }
-  .sql-name { color: #DCDCAA; }
-  .sql-comment { color: var(--text-muted); }
-
-  /* Demo bar */
+  /* ===== DEMO BAR ===== */
   .demo-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: var(--bg-raised); border-top: 1px solid var(--border-subtle);
-    padding: 5px 16px; display: flex; align-items: center; gap: 12px;
+    padding: 4px 16px; display: flex; align-items: center; gap: 12px;
     font-size: var(--text-xs); color: var(--text-muted); z-index: 300;
+    height: 24px;
   }
   .demo-bar strong { color: var(--accent); font-weight: 600; }
   .demo-bar .sep { color: var(--border-default); }
-  .demo-bar .tab-link {
-    color: var(--text-secondary); cursor: pointer; text-decoration: none;
-    padding: 2px 6px; border-radius: 3px; transition: background 0.12s;
+  .demo-bar a {
+    color: var(--text-secondary); text-decoration: none;
+    padding: 1px 6px; border-radius: 3px; transition: all 0.12s;
   }
-  .demo-bar .tab-link:hover { background: var(--bg-overlay); color: var(--text-primary); }
-  .demo-bar .tab-link.active { color: var(--accent); }
-
-  /* Tab panels */
-  .tab-panel { display: none; }
-  .tab-panel.active { display: flex; flex-direction: column; gap: 24px; }
-
-  /* Schema selector */
-  .schema-selector {
-    display: flex; align-items: center; gap: 8px;
-    font-size: var(--text-sm); color: var(--text-secondary);
-  }
-  .schema-selector .schema-badge {
-    display: flex; align-items: center; gap: 5px;
-    padding: 3px 8px; background: var(--bg-overlay); border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 12px;
-    cursor: pointer; transition: all 0.12s;
-  }
-  .schema-selector .schema-badge:hover { border-color: var(--border-default); }
-
-  /* State indicator */
-  .state-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    display: inline-block; flex-shrink: 0;
-  }
-  .state-dot.new { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .demo-bar a:hover { background: var(--bg-overlay); color: var(--text-primary); }
+  .demo-bar .active { color: var(--accent); }
 
 </style>
 </head>
@@ -532,97 +574,120 @@
   <div class="menu-item">Outils</div>
   <div class="menu-item">Aide</div>
   <div class="menu-right">
-    <div class="badge badge-dev">DEV</div>
+    <span class="badge-env">DEV</span>
   </div>
 </div>
 
 <!-- APP BACKGROUND (dimmed) -->
 <div class="app-bg">
-  <!-- Sidebar ghost -->
   <div class="ghost-sb">
     <div class="ghost-sb-hd">
       <div class="ghost-icon"></div>
-      <div class="ghost-lines">
-        <div class="ghost-line" style="width:80%"></div>
-        <div class="ghost-line" style="width:55%"></div>
-      </div>
+      <div class="ghost-lines"><div class="ghost-line" style="width:75%"></div><div class="ghost-line" style="width:50%"></div></div>
     </div>
     <div class="ghost-nav">
       <div class="ghost-nav-item"></div>
       <div class="ghost-nav-item" style="margin-left:12px;width:calc(100% - 12px)"></div>
-      <div class="ghost-nav-item active" style="margin-left:20px;width:calc(100% - 20px)"></div>
-      <div class="ghost-nav-item" style="margin-left:20px;width:calc(100% - 20px)"></div>
+      <div class="ghost-nav-item hi" style="margin-left:20px;width:calc(100% - 20px)"></div>
       <div class="ghost-nav-item" style="margin-left:20px;width:calc(100% - 20px)"></div>
       <div class="ghost-nav-item" style="margin-left:20px;width:calc(100% - 20px)"></div>
       <div class="ghost-nav-item" style="margin-left:20px;width:calc(100% - 20px);opacity:0.5"></div>
     </div>
   </div>
-  <!-- Main ghost -->
   <div class="ghost-main">
     <div class="ghost-toolbar"></div>
     <div class="ghost-editor">
-      <div class="ghost-code-line" style="width:35%"></div>
-      <div class="ghost-code-line" style="width:60%"></div>
-      <div class="ghost-code-line" style="width:50%"></div>
-      <div class="ghost-code-line" style="width:25%;margin-left:24px"></div>
-      <div class="ghost-code-line" style="width:40%;margin-left:24px"></div>
-      <div class="ghost-code-line" style="width:10%"></div>
+      <div class="ghost-code-line" style="width:30%"></div>
+      <div class="ghost-code-line" style="width:55%"></div>
+      <div class="ghost-code-line" style="width:45%"></div>
+      <div class="ghost-code-line" style="width:22%;margin-left:24px"></div>
+      <div class="ghost-code-line" style="width:38%;margin-left:24px"></div>
+      <div class="ghost-code-line" style="width:8%"></div>
     </div>
   </div>
-  <!-- Copilot ghost -->
   <div class="ghost-cp"></div>
 </div>
 
 <!-- BACKDROP -->
 <div class="backdrop"></div>
 
-<!-- SHEET PANEL -->
+<!-- ===== SHEET PANEL ===== -->
 <div class="sheet">
 
   <!-- Header -->
   <div class="sheet-header">
-    <div class="sheet-title-group">
-      <div class="sheet-breadcrumb">
-        <span>dvdrental</span>
-        <span class="sep">›</span>
-        <span>public</span>
-        <span class="sep">›</span>
-        <span class="current">Tables</span>
+    <div class="sheet-title-row">
+      <div class="sheet-title-icon">
+        <!-- Table icon — custom SVG -->
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" style="color: var(--accent);">
+          <rect x="1.5" y="1.5" width="15" height="15" rx="2.5" stroke-width="1.5"/>
+          <line x1="1.5" y1="6.5" x2="16.5" y2="6.5" stroke-width="1.5"/>
+          <line x1="1.5" y1="11.5" x2="16.5" y2="11.5" stroke-width="1.5"/>
+          <line x1="7" y1="6.5" x2="7" y2="16.5" stroke-width="1.5"/>
+        </svg>
       </div>
-      <div class="sheet-title">
-        <span class="state-dot new" style="margin-right:8px"></span>
-        Créer une table
+      <div class="sheet-title-text">
+        <div class="sheet-breadcrumb">
+          <span class="crumb">dvdrental</span>
+          <span class="sep">›</span>
+          <span class="crumb">public</span>
+          <span class="sep">›</span>
+          <span class="crumb current">Nouvelle table</span>
+        </div>
+        <div class="sheet-title">Créer une table</div>
       </div>
     </div>
-    <button class="sheet-close">✕</button>
+    <button class="sheet-close" aria-label="Fermer">
+      <!-- Close X — SVG -->
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/>
+      </svg>
+    </button>
   </div>
 
   <!-- Tabs -->
   <div class="sheet-tabs">
-    <div class="sheet-tab active" onclick="switchTab(this, 'tab-definition')">Définition</div>
-    <div class="sheet-tab" onclick="switchTab(this, 'tab-constraints')">Contraintes</div>
-    <div class="sheet-tab" onclick="switchTab(this, 'tab-preview')">Aperçu SQL</div>
+    <div class="sheet-tab active" onclick="switchTab(this,'tab-definition')">
+      <!-- Columns icon -->
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="1" width="14" height="14" rx="2"/><line x1="1" y1="5.5" x2="15" y2="5.5"/><line x1="6" y1="5.5" x2="6" y2="15"/>
+      </svg>
+      Définition
+    </div>
+    <div class="sheet-tab" onclick="switchTab(this,'tab-constraints')">
+      <!-- Link icon -->
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M6.5 9.5a3.5 3.5 0 005 0l2-2a3.5 3.5 0 00-5-5l-1 1"/>
+        <path d="M9.5 6.5a3.5 3.5 0 00-5 0l-2 2a3.5 3.5 0 005 5l1-1"/>
+      </svg>
+      Contraintes
+    </div>
+    <div class="sheet-tab" onclick="switchTab(this,'tab-preview')">
+      <!-- Code icon -->
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="5,3 1,8 5,13"/><polyline points="11,3 15,8 11,13"/>
+      </svg>
+      Aperçu SQL
+    </div>
   </div>
 
   <!-- Body -->
   <div class="sheet-body">
 
-    <!-- TAB: Définition -->
+    <!-- ======== TAB: Définition ======== -->
     <div class="tab-panel active" id="tab-definition">
 
-      <!-- Table info -->
+      <!-- Table metadata -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">
-            Nom de la table <span class="required">*</span>
-          </label>
-          <input type="text" class="form-input" placeholder="ex. users" value="" id="table-name"
-            oninput="updateSqlPreview()" style="font-family: var(--font-mono); font-size: 13px;">
-          <span class="form-hint">Lettres minuscules, chiffres et underscores uniquement.</span>
+          <label class="form-label">Nom de la table <span class="required">*</span></label>
+          <input type="text" class="form-input" id="table-name" placeholder="ex. users"
+            style="font-family:var(--font-mono);font-size:13px;" oninput="onNameChange()">
+          <span class="form-hint">Minuscules, chiffres et underscores.</span>
         </div>
         <div class="form-group">
           <label class="form-label">Schéma</label>
-          <select class="form-input" style="padding: 8px 10px;">
+          <select class="form-input" style="padding:8px 10px;">
             <option value="public" selected>public</option>
             <option value="auth">auth</option>
             <option value="storage">storage</option>
@@ -632,198 +697,326 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Description <span style="color: var(--text-muted); font-weight:400;">(optionnel)</span></label>
-        <textarea class="form-textarea form-input" placeholder="Description de la table, son rôle dans le schéma…"></textarea>
+        <label class="form-label">Description <span class="optional">(optionnel)</span></label>
+        <textarea class="form-textarea form-input" placeholder="Rôle de cette table, contexte métier…"></textarea>
       </div>
 
       <!-- Toggles -->
-      <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display:flex;flex-direction:column;gap:6px;">
         <div class="toggle-row">
           <div class="toggle-info">
             <div class="toggle-label">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color: var(--text-muted)"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              <!-- Shield/Lock icon -->
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="color:var(--text-muted)">
+                <path d="M8 1.5L2.5 4v4c0 3.5 2.3 5.8 5.5 6.5 3.2-.7 5.5-3 5.5-6.5V4L8 1.5z" stroke-linejoin="round"/>
+                <path d="M6 8l1.5 1.5L10 7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               Row Level Security (RLS)
             </div>
-            <div class="toggle-desc">
-              Contrôle l'accès ligne par ligne. Recommandé pour les tables exposées via l'API.
-              <a href="#">En savoir plus →</a>
-            </div>
+            <div class="toggle-desc">Restreint l'accès ligne par ligne. Recommandé si la table est exposée via API. <a href="#">Docs</a></div>
           </div>
           <div class="switch on" onclick="toggleSwitch(this)">
-            <div class="switch-track"></div>
-            <div class="switch-thumb"></div>
+            <div class="switch-track"></div><div class="switch-thumb"></div>
           </div>
         </div>
         <div class="toggle-row">
           <div class="toggle-info">
             <div class="toggle-label">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color: var(--text-muted)"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              <!-- Realtime / Bolt icon -->
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="color:var(--text-muted)" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8.5 1.5L3.5 9h4l-1 5.5 6-8h-4.5l.5-5z"/>
+              </svg>
               Realtime
             </div>
-            <div class="toggle-desc">
-              Diffuse les changements via WebSocket. Peut impacter les performances sur les tables à fort volume.
-            </div>
+            <div class="toggle-desc">Diffuse les changements via WebSocket. Impact perf sur les tables à fort volume.</div>
           </div>
           <div class="switch" onclick="toggleSwitch(this)">
-            <div class="switch-track"></div>
-            <div class="switch-thumb"></div>
+            <div class="switch-track"></div><div class="switch-thumb"></div>
           </div>
         </div>
       </div>
 
       <!-- Columns section -->
       <div>
-        <div class="section-divider">
-          <div class="section-divider-label">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        <div class="section-header">
+          <div class="section-header-label">
+            <!-- Grid/Table icon -->
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="1" y="1" width="14" height="14" rx="2"/>
+              <line x1="1" y1="5.5" x2="15" y2="5.5"/>
+              <line x1="1" y1="10.5" x2="15" y2="10.5"/>
+              <line x1="6" y1="1" x2="6" y2="15"/>
+            </svg>
             Colonnes
           </div>
-          <div class="section-divider-line"></div>
-          <div class="section-divider-count" id="col-count">5</div>
+          <div class="section-header-line"></div>
+          <div class="section-header-count" id="col-count">5</div>
         </div>
 
         <!-- Column header -->
-        <div class="col-header" style="margin-top:8px;">
+        <div class="col-header">
           <div></div>
-          <div>Nom</div>
-          <div>Type</div>
-          <div>Valeur par défaut</div>
-          <div title="Primary Key" style="text-align:center">PK</div>
-          <div title="Not Null" style="text-align:center">NN</div>
+          <div>NOM</div>
+          <div>TYPE</div>
+          <div>DÉFAUT</div>
+          <div style="text-align:center;">
+            <!-- PK header icon -->
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="5" cy="5.5" r="3.5"/><line x1="7.5" y1="8" x2="13" y2="13"/>
+              <line x1="10" y1="10.2" x2="13" y2="10.2"/><line x1="10.2" y1="10" x2="10.2" y2="13"/>
+            </svg>
+          </div>
+          <div style="text-align:center;font-size:10px;">NN</div>
           <div></div>
         </div>
 
         <!-- Columns list -->
         <div class="columns-area" id="columns-list">
 
-          <!-- id — PK -->
+          <!-- id — Primary Key -->
           <div class="col-row is-pk">
-            <div class="col-drag">⠿</div>
-            <input class="col-name-input" value="id" readonly>
+            <div class="col-drag">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="4" cy="2.5" r="1"/><circle cx="8" cy="2.5" r="1"/><circle cx="4" cy="6" r="1"/><circle cx="8" cy="6" r="1"/><circle cx="4" cy="9.5" r="1"/><circle cx="8" cy="9.5" r="1"/></svg>
+            </div>
+            <input class="col-name-input" value="id">
             <select class="col-type-select">
-              <option selected>bigserial</option>
-              <option>integer</option><option>bigint</option><option>uuid</option>
+              <option selected>bigserial</option><option>serial</option><option>uuid</option>
+              <option>integer</option><option>bigint</option>
               <option>varchar</option><option>text</option><option>boolean</option>
-              <option>timestamptz</option><option>date</option><option>jsonb</option>
-              <option>numeric</option>
+              <option>timestamptz</option><option>date</option><option>jsonb</option><option>numeric</option>
             </select>
-            <input class="col-default-input" placeholder="—" value="" readonly>
-            <button class="col-toggle-btn active-pk" title="Clé primaire">🔑</button>
-            <button class="col-toggle-btn active-nn" title="Not Null">!</button>
-            <button class="col-delete-btn" title="Supprimer" onclick="deleteCol(this)">✕</button>
+            <input class="col-default-input" placeholder="auto" disabled style="opacity:0.5;">
+            <!-- PK button: Key icon — custom -->
+            <button class="col-btn pk-on" data-tip="Clé primaire" onclick="togglePK(this)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="5.5" cy="6" r="3.5"/>
+                <line x1="8.2" y1="8.7" x2="14.5" y2="14.5"/>
+                <line x1="11" y1="11.8" x2="14" y2="11.8"/>
+                <line x1="11.2" y1="11.5" x2="11.2" y2="14.5"/>
+              </svg>
+            </button>
+            <button class="col-btn nn-on" data-tip="NOT NULL" onclick="toggleNN(this)">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4" x2="7" y2="7.5"/><circle cx="7" cy="9.8" r="0.6" fill="currentColor" stroke="none"/>
+              </svg>
+            </button>
+            <button class="col-del" data-tip="Supprimer" onclick="deleteCol(this)" style="visibility:hidden;">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+            </button>
           </div>
 
           <!-- created_at -->
           <div class="col-row">
-            <div class="col-drag">⠿</div>
+            <div class="col-drag"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="4" cy="2.5" r="1"/><circle cx="8" cy="2.5" r="1"/><circle cx="4" cy="6" r="1"/><circle cx="8" cy="6" r="1"/><circle cx="4" cy="9.5" r="1"/><circle cx="8" cy="9.5" r="1"/></svg></div>
             <input class="col-name-input" value="created_at">
             <select class="col-type-select">
-              <option>bigserial</option>
-              <option>integer</option><option>bigint</option><option>uuid</option>
+              <option>bigserial</option><option>serial</option><option>uuid</option>
+              <option>integer</option><option>bigint</option>
               <option>varchar</option><option>text</option><option>boolean</option>
-              <option selected>timestamptz</option><option>date</option><option>jsonb</option>
-              <option>numeric</option>
+              <option selected>timestamptz</option><option>date</option><option>jsonb</option><option>numeric</option>
             </select>
-            <input class="col-default-input" placeholder="NULL" value="now()">
-            <button class="col-toggle-btn" title="Clé primaire">🔑</button>
-            <button class="col-toggle-btn active-nn" title="Not Null">!</button>
-            <button class="col-delete-btn" onclick="deleteCol(this)">✕</button>
+            <input class="col-default-input has-value" value="now()">
+            <button class="col-btn" data-tip="Clé primaire" onclick="togglePK(this)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="6" r="3.5"/><line x1="8.2" y1="8.7" x2="14.5" y2="14.5"/><line x1="11" y1="11.8" x2="14" y2="11.8"/><line x1="11.2" y1="11.5" x2="11.2" y2="14.5"/></svg>
+            </button>
+            <button class="col-btn nn-on" data-tip="NOT NULL" onclick="toggleNN(this)">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4" x2="7" y2="7.5"/><circle cx="7" cy="9.8" r="0.6" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <button class="col-del" data-tip="Supprimer" onclick="deleteCol(this)">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+            </button>
           </div>
 
-          <!-- Colonnes vides / à remplir -->
+          <!-- updated_at -->
           <div class="col-row">
-            <div class="col-drag">⠿</div>
-            <input class="col-name-input" placeholder="nom_colonne">
+            <div class="col-drag"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="4" cy="2.5" r="1"/><circle cx="8" cy="2.5" r="1"/><circle cx="4" cy="6" r="1"/><circle cx="8" cy="6" r="1"/><circle cx="4" cy="9.5" r="1"/><circle cx="8" cy="9.5" r="1"/></svg></div>
+            <input class="col-name-input" value="updated_at">
             <select class="col-type-select">
-              <option>bigserial</option>
-              <option>integer</option><option>bigint</option><option>uuid</option>
+              <option>bigserial</option><option>serial</option><option>uuid</option>
+              <option>integer</option><option>bigint</option>
+              <option>varchar</option><option>text</option><option>boolean</option>
+              <option selected>timestamptz</option><option>date</option><option>jsonb</option><option>numeric</option>
+            </select>
+            <input class="col-default-input has-value" value="now()">
+            <button class="col-btn" data-tip="Clé primaire" onclick="togglePK(this)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="6" r="3.5"/><line x1="8.2" y1="8.7" x2="14.5" y2="14.5"/><line x1="11" y1="11.8" x2="14" y2="11.8"/><line x1="11.2" y1="11.5" x2="11.2" y2="14.5"/></svg>
+            </button>
+            <button class="col-btn" data-tip="NOT NULL" onclick="toggleNN(this)">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4" x2="7" y2="7.5"/><circle cx="7" cy="9.8" r="0.6" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <button class="col-del" data-tip="Supprimer" onclick="deleteCol(this)">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+            </button>
+          </div>
+
+          <!-- email -->
+          <div class="col-row">
+            <div class="col-drag"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="4" cy="2.5" r="1"/><circle cx="8" cy="2.5" r="1"/><circle cx="4" cy="6" r="1"/><circle cx="8" cy="6" r="1"/><circle cx="4" cy="9.5" r="1"/><circle cx="8" cy="9.5" r="1"/></svg></div>
+            <input class="col-name-input" value="email">
+            <select class="col-type-select">
+              <option>bigserial</option><option>serial</option><option>uuid</option>
+              <option>integer</option><option>bigint</option>
               <option selected>varchar</option><option>text</option><option>boolean</option>
-              <option>timestamptz</option><option>date</option><option>jsonb</option>
-              <option>numeric</option>
+              <option>timestamptz</option><option>date</option><option>jsonb</option><option>numeric</option>
             </select>
             <input class="col-default-input" placeholder="NULL">
-            <button class="col-toggle-btn" title="Clé primaire">🔑</button>
-            <button class="col-toggle-btn" title="Not Null">!</button>
-            <button class="col-delete-btn" onclick="deleteCol(this)">✕</button>
+            <button class="col-btn" data-tip="Clé primaire" onclick="togglePK(this)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="6" r="3.5"/><line x1="8.2" y1="8.7" x2="14.5" y2="14.5"/><line x1="11" y1="11.8" x2="14" y2="11.8"/><line x1="11.2" y1="11.5" x2="11.2" y2="14.5"/></svg>
+            </button>
+            <button class="col-btn nn-on" data-tip="NOT NULL" onclick="toggleNN(this)">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4" x2="7" y2="7.5"/><circle cx="7" cy="9.8" r="0.6" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <button class="col-del" data-tip="Supprimer" onclick="deleteCol(this)">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+            </button>
           </div>
 
+          <!-- name (empty) -->
           <div class="col-row">
-            <div class="col-drag">⠿</div>
+            <div class="col-drag"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="4" cy="2.5" r="1"/><circle cx="8" cy="2.5" r="1"/><circle cx="4" cy="6" r="1"/><circle cx="8" cy="6" r="1"/><circle cx="4" cy="9.5" r="1"/><circle cx="8" cy="9.5" r="1"/></svg></div>
             <input class="col-name-input" placeholder="nom_colonne">
             <select class="col-type-select">
-              <option>bigserial</option>
-              <option>integer</option><option>bigint</option><option>uuid</option>
+              <option>bigserial</option><option>serial</option><option>uuid</option>
+              <option>integer</option><option>bigint</option>
               <option selected>varchar</option><option>text</option><option>boolean</option>
-              <option>timestamptz</option><option>date</option><option>jsonb</option>
-              <option>numeric</option>
+              <option>timestamptz</option><option>date</option><option>jsonb</option><option>numeric</option>
             </select>
             <input class="col-default-input" placeholder="NULL">
-            <button class="col-toggle-btn" title="Clé primaire">🔑</button>
-            <button class="col-toggle-btn" title="Not Null">!</button>
-            <button class="col-delete-btn" onclick="deleteCol(this)">✕</button>
-          </div>
-
-          <div class="col-row">
-            <div class="col-drag">⠿</div>
-            <input class="col-name-input" placeholder="nom_colonne">
-            <select class="col-type-select">
-              <option>bigserial</option>
-              <option>integer</option><option>bigint</option><option>uuid</option>
-              <option>varchar</option><option selected>text</option><option>boolean</option>
-              <option>timestamptz</option><option>date</option><option>jsonb</option>
-              <option>numeric</option>
-            </select>
-            <input class="col-default-input" placeholder="NULL">
-            <button class="col-toggle-btn" title="Clé primaire">🔑</button>
-            <button class="col-toggle-btn" title="Not Null">!</button>
-            <button class="col-delete-btn" onclick="deleteCol(this)">✕</button>
+            <button class="col-btn" data-tip="Clé primaire" onclick="togglePK(this)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="6" r="3.5"/><line x1="8.2" y1="8.7" x2="14.5" y2="14.5"/><line x1="11" y1="11.8" x2="14" y2="11.8"/><line x1="11.2" y1="11.5" x2="11.2" y2="14.5"/></svg>
+            </button>
+            <button class="col-btn" data-tip="NOT NULL" onclick="toggleNN(this)">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4" x2="7" y2="7.5"/><circle cx="7" cy="9.8" r="0.6" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <button class="col-del" data-tip="Supprimer" onclick="deleteCol(this)">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+            </button>
           </div>
 
         </div>
 
         <!-- Add column -->
         <button class="add-col-btn" onclick="addColumn()">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/>
+          </svg>
           Ajouter une colonne
         </button>
-
       </div>
 
     </div>
 
-    <!-- TAB: Contraintes -->
+    <!-- ======== TAB: Contraintes ======== -->
     <div class="tab-panel" id="tab-constraints">
-      <div class="info-banner">
-        <div class="icon">ℹ️</div>
+
+      <div class="banner banner-info">
+        <div class="banner-icon">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <circle cx="8" cy="8" r="6.5"/><line x1="8" y1="7" x2="8" y2="11.5"/><circle cx="8" cy="4.8" r="0.6" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
         <div>
-          Les contraintes (UNIQUE, CHECK, FOREIGN KEY) sont disponibles après la création initiale de la table.
-          Vous pourrez les ajouter depuis le panneau d'édition de la table.
+          Les contraintes sont configurables après la création de la table. Vous pourrez y revenir depuis le panneau d'édition.
         </div>
       </div>
+
+      <!-- Constraint type cards -->
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="constraint-card">
+          <div class="constraint-icon">
+            <!-- Unique icon: fingerprint-like -->
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+              <path d="M8 2a5 5 0 00-5 5v2"/><path d="M8 2a5 5 0 015 5v2"/><path d="M6 5a2 2 0 014 0v4"/><line x1="8" y1="5" x2="8" y2="11"/>
+            </svg>
+          </div>
+          <div class="constraint-info">
+            <div class="constraint-name">UNIQUE</div>
+            <div class="constraint-desc">Garantit l'unicité des valeurs dans une ou plusieurs colonnes.</div>
+          </div>
+          <div class="constraint-arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,2 10,7 5,12"/></svg>
+          </div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-icon">
+            <!-- CHECK icon -->
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="12" height="12" rx="2"/><polyline points="5,8 7,10.5 11,5.5"/>
+            </svg>
+          </div>
+          <div class="constraint-info">
+            <div class="constraint-name">CHECK</div>
+            <div class="constraint-desc">Valide que les données respectent une expression booléenne.</div>
+          </div>
+          <div class="constraint-arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,2 10,7 5,12"/></svg>
+          </div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-icon">
+            <!-- Foreign Key icon -->
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="5" cy="5" r="3"/><line x1="7.2" y1="7.2" x2="14" y2="14"/><line x1="10.5" y1="10.5" x2="14" y2="10.5"/><line x1="10.5" y1="10.5" x2="10.5" y2="14"/>
+              <circle cx="12" cy="4" r="2" stroke-dasharray="2 1.5"/>
+              <line x1="9" y1="5" x2="10" y2="4" stroke-dasharray="2 1.5"/>
+            </svg>
+          </div>
+          <div class="constraint-info">
+            <div class="constraint-name">FOREIGN KEY</div>
+            <div class="constraint-desc">Référence une clé primaire d'une autre table.</div>
+          </div>
+          <div class="constraint-arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,2 10,7 5,12"/></svg>
+          </div>
+        </div>
+
+        <div class="constraint-card">
+          <div class="constraint-icon">
+            <!-- Index icon -->
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+              <line x1="4" y1="3" x2="4" y2="13"/><line x1="4" y1="3" x2="7" y2="3"/><line x1="4" y1="8" x2="7" y2="8"/><line x1="4" y1="13" x2="7" y2="13"/>
+              <line x1="9" y1="5" x2="13" y2="5"/><line x1="9" y1="8" x2="13" y2="8"/><line x1="9" y1="11" x2="13" y2="11"/>
+            </svg>
+          </div>
+          <div class="constraint-info">
+            <div class="constraint-name">INDEX</div>
+            <div class="constraint-desc">Accélère les requêtes sur les colonnes indexées.</div>
+          </div>
+          <div class="constraint-arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5,2 10,7 5,12"/></svg>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- TAB: Aperçu SQL -->
+    <!-- ======== TAB: Aperçu SQL ======== -->
     <div class="tab-panel" id="tab-preview">
-      <div>
-        <div class="form-label" style="margin-bottom: 8px;">SQL généré</div>
-        <div class="sql-preview" id="sql-preview">
-<span class="sql-comment">-- Aperçu du SQL généré — mis à jour en temps réel</span>
 
-<span class="sql-kw">CREATE TABLE</span> <span class="sql-name">public</span>.<span class="sql-name">⟨nom_table⟩</span> (
-  <span class="sql-name">id</span>          <span class="sql-type">bigserial</span>    <span class="sql-kw">PRIMARY KEY</span>,
-  <span class="sql-name">created_at</span>  <span class="sql-type">timestamptz</span>  <span class="sql-kw">NOT NULL DEFAULT</span> <span class="sql-val">now()</span>
-);
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="form-label">SQL généré</span>
+        <button class="btn btn-ghost btn-sm" style="gap:5px;" onclick="copySQL()">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 9H2.5A1.5 1.5 0 011 7.5v-6A1.5 1.5 0 012.5 0h6A1.5 1.5 0 0110 1.5V3"/>
+          </svg>
+          Copier
+        </button>
+      </div>
 
-<span class="sql-kw">ALTER TABLE</span> <span class="sql-name">public</span>.<span class="sql-name">⟨nom_table⟩</span>
-  <span class="sql-kw">ENABLE ROW LEVEL SECURITY</span>;
+      <div class="sql-preview" id="sql-preview"></div>
+
+      <div class="banner banner-warning">
+        <div class="banner-icon">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M7.13 2.24L1.18 12.5a1 1 0 00.87 1.5h11.9a1 1 0 00.87-1.5L8.87 2.24a1 1 0 00-1.74 0z" stroke-linejoin="round"/>
+            <line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r="0.5" fill="currentColor" stroke="none"/>
+          </svg>
         </div>
+        <div>RLS activé mais aucune policy définie — la table sera inaccessible via l'API tant qu'aucune policy n'est créée.</div>
       </div>
-      <div class="warning-banner">
-        <div class="icon">⚠️</div>
-        <div>
-          RLS activé mais aucune policy définie — la table sera inaccessible via l'API REST tant qu'aucune policy n'est créée.
-        </div>
-      </div>
+
     </div>
 
   </div>
@@ -831,16 +1024,19 @@
   <!-- Footer -->
   <div class="sheet-footer">
     <div class="sheet-footer-left">
-      <span style="font-size: var(--text-sm); color: var(--text-muted);">
-        <span class="state-dot new" style="display:inline-block; margin-right:5px;"></span>
+      <div class="footer-status">
+        <span class="status-dot"></span>
         Nouveau · non sauvegardé
-      </span>
+      </div>
+      <span class="kbd-hint">Ctrl+Enter</span>
     </div>
     <div class="sheet-footer-right">
       <button class="btn btn-ghost">Annuler</button>
       <button class="btn btn-primary" id="save-btn" disabled>
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Enregistrer la table
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="11,4 5.5,10 3,7.5"/>
+        </svg>
+        Enregistrer
       </button>
     </div>
   </div>
@@ -849,18 +1045,18 @@
 
 <!-- DEMO BAR -->
 <div class="demo-bar">
-  <strong>dblumi</strong> — Table Editor Sheet Mockup
+  <strong>dblumi</strong>
   <span class="sep">·</span>
-  <a href="ux-design-directions.html" class="tab-link">← Vue principale</a>
+  <a href="ux-design-directions.html">Vue principale</a>
   <span class="sep">·</span>
-  <span class="tab-link active">Table Editor</span>
-  <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-    <span style="color: var(--accent)">⬤</span> Mockup statique — design uniquement
+  <span class="active">Table Editor Sheet</span>
+  <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+    Mockup statique
   </div>
 </div>
 
 <script>
-  // Tab switching
+  /* ===== Tab switching ===== */
   function switchTab(tabEl, panelId) {
     document.querySelectorAll('.sheet-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -868,106 +1064,120 @@
     document.getElementById(panelId).classList.add('active');
   }
 
-  // Toggle switch
-  function toggleSwitch(el) {
-    el.classList.toggle('on');
+  /* ===== Toggle switch ===== */
+  function toggleSwitch(el) { el.classList.toggle('on'); updateSqlPreview(); }
+
+  /* ===== Column interactions ===== */
+  function togglePK(btn) {
+    const row = btn.closest('.col-row');
+    const wasActive = btn.classList.contains('pk-on');
+    // Remove PK from all
+    document.querySelectorAll('.col-btn.pk-on').forEach(b => {
+      b.classList.remove('pk-on');
+      b.closest('.col-row').classList.remove('is-pk');
+    });
+    if (!wasActive) {
+      btn.classList.add('pk-on');
+      row.classList.add('is-pk');
+      // PK implies NN
+      const nnBtn = row.querySelectorAll('.col-btn')[1];
+      if (nnBtn) nnBtn.classList.add('nn-on');
+    }
     updateSqlPreview();
   }
 
-  // Delete column row
+  function toggleNN(btn) { btn.classList.toggle('nn-on'); updateSqlPreview(); }
+
   function deleteCol(btn) {
     const row = btn.closest('.col-row');
-    if (row.classList.contains('is-pk')) return; // can't delete PK
-    row.remove();
-    updateColCount();
+    if (row.classList.contains('is-pk')) return;
+    row.style.opacity = '0'; row.style.transform = 'translateX(10px)';
+    setTimeout(() => { row.remove(); updateColCount(); updateSqlPreview(); }, 120);
   }
 
-  // Add column
   function addColumn() {
     const list = document.getElementById('columns-list');
     const row = document.createElement('div');
     row.className = 'col-row';
+    row.style.opacity = '0'; row.style.transform = 'translateX(-6px)';
     row.innerHTML = `
-      <div class="col-drag">⠿</div>
-      <input class="col-name-input" placeholder="nom_colonne" autofocus>
+      <div class="col-drag"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="4" cy="2.5" r="1"/><circle cx="8" cy="2.5" r="1"/><circle cx="4" cy="6" r="1"/><circle cx="8" cy="6" r="1"/><circle cx="4" cy="9.5" r="1"/><circle cx="8" cy="9.5" r="1"/></svg></div>
+      <input class="col-name-input" placeholder="nom_colonne">
       <select class="col-type-select">
-        <option>bigserial</option>
-        <option>integer</option><option>bigint</option><option>uuid</option>
+        <option>bigserial</option><option>serial</option><option>uuid</option>
+        <option>integer</option><option>bigint</option>
         <option selected>varchar</option><option>text</option><option>boolean</option>
-        <option>timestamptz</option><option>date</option><option>jsonb</option>
-        <option>numeric</option>
+        <option>timestamptz</option><option>date</option><option>jsonb</option><option>numeric</option>
       </select>
       <input class="col-default-input" placeholder="NULL">
-      <button class="col-toggle-btn" title="Clé primaire" onclick="togglePK(this)">🔑</button>
-      <button class="col-toggle-btn" title="Not Null" onclick="toggleNN(this)">!</button>
-      <button class="col-delete-btn" onclick="deleteCol(this)">✕</button>
+      <button class="col-btn" data-tip="Clé primaire" onclick="togglePK(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="6" r="3.5"/><line x1="8.2" y1="8.7" x2="14.5" y2="14.5"/><line x1="11" y1="11.8" x2="14" y2="11.8"/><line x1="11.2" y1="11.5" x2="11.2" y2="14.5"/></svg></button>
+      <button class="col-btn" data-tip="NOT NULL" onclick="toggleNN(this)"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4" x2="7" y2="7.5"/><circle cx="7" cy="9.8" r="0.6" fill="currentColor" stroke="none"/></svg></button>
+      <button class="col-del" data-tip="Supprimer" onclick="deleteCol(this)"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg></button>
     `;
     list.appendChild(row);
+    requestAnimationFrame(() => {
+      row.style.transition = 'opacity 0.15s, transform 0.15s';
+      row.style.opacity = '1'; row.style.transform = 'translateX(0)';
+    });
     row.querySelector('.col-name-input').focus();
     updateColCount();
-  }
-
-  function togglePK(btn) {
-    btn.classList.toggle('active-pk');
-  }
-
-  function toggleNN(btn) {
-    btn.classList.toggle('active-nn');
+    updateSqlPreview();
   }
 
   function updateColCount() {
-    const count = document.querySelectorAll('.col-row').length;
-    document.getElementById('col-count').textContent = count;
+    document.getElementById('col-count').textContent = document.querySelectorAll('.col-row').length;
   }
 
-  // Enable save when table name is filled
-  const tableNameInput = document.getElementById('table-name');
+  /* ===== Table name → enable save ===== */
+  const nameInput = document.getElementById('table-name');
   const saveBtn = document.getElementById('save-btn');
-  tableNameInput.addEventListener('input', function() {
-    saveBtn.disabled = this.value.trim().length === 0;
+  function onNameChange() {
+    saveBtn.disabled = nameInput.value.trim().length === 0;
     updateSqlPreview();
-  });
+  }
 
+  /* ===== Live SQL preview ===== */
   function updateSqlPreview() {
-    const name = tableNameInput.value.trim() || '⟨nom_table⟩';
-    const rlsOn = document.querySelector('.switch.on') !== null;
+    const name = nameInput.value.trim() || '<em style="color:var(--text-muted)">&lt;table_name&gt;</em>';
+    const nameRaw = nameInput.value.trim() || '&lt;table_name&gt;';
+    const rlsOn = document.querySelectorAll('.toggle-row .switch.on').length > 0;
 
-    // Collect columns
     const rows = document.querySelectorAll('.col-row');
-    let colLines = [];
+    let lines = [];
     rows.forEach(row => {
-      const nameInput = row.querySelector('.col-name-input');
-      const typeSelect = row.querySelector('.col-type-select');
-      const defInput = row.querySelector('.col-default-input');
-      const isPK = row.querySelector('.active-pk') !== null;
-      const isNN = row.querySelector('.active-nn') !== null || isPK;
-
-      const colName = nameInput.value.trim() || '⟨colonne⟩';
-      const colType = typeSelect.value;
-      const colDef = defInput.value.trim();
-      const pkStr = isPK ? '    PRIMARY KEY' : '';
-      const nnStr = (!isPK && isNN) ? ' NOT NULL' : '';
-      const defStr = colDef ? ` DEFAULT ${colDef}` : '';
-      const pad = ' '.repeat(Math.max(1, 14 - colName.length));
-
-      colLines.push(
-        `  <span class="sql-name">${colName}</span>${pad}<span class="sql-type">${colType}</span>${nnStr}${defStr}${pkStr}`
-      );
+      const cn = row.querySelector('.col-name-input').value.trim() || '...';
+      const ct = row.querySelector('.col-type-select').value;
+      const cd = row.querySelector('.col-default-input').value.trim();
+      const isPK = row.querySelector('.pk-on') !== null;
+      const isNN = row.querySelector('.nn-on') !== null;
+      const pad = ' '.repeat(Math.max(1, 16 - cn.length));
+      let extra = '';
+      if (isPK) extra += ' <span class="sql-kw">PRIMARY KEY</span>';
+      if (!isPK && isNN) extra += ' <span class="sql-kw">NOT NULL</span>';
+      if (cd) extra += ' <span class="sql-kw">DEFAULT</span> <span class="sql-val">' + cd + '</span>';
+      lines.push(`  <span class="sql-name">${cn}</span>${pad}<span class="sql-type">${ct}</span>${extra}`);
     });
 
-    let sql = `<span class="sql-comment">-- SQL généré — non exécuté</span>\n\n`;
-    sql += `<span class="sql-kw">CREATE TABLE</span> <span class="sql-name">public</span>.<span class="sql-name">${name}</span> (\n`;
-    sql += colLines.join(',\n') + '\n';
+    let sql = `<span class="sql-kw">CREATE TABLE</span> <span class="sql-name">public</span>.<span class="sql-name">${nameRaw}</span> (\n`;
+    sql += lines.join(',\n') + '\n';
     sql += `);\n`;
 
     if (rlsOn) {
-      sql += `\n<span class="sql-kw">ALTER TABLE</span> <span class="sql-name">public</span>.<span class="sql-name">${name}</span>\n`;
+      sql += `\n<span class="sql-kw">ALTER TABLE</span> <span class="sql-name">public</span>.<span class="sql-name">${nameRaw}</span>\n`;
       sql += `  <span class="sql-kw">ENABLE ROW LEVEL SECURITY</span>;`;
     }
 
     document.getElementById('sql-preview').innerHTML = sql;
   }
 
+  function copySQL() {
+    const text = document.getElementById('sql-preview').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.sql-copy-bar button, .btn-ghost.btn-sm');
+    });
+  }
+
+  // Init
   updateSqlPreview();
 </script>
 </body>

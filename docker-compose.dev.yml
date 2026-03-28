@@ -1,0 +1,21 @@
+# Utilisé pour le développement local — monte le code source
+# Usage: docker-compose -f docker-compose.dev.yml up
+name: dblumi-dev
+
+services:
+  app:
+    build:
+      context: .
+      target: api-builder
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src
+      - ./data:/data
+    environment:
+      - NODE_ENV=development
+      - DATABASE_PATH=/data/dblumi.db
+      - DBLUMI_ENCRYPTION_KEY=${DBLUMI_ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - BASE_URL=http://localhost:3000
+    command: node --watch src/api/dist/index.js
