@@ -37,6 +37,7 @@ export const connections = sqliteTable('connections', {
   passwordEncrypted: blob('password_encrypted').notNull(),   // AES-256-GCM
   ssl: integer('ssl', { mode: 'boolean' }).notNull().default(false),
   color: text('color'),
+  environment: text('environment'),
   createdBy: text('created_by')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -53,6 +54,8 @@ export const savedQueries = sqliteTable('saved_queries', {
   name: text('name').notNull(),
   sql: text('sql').notNull(),
   description: text('description'),
+  folder: text('folder'),
+  sortOrder: integer('sort_order'),
   connectionId: text('connection_id').references(() => connections.id, {
     onDelete: 'set null',
   }),

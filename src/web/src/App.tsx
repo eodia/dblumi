@@ -1,12 +1,48 @@
+import { useEffect, useState } from 'react'
+import { useAuthStore } from './stores/auth.store'
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { AppShell } from './components/layout/AppShell'
+
+type AuthView = 'login' | 'register'
+
 export function App() {
-  return (
-    <div className="flex h-screen w-screen items-center justify-center bg-[#121314]">
-      <div className="flex flex-col items-center gap-3">
-        <span className="text-2xl font-extrabold tracking-tight text-white">
-          db<span className="text-[#41cd2a] [text-shadow:0_0_16px_#41cd2a40]">lumi</span>
-        </span>
-        <span className="text-sm text-zinc-500">Démarrage en cours…</span>
+  const { user, hydrated, hydrate } = useAuthStore()
+  const [view, setView] = useState<AuthView>('login')
+
+  useEffect(() => {
+    hydrate()
+  }, [hydrate])
+
+  // ── Splash screen ──────────────────────
+  if (!hydrated) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <h1 className="text-2xl font-extrabold tracking-tight">
+            db<span className="text-primary glow-primary">lumi</span>
+          </h1>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+            </svg>
+            Initialisation...
+          </div>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  // ── Auth flow ──────────────────────────
+  if (!user) {
+    return view === 'login' ? (
+      <LoginPage onSwitchToRegister={() => setView('register')} />
+    ) : (
+      <RegisterPage onSwitchToLogin={() => setView('login')} />
+    )
+  }
+
+  // ── Main app ───────────────────────────
+  return <AppShell />
 }

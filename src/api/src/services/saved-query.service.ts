@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm'
+import { eq, and, asc, sql } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { db } from '../db/index.js'
 import { savedQueries } from '../db/schema.js'
@@ -19,6 +19,8 @@ type CreateSavedQuery = {
   sql: string
   description?: string | null
   connectionId?: string | null
+  folder?: string | null
+  sortOrder?: number | null
 }
 
 type UpdateSavedQuery = Partial<CreateSavedQuery>
@@ -30,6 +32,8 @@ function toView(row: typeof savedQueries.$inferSelect): SavedQuery {
     sql: row.sql,
     description: row.description ?? undefined,
     connectionId: row.connectionId ?? undefined,
+    folder: row.folder ?? undefined,
+    sortOrder: row.sortOrder ?? undefined,
     createdBy: row.createdBy,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -41,7 +45,7 @@ export async function listSavedQueries(userId: string): Promise<SavedQuery[]> {
     .select()
     .from(savedQueries)
     .where(eq(savedQueries.createdBy, userId))
-    .orderBy(savedQueries.updatedAt)
+    .orderBy(asc(savedQueries.sortOrder), asc(savedQueries.updatedAt))
   return rows.map(toView)
 }
 
@@ -68,6 +72,8 @@ export async function createSavedQuery(
     sql: data.sql,
     description: data.description ?? null,
     connectionId: data.connectionId ?? null,
+    folder: data.folder ?? null,
+    sortOrder: data.sortOrder ?? null,
     createdBy: userId,
     createdAt: now,
     updatedAt: now,
@@ -80,7 +86,6 @@ export async function updateSavedQuery(
   data: UpdateSavedQuery,
   userId: string
 ): Promise<SavedQuery> {
-  // Verify ownership
   await getSavedQuery(id, userId)
 
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() }
@@ -88,6 +93,8 @@ export async function updateSavedQuery(
   if (data.sql !== undefined) updates['sql'] = data.sql
   if ('description' in data) updates['description'] = data.description ?? null
   if ('connectionId' in data) updates['connectionId'] = data.connectionId ?? null
+  if ('folder' in data) updates['folder'] = data.folder ?? null
+  if ('sortOrder' in data) updates['sortOrder'] = data.sortOrder ?? null
 
   await db
     .update(savedQueries)
@@ -102,4 +109,18 @@ export async function deleteSavedQuery(id: string, userId: string): Promise<void
   await db
     .delete(savedQueries)
     .where(and(eq(savedQueries.id, id), eq(savedQueries.createdBy, userId)))
+}
+
+export async function reorderSavedQueries(
+  items: { id: string; sortOrder: number }[],
+  userId: string
+): Promise<void> {
+  await Promise.all(
+    items.map(({ id, sortOrder }) =>
+      db
+        .update(savedQueries)
+        .set({ sortOrder })
+        .where(and(eq(savedQueries.id, id), eq(savedQueries.createdBy, userId)))
+    )
+  )
 }

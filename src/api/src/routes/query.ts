@@ -19,6 +19,7 @@ const QuerySchema = z.object({
   connectionId: z.string().uuid(),
   sql: z.string().min(1).max(100_000),
   limit: z.number().int().min(1).max(10_000).default(1_000),
+  offset: z.number().int().min(0).default(0),
   force: z.boolean().default(false), // bypass guardrail after user confirmation
 })
 
@@ -26,7 +27,7 @@ queryRouter.post(
   '/',
   zValidator('json', QuerySchema),
   async (c) => {
-    const { connectionId, sql, limit, force } = c.req.valid('json')
+    const { connectionId, sql, limit, offset, force } = c.req.valid('json')
     const userId = c.get('userId')
 
     // ── Guardrail check ──────────────────────────
@@ -66,8 +67,8 @@ queryRouter.post(
       try {
         const result =
           poolOpts.driver === 'postgresql'
-            ? await executePg(pool as PgPool, sql, limit)
-            : await executeMySQL(pool as MySQLPool, sql, limit)
+            ? await executePg(pool as PgPool, sql, limit, offset)
+            : await executeMySQL(pool as MySQLPool, sql, limit, offset)
 
         // Columns first
         await send('columns', result.columns)
@@ -86,8 +87,10 @@ queryRouter.post(
           durationMs: result.durationMs,
         })
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        logger.warn({ connectionId, err }, 'Query execution error')
+        const raw = err instanceof Error ? err.message : String(err)
+        const code = err instanceof Error && 'code' in err ? (err as Record<string, unknown>).code : undefined
+        const message = raw || (code ? `Database error (${code})` : 'Connection or query failed')
+        logger.warn({ connectionId, err, code }, 'Query execution error')
         await send('error', { message })
       }
     })

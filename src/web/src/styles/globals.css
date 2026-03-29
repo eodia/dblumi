@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
-/* ===== dblumi Design Tokens ===== */
+/* ═══════════════════════════════════════════════════
+   dblumi — Luminescent Dark Theme
+   shadcn/ui CSS variables → dblumi design tokens
+   ═══════════════════════════════════════════════════ */
+
 @theme {
-  /* Colors */
-  --color-bg-root:      #121314;
-  --color-bg-surface:   #171717;
-  --color-bg-raised:    #1C1C1F;
-  --color-bg-overlay:   #27272A;
+  /* ── shadcn semantic colors (dark first) ────────── */
+  --color-background:            #121314;
+  --color-foreground:            #FAFAFA;
 
-  --color-border-subtle:  #222323;
-  --color-border-default: #3F3F46;
+  --color-card:                  #171717;
+  --color-card-foreground:       #FAFAFA;
 
-  --color-text-primary:   #FAFAFA;
-  --color-text-secondary: #A1A1AA;
-  --color-text-muted:     #71717A;
+  --color-popover:               #1C1C1F;
+  --color-popover-foreground:    #FAFAFA;
 
-  --color-accent:        #41cd2a;
-  --color-accent-hover:  #36b022;
+  --color-primary:               #41cd2a;
+  --color-primary-foreground:    #000000;
 
-  /* Typography */
-  --font-ui:   'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Fira Code', monospace;
+  --color-secondary:             #27272A;
+  --color-secondary-foreground:  #FAFAFA;
+
+  --color-muted:                 #27272A;
+  --color-muted-foreground:      #A1A1AA;
+
+  --color-accent:                #1C1C1F;
+  --color-accent-foreground:     #FAFAFA;
+
+  --color-destructive:           #EF4444;
+  --color-destructive-foreground:#FAFAFA;
+
+  --color-border:                #27272A;
+  --color-input:                 #27272A;
+  --color-ring:                  #41cd2a;
+
+  /* ── dblumi extended palette ───────────────────── */
+  --color-surface:               #171717;
+  --color-surface-raised:        #1C1C1F;
+  --color-surface-overlay:       #27272A;
+
+  --color-border-subtle:         #222323;
+  --color-border-strong:         #3F3F46;
+
+  --color-text-secondary:        #A1A1AA;
+  --color-text-muted:            #71717A;
+
+  --color-dblumi:                #41cd2a;
+  --color-dblumi-hover:          #36b022;
+  --color-dblumi-glow:           #41cd2a40;
+  --color-dblumi-subtle:         #41cd2a10;
+
+  --color-success:               #10B981;
+  --color-warning:               #F59E0B;
+
+  /* ── Sidebar (shadcn sidebar component) ─────── */
+  --color-sidebar:               #171717;
+  --color-sidebar-foreground:    #FAFAFA;
+  --color-sidebar-primary:       #41cd2a;
+  --color-sidebar-primary-foreground: #000000;
+  --color-sidebar-accent:        #1C1C1F;
+  --color-sidebar-accent-foreground: #FAFAFA;
+  --color-sidebar-border:        #222323;
+  --color-sidebar-ring:          #41cd2a;
+
+  /* ── Typography ─────────────────────────────────── */
+  --font-sans:  'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', 'Fira Code', monospace;
+
+  /* ── Radius (shadcn convention) ─────────────────── */
+  --radius-lg: 0.5rem;
+  --radius-md: calc(var(--radius-lg) - 2px);
+  --radius-sm: calc(var(--radius-lg) - 4px);
 }
 
 /* ===== Base ===== */
@@ -28,18 +79,17 @@
   *,
   *::before,
   *::after {
-    box-sizing: border-box;
+    @apply border-border;
   }
 
   html {
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    background-color: var(--color-bg-root);
-    color: var(--color-text-primary);
+    @apply bg-background text-foreground;
     margin: 0;
     min-height: 100dvh;
   }
@@ -48,19 +98,16 @@
     color-scheme: dark;
   }
 
-  /* Custom scrollbars */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--color-bg-overlay);
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-border-default);
+  /* Scrollbars — minimal, dark */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-surface-overlay); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+}
+
+/* ===== Utilities ===== */
+@layer utilities {
+  .glow-primary {
+    text-shadow: 0 0 20px var(--color-dblumi-glow);
   }
 }

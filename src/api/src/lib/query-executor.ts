@@ -16,14 +16,14 @@ export type ExecutionResult = {
 export async function executePg(
   pool: PgPool,
   sql: string,
-  limit: number
+  limit: number,
+  offset = 0,
 ): Promise<ExecutionResult> {
   const client = await pool.connect()
   const start = Date.now()
 
   try {
-    // Wrap SELECT-like queries in a LIMIT subquery if needed
-    const wrappedSql = injectLimit(sql, limit)
+    const wrappedSql = injectLimit(sql, limit, offset)
     const result: QueryResult = await client.query(wrappedSql)
 
     const columns: QueryColumn[] = (result.fields ?? []).map((f) => ({
@@ -51,13 +51,14 @@ export async function executePg(
 export async function executeMySQL(
   pool: MySQLPool,
   sql: string,
-  limit: number
+  limit: number,
+  offset = 0,
 ): Promise<ExecutionResult> {
   const conn = await pool.getConnection()
   const start = Date.now()
 
   try {
-    const wrappedSql = injectLimit(sql, limit)
+    const wrappedSql = injectLimit(sql, limit, offset)
     const [rows, fields] = await conn.query(wrappedSql)
 
     const columns: QueryColumn[] = Array.isArray(fields)
@@ -90,23 +91,24 @@ export async function executeMySQL(
  * Wraps SELECT statements in a subquery with LIMIT.
  * Leaves non-SELECT statements unchanged.
  */
-function injectLimit(sql: string, limit: number): string {
-  const trimmed = sql.trim()
+function injectLimit(sql: string, limit: number, offset = 0): string {
+  const trimmed = sql.trim().replace(/;+$/, '')
   const upper = trimmed.toUpperCase()
 
   if (!upper.startsWith('SELECT') && !upper.startsWith('WITH')) {
     return trimmed
   }
 
-  // Already has a LIMIT clause — respect it (but cap it)
-  const limitMatch = upper.match(/\bLIMIT\s+(\d+)\b/)
-  if (limitMatch) {
-    const existing = parseInt(limitMatch[1] ?? '0', 10)
-    if (existing <= limit) return trimmed
-    return trimmed.replace(/\bLIMIT\s+\d+\b/i, `LIMIT ${limit}`)
-  }
+  // Strip existing LIMIT / OFFSET clauses
+  let clean = trimmed
+    .replace(/\bLIMIT\s+\d+\s*,\s*\d+/i, '') // MySQL LIMIT offset, count
+    .replace(/\bOFFSET\s+\d+/i, '')
+    .replace(/\bLIMIT\s+\d+/i, '')
+    .trim()
 
-  return `${trimmed}\nLIMIT ${limit}`
+  let result = `${clean}\nLIMIT ${limit}`
+  if (offset > 0) result += ` OFFSET ${offset}`
+  return result
 }
 
 /**

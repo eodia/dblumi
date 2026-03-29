@@ -28,6 +28,8 @@ export const SavedQuerySchema = z.object({
   sql: z.string().min(1),
   connectionId: z.string().uuid().optional(),
   description: z.string().optional(),
+  folder: z.string().optional(),
+  sortOrder: z.number().int().optional(),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

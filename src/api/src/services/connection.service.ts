@@ -19,6 +19,7 @@ export type ConnectionView = {
   username: string
   ssl: boolean
   color: string | null
+  environment: string | null
   createdAt: string
   updatedAt: string
 }
@@ -44,6 +45,7 @@ function toView(row: typeof connections.$inferSelect): ConnectionView {
     username: row.username,
     ssl: row.ssl,
     color: row.color,
+    environment: row.environment,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -102,6 +104,7 @@ export async function createConnection(
     passwordEncrypted,
     ssl: input.ssl,
     color: input.color ?? null,
+    environment: input.environment ?? null,
     createdBy: userId,
     createdAt: now,
     updatedAt: now,
@@ -138,6 +141,7 @@ export async function updateConnection(
   if (input.username !== undefined) updates.username = input.username
   if (input.ssl !== undefined) updates.ssl = input.ssl
   if (input.color !== undefined) updates.color = input.color
+  if (input.environment !== undefined) updates.environment = input.environment
   if (input.password !== undefined) {
     updates.passwordEncrypted = encrypt(input.password)
   }

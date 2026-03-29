@@ -7,19 +7,19 @@ import { App } from './App'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60,        // 1 minute
+      staleTime: 60_000,
       retry: 1,
     },
   },
 })
 
-const rootEl = document.getElementById('root')
-if (!rootEl) throw new Error('Root element not found')
+const root = document.getElementById('root')
+if (!root) throw new Error('Root element not found')
 
-createRoot(rootEl).render(
+createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 )
