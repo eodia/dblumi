@@ -5,9 +5,10 @@ import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/stores/editor.store'
 import { streamCopilot, type CopilotMessage } from '@/api/copilot'
 import { SqlHighlight } from './SqlHighlight'
+import { useI18n } from '@/i18n'
 
 // ── Markdown-ish renderer with SQL syntax highlighting ──
-function MessageContent({ content, onInsertSql }: { content: string; onInsertSql: (sql: string) => void }) {
+function MessageContent({ content, onInsertSql, t }: { content: string; onInsertSql: (sql: string) => void; t: (key: string) => string }) {
   const parts = content.split(/(```sql[\s\S]*?```|```[\s\S]*?```)/g)
 
   return (
@@ -21,14 +22,14 @@ function MessageContent({ content, onInsertSql }: { content: string; onInsertSql
               <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-subtle bg-surface">
                 <span className="text-[10px] font-mono text-text-muted uppercase tracking-wide">sql</span>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1" title="Copier le SQL"
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1" title={t('copilot.copySql')}
                     onClick={() => navigator.clipboard.writeText(sql)}>
                     <Copy className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1 text-primary" title="Insérer dans l'éditeur"
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1 text-primary" title={t('copilot.insertToEditor')}
                     onClick={() => onInsertSql(sql)}>
                     <Play className="h-3 w-3" />
-                    Insérer
+                    {t('copilot.insert')}
                   </Button>
                 </div>
               </div>
@@ -63,6 +64,7 @@ function MessageContent({ content, onInsertSql }: { content: string; onInsertSql
 }
 
 export function CopilotPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n()
   const { activeConnectionId, setSql, tabs, activeTabId } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
 
@@ -107,7 +109,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
         } else if (chunk.type === 'error') {
           setMessages((prev) => {
             const updated = [...prev]
-            updated[updated.length - 1] = { role: 'assistant', content: `**Erreur :** ${chunk.message}` }
+            updated[updated.length - 1] = { role: 'assistant', content: `**Error:** ${chunk.message}` }
             return updated
           })
         }
@@ -115,7 +117,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
     } catch {
       setMessages((prev) => {
         const updated = [...prev]
-        updated[updated.length - 1] = { role: 'assistant', content: '**Erreur :** Impossible de contacter le copilot.' }
+        updated[updated.length - 1] = { role: 'assistant', content: `**Error:** ${t('copilot.errorContact')}` }
         return updated
       })
     } finally {
@@ -127,7 +129,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 text-text-muted p-4">
         <Bot className="h-8 w-8 opacity-20" />
-        <span className="text-xs text-center">Sélectionnez une connexion pour utiliser le copilot</span>
+        <span className="text-xs text-center">{t('copilot.selectConnection')}</span>
       </div>
     )
   }
@@ -137,8 +139,8 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
       {/* Header */}
       <div className="flex items-center gap-2 h-8 px-3 border-b border-border-subtle bg-surface flex-shrink-0">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <span className="text-xs font-semibold">Copilot</span>
-        <span className="text-[10px] text-text-muted">Claude · schema-aware</span>
+        <span className="text-xs font-semibold">{t('copilot.title')}</span>
+        <span className="text-[10px] text-text-muted">{t('copilot.subtitle')}</span>
         <div className="flex-1" />
         <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={onClose}>
           <X className="h-3 w-3" />
@@ -151,14 +153,14 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col items-center justify-center h-full gap-3 text-text-muted">
             <Bot className="h-10 w-10 opacity-15" />
             <p className="text-xs text-center max-w-[200px]">
-              Demandez-moi n'importe quoi sur votre base de données. Je connais votre schéma.
+              {t('copilot.emptyHint')}
             </p>
             <div className="flex flex-wrap gap-1.5 justify-center">
               {[
-                'Les 10 derniers enregistrements',
-                'Compter les lignes par table',
-                'Expliquer cette requête',
-                'Génère-moi un jeu de données réaliste',
+                t('copilot.suggestion1'),
+                t('copilot.suggestion2'),
+                t('copilot.suggestion3'),
+                t('copilot.suggestion4'),
               ].map((suggestion) => (
                 <button
                   key={suggestion}
@@ -189,7 +191,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
             )}>
               {msg.role === 'assistant' ? (
                 <>
-                  <MessageContent content={msg.content} onInsertSql={handleInsertSql} />
+                  <MessageContent content={msg.content} onInsertSql={handleInsertSql} t={t} />
                   {isStreaming && i === messages.length - 1 && (
                     <span className="inline-block w-1.5 h-4 bg-primary/60 animate-pulse rounded-sm ml-0.5" />
                   )}
@@ -215,7 +217,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
                 handleSubmit()
               }
             }}
-            placeholder="Demandez au copilot..."
+            placeholder={t('copilot.placeholder')}
             rows={1}
             className="flex-1 resize-none rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-ring min-h-[36px] max-h-[120px]"
             style={{ height: 'auto', overflow: 'hidden' }}

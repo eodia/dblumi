@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '@/i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
@@ -87,6 +88,7 @@ function QueryItem({
   onMoveToFolder: (folder: string | null) => void
   onRequestNewFolder: () => void
 }) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: query.id })
   const [renaming, setRenaming] = useState(false)
 
@@ -127,24 +129,24 @@ function QueryItem({
         <ContextMenuContent className="w-44">
           <ContextMenuItem className="gap-2 text-xs" onClick={onLoad}>
             <FileCode2 className="h-3.5 w-3.5" />
-            Ouvrir
+            {t('sq.open')}
           </ContextMenuItem>
           <ContextMenuItem className="gap-2 text-xs" onClick={() => setRenaming(true)}>
             <Pencil className="h-3.5 w-3.5" />
-            Renommer
+            {t('sq.rename')}
           </ContextMenuItem>
 
           <ContextMenuSub>
             <ContextMenuSubTrigger className="gap-2 text-xs">
               <FolderInput className="h-3.5 w-3.5" />
-              Déplacer vers
+              {t('sq.moveTo')}
             </ContextMenuSubTrigger>
             <ContextMenuSubContent className="w-40">
               {query.folder && (
                 <>
                   <ContextMenuItem className="gap-2 text-xs" onClick={() => onMoveToFolder(null)}>
                     <FileCode2 className="h-3.5 w-3.5" />
-                    Retirer du dossier
+                    {t('sq.removeFromFolder')}
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                 </>
@@ -160,14 +162,14 @@ function QueryItem({
                 onSelect={onRequestNewFolder}
               >
                 <FolderPlus className="h-3.5 w-3.5" />
-                Nouveau dossier…
+                {t('sq.newFolder')}
               </ContextMenuItem>
             </ContextMenuSubContent>
           </ContextMenuSub>
 
           <ContextMenuItem className="gap-2 text-xs" onClick={onDuplicate}>
             <Copy className="h-3.5 w-3.5" />
-            Dupliquer
+            {t('sq.duplicate')}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -175,7 +177,7 @@ function QueryItem({
             onClick={onDelete}
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Supprimer
+            {t('sq.delete')}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -185,6 +187,7 @@ function QueryItem({
 
 // ── Main panel ──────────────────────────────────
 export function SavedQueriesPanel() {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const { openQuery, activeConnectionId } = useEditorStore()
   const { isMobile, setOpenMobile } = useSidebar()
@@ -281,7 +284,7 @@ export function SavedQueriesPanel() {
   if (allQueries.length === 0) {
     return (
       <p className="group-data-[collapsible=icon]:hidden px-2 py-2 text-xs text-text-muted">
-        Aucune requête sauvegardée.
+        {t('sq.none')}
       </p>
     )
   }
@@ -320,14 +323,14 @@ export function SavedQueriesPanel() {
       >
         <DialogContent className="sm:max-w-xs bg-card border-border-subtle">
           <DialogHeader>
-            <DialogTitle className="text-base">Nouveau dossier</DialogTitle>
+            <DialogTitle className="text-base">{t('sq.newFolderTitle')}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={(e) => { e.preventDefault(); handleNewFolderConfirm() }}
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label className="text-xs">Nom du dossier</Label>
+              <Label className="text-xs">{t('sq.folderName')}</Label>
               <Input
                 autoFocus
                 value={newFolderName}
@@ -343,10 +346,10 @@ export function SavedQueriesPanel() {
                 size="sm"
                 onClick={() => { setNewFolderTarget(null); setNewFolderName('') }}
               >
-                Annuler
+                {t('common.cancel')}
               </Button>
               <Button type="submit" size="sm" disabled={!newFolderName.trim()}>
-                Créer
+                {t('sq.create')}
               </Button>
             </DialogFooter>
           </form>
@@ -360,7 +363,7 @@ export function SavedQueriesPanel() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filtrer les requêtes..."
+            placeholder={t('sq.search')}
             className="h-6 pl-6 pr-2 text-xs"
           />
         </div>
@@ -370,7 +373,7 @@ export function SavedQueriesPanel() {
         <SortableContext items={queries.map((q) => q.id)} strategy={verticalListSortingStrategy}>
           <div className="group-data-[collapsible=icon]:hidden flex-1 overflow-y-auto px-1 pb-2 space-y-0.5">
             {queries.length === 0 && (
-              <p className="px-2 py-2 text-xs text-text-muted">Aucun résultat.</p>
+              <p className="px-2 py-2 text-xs text-text-muted">{t('sq.none')}</p>
             )}
             {ungrouped.map(renderItem)}
 

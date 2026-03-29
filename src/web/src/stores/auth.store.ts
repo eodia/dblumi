@@ -6,11 +6,12 @@ type AuthState = {
   hydrated: boolean
   hydrate: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string, language?: string) => Promise<void>
   logout: () => Promise<void>
+  setLanguage: (language: string) => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   hydrated: false,
 
@@ -28,13 +29,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user })
   },
 
-  register: async (name, email, password) => {
-    const { user } = await authApi.register({ name, email, password })
+  register: async (name, email, password, language) => {
+    const payload: Parameters<typeof authApi.register>[0] = { name, email, password }
+    if (language) payload.language = language
+    const { user } = await authApi.register(payload)
     set({ user })
   },
 
   logout: async () => {
     await authApi.logout()
     set({ user: null })
+  },
+
+  setLanguage: async (language) => {
+    await authApi.updateLanguage(language)
+    const { user } = get()
+    if (user) set({ user: { ...user, language } })
   },
 }))

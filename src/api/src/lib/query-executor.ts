@@ -113,6 +113,11 @@ function injectLimit(sql: string, limit: number, offset = 0): string {
   // Use the smaller of user LIMIT and pagination LIMIT
   const effectiveLimit = userLimit !== null ? Math.min(userLimit, limit) : limit
 
+  // 10000 = "all" sentinel — don't inject LIMIT unless user specified one
+  if (effectiveLimit >= 10000 && userLimit === null) {
+    return clean
+  }
+
   let result = `${clean}\nLIMIT ${effectiveLimit}`
   if (offset > 0) result += ` OFFSET ${offset}`
   return result

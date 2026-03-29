@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '@/i18n'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
@@ -18,6 +19,7 @@ import { useEditorStore } from '@/stores/editor.store'
 type Props = { onClose: () => void }
 
 export function SaveQueryModal({ onClose }: Props) {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const { tabs, activeTabId, activeConnectionId, loadQuery, setSavedQueryId } = useEditorStore()
   const sql = tabs.find((t) => t.id === activeTabId)?.sql ?? ''
@@ -36,7 +38,7 @@ export function SaveQueryModal({ onClose }: Props) {
       qc.invalidateQueries({ queryKey: ['saved-queries'] })
       loadQuery(sql, name.trim())
       setSavedQueryId(data.savedQuery.id)
-      toast.success('Requête sauvegardée')
+      toast.success(t('sq.saved'))
       onClose()
     },
   })
@@ -45,7 +47,7 @@ export function SaveQueryModal({ onClose }: Props) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
         <DialogHeader>
-          <DialogTitle className="text-base">Sauvegarder la requête</DialogTitle>
+          <DialogTitle className="text-base">{t('sq.saveTitle')}</DialogTitle>
         </DialogHeader>
 
         <form
@@ -56,22 +58,22 @@ export function SaveQueryModal({ onClose }: Props) {
           className="space-y-4"
         >
           <div className="space-y-2">
-            <Label>Nom</Label>
+            <Label>{t('sq.saveName')}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Active users count"
+              placeholder={t('sq.saveNamePlaceholder')}
               autoFocus
             />
           </div>
           <div className="space-y-2">
             <Label>
-              Description <span className="text-text-muted font-normal">(optionnel)</span>
+              {t('sq.saveDescription')} <span className="text-text-muted font-normal">({t('sq.saveDescriptionOptional')})</span>
             </Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description courte..."
+              placeholder={t('sq.saveDescriptionPlaceholder')}
             />
           </div>
 
@@ -88,11 +90,11 @@ export function SaveQueryModal({ onClose }: Props) {
 
           <DialogFooter>
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button type="submit" size="sm" disabled={mutation.isPending || !name.trim()}>
               {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Sauvegarder
+              {t('sq.saveAction')}
             </Button>
           </DialogFooter>
         </form>

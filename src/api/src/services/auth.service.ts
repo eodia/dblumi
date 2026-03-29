@@ -15,6 +15,7 @@ export type AuthUser = {
   name: string
   role: UserRole
   avatarUrl: string | null
+  language: string
   createdAt: string
 }
 
@@ -32,6 +33,7 @@ export async function register(input: {
   email: string
   password: string
   name: string
+  language?: string
 }): Promise<AuthResult> {
   // Check for existing user
   const existing = await db
@@ -53,12 +55,15 @@ export async function register(input: {
   const passwordHash = await hash(input.password)
   const now = new Date().toISOString()
 
+  const language = input.language ?? 'fr'
+
   await db.insert(users).values({
     id,
     email: input.email.toLowerCase(),
     name: input.name,
     passwordHash,
     role,
+    language,
     createdAt: now,
     updatedAt: now,
   })
@@ -69,7 +74,7 @@ export async function register(input: {
   return {
     token,
     expiresAt,
-    user: { id, email: input.email.toLowerCase(), name: input.name, role, avatarUrl: null, createdAt: now },
+    user: { id, email: input.email.toLowerCase(), name: input.name, role, avatarUrl: null, language, createdAt: now },
   }
 }
 
@@ -112,6 +117,7 @@ export async function login(input: {
       name: user.name,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      language: user.language ?? 'fr',
       createdAt: user.createdAt,
     },
   }
@@ -161,6 +167,7 @@ export async function getMe(userId: string): Promise<AuthUser> {
     name: user.name,
     role: user.role,
     avatarUrl: user.avatarUrl,
+    language: user.language ?? 'fr',
     createdAt: user.createdAt,
   }
 }

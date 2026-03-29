@@ -39,6 +39,7 @@ import {
   Trash2,
   MoreHorizontal,
   Sparkles,
+  Languages,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -64,6 +65,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu'
 import {
   ContextMenu,
@@ -108,13 +112,14 @@ import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { SavedQueriesPanel } from '@/components/saved-queries/SavedQueriesPanel'
 import { CopilotPanel } from '@/components/copilot/CopilotPanel'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 type NavPage = 'overview' | 'tables' | 'sql-editor'
 
-const NAV_ITEMS: { id: NavPage; label: string; icon: React.ElementType }[] = [
-  { id: 'overview', label: 'Project Overview', icon: LayoutDashboard },
-  { id: 'tables', label: 'Tables', icon: Table2 },
-  { id: 'sql-editor', label: 'SQL Editor', icon: TerminalSquare },
+const NAV_ITEMS = [
+  { id: 'overview' as NavPage, labelKey: 'nav.overview' as const, icon: LayoutDashboard },
+  { id: 'tables' as NavPage, labelKey: 'nav.tables' as const, icon: Table2 },
+  { id: 'sql-editor' as NavPage, labelKey: 'nav.sqlEditor' as const, icon: TerminalSquare },
 ]
 
 function DriverIcon({ driver }: { driver: string }) {
@@ -141,6 +146,7 @@ function EnvBadge({ env }: { env: string }) {
 function SchemaNav({ connectionId }: { connectionId: string }) {
   const { openTable } = useEditorStore()
   const { isMobile, setOpenMobile } = useSidebar()
+  const { t } = useI18n()
   const [tableSearch, setTableSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -174,7 +180,7 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
           <Input
             value={tableSearch}
             onChange={(e) => setTableSearch(e.target.value)}
-            placeholder="Filtrer les tables..."
+            placeholder={t('common.filterTables')}
             className="h-6 pl-6 pr-2 text-xs"
           />
         </div>
@@ -191,7 +197,7 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
         {isLoading && (
           <div className="flex items-center gap-2 px-3 py-3 text-xs text-muted-foreground">
             <RefreshCw className="h-3 w-3 animate-spin" />
-            Chargement...
+            {t('common.loading')}
           </div>
         )}
 
@@ -249,7 +255,7 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
         })}
 
         {tables?.length === 0 && !isLoading && (
-          <p className="px-3 py-2 text-xs text-text-muted">Aucune table trouvée.</p>
+          <p className="px-3 py-2 text-xs text-text-muted">{t('common.noTableFound')}</p>
         )}
       </div>
     </>
@@ -278,6 +284,7 @@ function SortableTab({
   onCloseToRight: () => void
   onCloseAll: () => void
 }) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
 
   return (
@@ -321,15 +328,15 @@ function SortableTab({
 
       <ContextMenuContent className="w-52">
         <ContextMenuItem onClick={onClose}>
-          Fermer <ContextMenuShortcut>Alt+W</ContextMenuShortcut>
+          {t('tab.close')} <ContextMenuShortcut>Alt+W</ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem onClick={onCloseOthers}>Fermer les autres</ContextMenuItem>
+        <ContextMenuItem onClick={onCloseOthers}>{t('tab.closeOthers')}</ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={onCloseToLeft}>Fermer à gauche</ContextMenuItem>
-        <ContextMenuItem onClick={onCloseToRight}>Fermer à droite</ContextMenuItem>
+        <ContextMenuItem onClick={onCloseToLeft}>{t('tab.closeLeft')}</ContextMenuItem>
+        <ContextMenuItem onClick={onCloseToRight}>{t('tab.closeRight')}</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={onCloseAll} className="text-destructive focus:text-destructive">
-          Close All
+          {t('tab.close')}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -338,6 +345,7 @@ function SortableTab({
 
 // ── Unified tab bar (query + table tabs together) ────────────────────────
 function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onSave: () => void; onSaveAs: () => void; onToggleCopilot: () => void; copilotOpen: boolean }) {
+  const { t } = useI18n()
   const { tabs, activeTabId, setActiveTab, addTab, closeTab, closeOthers, closeToLeft, closeToRight, closeAll, reorderTabs, executeQuery, executeSelection, selection, activeConnectionId } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const isRunning = activeTab?.result.status === 'running'
@@ -382,7 +390,7 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
                   <Plus className="h-3.5 w-3.5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Nouvelle requête · Alt+N</TooltipContent>
+              <TooltipContent>{t('tab.newTooltip')}</TooltipContent>
             </Tooltip>
           </div>
         </SortableContext>
@@ -391,7 +399,7 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
       {/* Right-side actions */}
       <div className="flex items-center gap-1 px-2 border-l border-border-subtle flex-shrink-0">
         {!activeConnectionId && (
-          <span className="text-[11px] text-text-muted hidden sm:block mr-1">Sélectionnez une connexion</span>
+          <span className="text-[11px] text-text-muted hidden sm:block mr-1">{t('editor.selectConnection')}</span>
         )}
         {activeTab?.kind === 'query' && (
           <div className="flex items-center">
@@ -400,10 +408,10 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
                 <Button variant="ghost" size="sm" onClick={onSave}
                   className={cn('gap-1.5 h-6 px-2 text-xs', activeTab.savedQueryId && 'rounded-r-none')}>
                   <Save className="h-3 w-3" />
-                  <span className="hidden sm:inline">Sauvegarder</span>
+                  <span className="hidden sm:inline">{t('editor.save')}</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Sauvegarder · Ctrl+S</TooltipContent>
+              <TooltipContent>{t('editor.saveTooltip')}</TooltipContent>
             </Tooltip>
             {activeTab.savedQueryId && (
               <DropdownMenu>
@@ -416,8 +424,8 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem className="gap-2 text-xs" onClick={onSaveAs}>
                     <Save className="h-3.5 w-3.5" />
-                    Enregistrer sous…
-                    <span className="ml-auto text-text-muted text-[10px]">Ctrl+Shift+S</span>
+                    {t('editor.saveAs')}
+                    <span className="ml-auto text-text-muted text-[10px]">{t('editor.saveAsTooltip')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -434,10 +442,10 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
                 className="gap-1.5 h-6 px-2.5 text-xs"
               >
                 {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
-                <span className="hidden sm:inline">{selection ? 'Exécuter la sélection' : 'Exécuter'}</span>
+                <span className="hidden sm:inline">{selection ? t('editor.executeSelection') : t('editor.execute')}</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{activeConnectionId ? 'Ctrl+Enter' : 'Sélectionnez une connexion'}</TooltipContent>
+            <TooltipContent>{activeConnectionId ? t('editor.executeTooltip') : t('editor.selectConnection')}</TooltipContent>
           </Tooltip>
         )}
 
@@ -452,10 +460,10 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
               className="gap-1.5 h-6 px-2 text-xs"
             >
               <Sparkles className="h-3 w-3" />
-              <span className="hidden sm:inline">Copilot</span>
+              <span className="hidden sm:inline">{t('copilot.title')}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Copilot IA · Claude</TooltipContent>
+          <TooltipContent>{t('copilot.tooltip')}</TooltipContent>
         </Tooltip>
       </div>
     </div>
@@ -464,6 +472,7 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
 
 // ── Unified editor area — tab bar + content ──────────────────────────────
 function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onSaveAs: () => void }) {
+  const { t } = useI18n()
   const { tabs, activeTabId, activeConnectionId, addTab, closeTab, reloadTab } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const qcRef = useRef(useQueryClient())
@@ -474,7 +483,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
       // Existing → auto-save
       savedQueriesApi.update(activeTab.savedQueryId, { sql: activeTab.sql }).then(() => {
         qcRef.current.invalidateQueries({ queryKey: ['saved-queries'] })
-        toast.success('Requête sauvegardée')
+        toast.success(t('sq.saved'))
       })
     } else {
       // New → open save modal
@@ -532,7 +541,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
 
             {!activeTab && (
               <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                Créez une requête ou explorez une table
+                {t('editor.createOrExplore')}
               </div>
             )}
           </ResizablePanel>
@@ -573,6 +582,7 @@ function AppShellInner({
   const { activeConnectionId, setActiveConnection } = useEditorStore()
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
+  const { t, locale, setLocale } = useI18n()
   const qc = useQueryClient()
 
   const [connSearch, setConnSearch] = useState('')
@@ -638,10 +648,10 @@ function AppShellInner({
                         </span>
                         <div className="grid flex-1 text-left text-sm leading-tight">
                           <span className="truncate font-semibold text-muted-foreground">
-                            Aucune connexion
+                            {t('conn.none')}
                           </span>
                           <span className="truncate text-xs text-text-muted">
-                            Sélectionnez ou créez
+                            {t('conn.selectOrCreate')}
                           </span>
                         </div>
                       </>
@@ -664,7 +674,7 @@ function AppShellInner({
                           value={connSearch}
                           onChange={(e) => setConnSearch(e.target.value)}
                           onKeyDown={(e) => e.stopPropagation()}
-                          placeholder="Rechercher..."
+                          placeholder={t('conn.search')}
                           className="h-7 pl-7 pr-2 text-xs"
                         />
                       </div>
@@ -672,7 +682,7 @@ function AppShellInner({
                   )}
 
                   <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Connexions
+                    {t('conn.label')}
                   </DropdownMenuLabel>
 
                   {filteredConns.map((conn) => (
@@ -722,7 +732,7 @@ function AppShellInner({
 
                   {filteredConns.length === 0 && connSearch && (
                     <div className="px-2 py-2 text-xs text-muted-foreground text-center">
-                      Aucun résultat
+                      {t('conn.none')}
                     </div>
                   )}
 
@@ -732,7 +742,7 @@ function AppShellInner({
                     className="gap-2 cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
-                    <span className="text-sm">Nouvelle connexion</span>
+                    <span className="text-sm">{t('conn.new')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -751,10 +761,10 @@ function AppShellInner({
                     <SidebarMenuButton
                       isActive={page === item.id}
                       onClick={() => setPage(item.id)}
-                      tooltip={item.label}
+                      tooltip={t(item.labelKey)}
                     >
                       <item.icon />
-                      <span>{item.label}</span>
+                      <span>{t(item.labelKey)}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -766,7 +776,7 @@ function AppShellInner({
           {page === 'tables' && activeConnectionId && (
             <SidebarGroup className="flex-1 min-h-0 overflow-hidden">
               <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-                Schema
+                {t('common.schema')}
               </SidebarGroupLabel>
               <SidebarGroupContent className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 <SchemaNav connectionId={activeConnectionId} />
@@ -776,7 +786,7 @@ function AppShellInner({
 
           {page === 'tables' && !activeConnectionId && (
             <div className="group-data-[collapsible=icon]:hidden px-4 py-3 text-xs text-text-muted">
-              Sélectionnez une connexion pour voir les tables.
+              {t('editor.selectConnection')}
             </div>
           )}
 
@@ -784,7 +794,7 @@ function AppShellInner({
           {page === 'sql-editor' && (
             <SidebarGroup className="flex-1 min-h-0 overflow-hidden">
               <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-                Requêtes sauvegardées
+                {t('sq.title')}
               </SidebarGroupLabel>
               <SidebarGroupContent className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 <SavedQueriesPanel />
@@ -823,9 +833,26 @@ function AppShellInner({
                     {user?.email}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                      <Languages className="h-4 w-4" />
+                      {t('user.language')}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={() => setLocale('fr')} className="gap-2 cursor-pointer">
+                        🇫🇷 {t('user.french')}
+                        {locale === 'fr' && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLocale('en')} className="gap-2 cursor-pointer">
+                        🇬🇧 {t('user.english')}
+                        {locale === 'en' && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="gap-2 cursor-pointer">
                     <LogOut className="h-4 w-4" />
-                    Se déconnecter
+                    {t('auth.logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -873,7 +900,7 @@ function AppShellInner({
         <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
           {page === 'overview' && (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-              Project Overview — à venir
+              {t('common.overviewPlaceholder')}
             </div>
           )}
 
@@ -913,15 +940,15 @@ function AppShellInner({
         <Dialog open={deleteConfirmConn !== null} onOpenChange={(o) => { if (!o) setDeleteConfirmConn(null) }}>
           <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
             <DialogHeader>
-              <DialogTitle className="text-base">Supprimer la connexion</DialogTitle>
+              <DialogTitle className="text-base">{t('conn.delete')}</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              Supprimer <span className="font-semibold text-foreground">{deleteConfirmConn?.name}</span> ?
-              Les requêtes sauvegardées liées à cette connexion perdront leur association.
+              {t('conn.deleteAction')} <span className="font-semibold text-foreground">{deleteConfirmConn?.name}</span> ?
+              {t('conn.deleteConfirm')}
             </p>
             <DialogFooter>
               <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmConn(null)}>
-                Annuler
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="destructive"
@@ -929,7 +956,7 @@ function AppShellInner({
                 disabled={deleteMutation.isPending}
                 onClick={() => deleteConfirmConn && deleteMutation.mutate(deleteConfirmConn.id)}
               >
-                {deleteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Supprimer'}
+                {deleteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('common.delete')}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { useI18n } from '@/i18n'
 import {
   DndContext,
   PointerSensor,
@@ -105,6 +106,7 @@ export function PaginationBar({
   onPage: (p: number) => void; onPageSize: (s: number) => void; onRefresh?: () => void
   onExport?: (format: 'csv' | 'json' | 'sql') => void
 }) {
+  const { t } = useI18n()
   const [inputValue, setInputValue] = useState('')
   const commitInput = () => {
     const n = parseInt(inputValue, 10)
@@ -117,11 +119,11 @@ export function PaginationBar({
   return (
     <div className="flex items-center justify-between h-9 px-3 border-t border-border-subtle bg-surface flex-shrink-0 gap-2">
       <div className="flex items-center gap-2 flex-shrink-0">
-        <span className="text-[11px] text-text-muted whitespace-nowrap hidden sm:block">Lignes par page</span>
+        <span className="text-[11px] text-text-muted whitespace-nowrap hidden sm:block">{t('results.perPage')}</span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-6 w-16 px-2 text-xs justify-between">
-              {pageSize}<ChevronRight className="h-3 w-3 rotate-90 opacity-50" />
+              {pageSize === 10000 ? t('results.all') : pageSize}<ChevronRight className="h-3 w-3 rotate-90 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[4rem]">
@@ -129,6 +131,8 @@ export function PaginationBar({
               <DropdownMenuItem key={s} className={cn('text-xs', s === pageSize && 'text-primary font-medium')}
                 onClick={() => { onPageSize(s); onPage(0) }}>{s}</DropdownMenuItem>
             ))}
+            <DropdownMenuItem className={cn('text-xs', pageSize === 10000 && 'text-primary font-medium')}
+              onClick={() => { onPageSize(10000); onPage(0) }}>{t('results.all')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -147,9 +151,9 @@ export function PaginationBar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="text-xs" onClick={() => onExport('csv')}>Exporter en CSV</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => onExport('json')}>Exporter en JSON</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => onExport('sql')}>Exporter en SQL</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => onExport('csv')}>{t('sel.exportAsCsv')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => onExport('json')}>{t('sel.exportAsJson')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => onExport('sql')}>{t('sel.exportAsSql')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -206,8 +210,8 @@ function SortableColumnHeader({ col, width, sortBy, onSort, onResize }: {
         <GripVertical className="h-3 w-3" />
       </span>
       <button type="button" onClick={onSort} className="flex items-center gap-1 min-w-0 flex-1 pr-2 hover:text-foreground transition-colors">
-        <span className="text-[11px] font-semibold text-muted-foreground truncate">{col.name}</span>
-        <span className="text-[10px] text-text-muted/50 font-mono flex-shrink-0">{col.dataType}</span>
+        <span className="text-[11px] font-semibold text-muted-foreground flex-shrink-0">{col.name}</span>
+        <span className="text-[10px] text-text-muted/50 font-mono truncate">{col.dataType}</span>
         {sortBy?.column === col.name ? (
           sortBy.direction === 'asc' ? <ArrowUp className="h-3 w-3 text-primary flex-shrink-0" /> : <ArrowDown className="h-3 w-3 text-primary flex-shrink-0" />
         ) : (
@@ -223,6 +227,7 @@ function SortableColumnHeader({ col, width, sortBy, onSort, onResize }: {
 function FilterPanel({ columns, filters, setFilters, onApply, onClear }: {
   columns: QueryColumn[]; filters: FilterRow[]; setFilters: (f: FilterRow[]) => void; onApply: () => void; onClear: () => void
 }) {
+  const { t } = useI18n()
   const addFilter = () => setFilters([...filters, { column: columns[0]?.name ?? '', operator: '=', value: '' }])
   const removeFilter = (i: number) => setFilters(filters.filter((_, j) => j !== i))
   const updateFilter = (i: number, patch: Partial<FilterRow>) =>
@@ -266,19 +271,19 @@ function FilterPanel({ columns, filters, setFilters, onApply, onClear }: {
             </DropdownMenuContent>
           </DropdownMenu>
           {!noValue(f.operator) && (
-            <Input value={f.value} onChange={(e) => updateFilter(i, { value: e.target.value })} placeholder="Saisir une valeur" className="h-7 text-xs flex-1 min-w-[120px]"
+            <Input value={f.value} onChange={(e) => updateFilter(i, { value: e.target.value })} placeholder={t('table.filterValue')} className="h-7 text-xs flex-1 min-w-[120px]"
               onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onApply() } }} />
           )}
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeFilter(i)}><X className="h-3.5 w-3.5" /></Button>
         </div>
       ))}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addFilter}><Plus className="h-3 w-3" />Ajouter un filtre</Button>
+        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addFilter}><Plus className="h-3 w-3" />{t('table.addFilter')}</Button>
         <div className="flex-1" />
         {filters.length > 0 && (
-          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={onClear} title="Supprimer et appliquer">Supprimer les filtres</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={onClear}>{t('table.removeFilters')}</Button>
         )}
-        <Button size="sm" className="h-7 text-xs" onClick={onApply} title="Ctrl+Enter">Appliquer les filtres</Button>
+        <Button size="sm" className="h-7 text-xs" onClick={onApply} title="Ctrl+Enter">{t('table.applyFilters')}</Button>
       </div>
     </div>
   )
@@ -306,6 +311,7 @@ function SortableRow({ id, children }: { id: string; children: (handle: React.Re
 function SortPanel({ columns, sorts, setSorts, onApply }: {
   columns: QueryColumn[]; sorts: SortEntry[]; setSorts: (s: SortEntry[]) => void; onApply: () => void
 }) {
+  const { t } = useI18n()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onApply() }
@@ -341,7 +347,7 @@ function SortPanel({ columns, sorts, setSorts, onApply }: {
               {(handle) => (
                 <div className="flex items-center gap-2 text-xs">
                   {handle}
-                  <span className="text-text-muted flex-shrink-0">{i === 0 ? 'trier par' : 'puis par'}</span>
+                  <span className="text-text-muted flex-shrink-0">{i === 0 ? t('table.sortBy') : t('table.thenBy')}</span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-6 px-2 text-xs gap-1 font-semibold">
@@ -358,7 +364,7 @@ function SortPanel({ columns, sorts, setSorts, onApply }: {
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <div className="flex-1" />
-                  <span className="text-text-muted flex-shrink-0">croissant :</span>
+                  <span className="text-text-muted flex-shrink-0">{t('table.ascending')} :</span>
                   <Switch checked={s.direction === 'asc'} onCheckedChange={(asc) => updateSort(i, { direction: asc ? 'asc' : 'desc' })} className="scale-75" />
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeSort(i)}>
                     <X className="h-3 w-3" />
@@ -373,7 +379,7 @@ function SortPanel({ columns, sorts, setSorts, onApply }: {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-              Ajouter une colonne de tri
+              {t('table.addSort')}
               <ChevronDown className="h-3 w-3 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
@@ -388,7 +394,7 @@ function SortPanel({ columns, sorts, setSorts, onApply }: {
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex-1" />
-        <Button size="sm" className="h-7 text-xs" onClick={onApply} disabled={sorts.length === 0} title="Ctrl+Enter">Appliquer le tri</Button>
+        <Button size="sm" className="h-7 text-xs" onClick={onApply} disabled={sorts.length === 0} title="Ctrl+Enter">{t('table.applySort')}</Button>
       </div>
     </div>
   )
@@ -441,6 +447,7 @@ function isNumericType(dt: string) {
 }
 
 function TypedField({ col, value, onChange }: { col: QueryColumn; value: string; onChange: (v: string) => void }) {
+  const { t } = useI18n()
   const dt = col.dataType
 
   if (isBoolType(dt)) {
@@ -476,7 +483,7 @@ function TypedField({ col, value, onChange }: { col: QueryColumn; value: string;
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className={cn('h-8 justify-start text-xs font-normal gap-2', hasTime ? 'flex-1' : 'w-full')}>
               <CalendarIcon className="h-3.5 w-3.5 text-text-muted" />
-              {dateVal ? format(dateVal, displayFormat, { locale: fr }) : <span className="text-text-muted">Choisir une date</span>}
+              {dateVal ? format(dateVal, displayFormat, { locale: fr }) : <span className="text-text-muted">{t('sheet.chooseDate')}</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -524,6 +531,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
   onClose: () => void
   columns: QueryColumn[]
 }) {
+  const { t } = useI18n()
   const initialValues = useMemo(() => {
     if (mode !== 'edit' || !editRow) return {}
     return Object.fromEntries(columns.map((c) => [c.name, editRow[c.name] === null || editRow[c.name] === undefined ? '' : String(editRow[c.name])]))
@@ -593,7 +601,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
     setCsvText(''); onClose()
   }
 
-  const titles: Record<string, string> = { row: 'Nouvelle ligne', column: 'Nouvelle colonne', csv: 'Importer CSV', edit: 'Modifier l\'enregistrement' }
+  const titles: Record<string, string> = { row: t('sheet.newRow'), column: t('sheet.newColumn'), csv: t('sheet.importCsv'), edit: t('sheet.editRecord') }
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -612,13 +620,13 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
           )}
           {mode === 'column' && (
             <div className="space-y-2">
-              <div className="space-y-1"><Label className="text-xs">Nom de la colonne</Label><Input value={colName} onChange={(e) => setColName(e.target.value)} className="h-8 text-xs" /></div>
-              <div className="space-y-1"><Label className="text-xs">Type</Label><Input value={colType} onChange={(e) => setColType(e.target.value)} placeholder="text" className="h-8 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-xs">{t('sheet.columnName')}</Label><Input value={colName} onChange={(e) => setColName(e.target.value)} className="h-8 text-xs" /></div>
+              <div className="space-y-1"><Label className="text-xs">{t('sheet.columnType')}</Label><Input value={colType} onChange={(e) => setColType(e.target.value)} placeholder="text" className="h-8 text-xs" /></div>
             </div>
           )}
           {mode === 'csv' && (
             <div className="space-y-1">
-              <Label className="text-xs">Données CSV (première ligne = en-têtes)</Label>
+              <Label className="text-xs">{t('sheet.csvHint')}</Label>
               <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)}
                 placeholder={"name,email,age\nAlice,alice@example.com,30\nBob,bob@example.com,25"}
                 className="w-full h-40 rounded-md border border-border-subtle bg-surface-overlay p-2 text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-ring" />
@@ -626,11 +634,11 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
           )}
         </div>
         <SheetFooter>
-          <Button variant="ghost" size="sm" onClick={onClose}>Annuler</Button>
-          {mode === 'row' && <Button size="sm" onClick={handleInsertRow}>Insérer la ligne</Button>}
-          {mode === 'edit' && <Button size="sm" onClick={handleUpdateRow}>Enregistrer</Button>}
-          {mode === 'column' && <Button size="sm" onClick={handleAddColumn} disabled={!colName.trim()}>Ajouter la colonne</Button>}
-          {mode === 'csv' && <Button size="sm" onClick={handleImportCsv} disabled={!csvText.trim()}>Importer</Button>}
+          <Button variant="ghost" size="sm" onClick={onClose}>{t('sheet.cancel')}</Button>
+          {mode === 'row' && <Button size="sm" onClick={handleInsertRow}>{t('sheet.insertRow')}</Button>}
+          {mode === 'edit' && <Button size="sm" onClick={handleUpdateRow}>{t('sheet.save')}</Button>}
+          {mode === 'column' && <Button size="sm" onClick={handleAddColumn} disabled={!colName.trim()}>{t('sheet.addColumn')}</Button>}
+          {mode === 'csv' && <Button size="sm" onClick={handleImportCsv} disabled={!csvText.trim()}>{t('sheet.import')}</Button>}
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -639,6 +647,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
 
 // ── Main component ───────────────────────────────
 export function ResultsTable() {
+  const { t } = useI18n()
   const { tabs, activeTabId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery } = useEditorStore()
   const tab = tabs.find((t) => t.id === activeTabId)
   const result = tab?.result
@@ -772,16 +781,16 @@ export function ResultsTable() {
   if (status === 'idle' && rows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 text-text-muted bg-background">
-        <TableIcon className="h-8 w-8 opacity-20" /><span className="text-xs">Les résultats apparaîtront ici</span>
-        <span className="text-[11px] text-text-muted/60">Ctrl+Enter pour exécuter</span>
+        <TableIcon className="h-8 w-8 opacity-20" /><span className="text-xs">{t('editor.resultsHere')}</span>
+        <span className="text-[11px] text-text-muted/60">{t('editor.ctrlEnter')}</span>
       </div>
     )
   }
   if (status === 'running' && rows.length === 0) {
-    return (<div className="flex items-center justify-center h-full gap-2 text-muted-foreground bg-background"><Loader2 className="h-4 w-4 animate-spin text-primary" /><span className="text-xs">Exécution en cours...</span></div>)
+    return (<div className="flex items-center justify-center h-full gap-2 text-muted-foreground bg-background"><Loader2 className="h-4 w-4 animate-spin text-primary" /><span className="text-xs">{t('editor.running')}</span></div>)
   }
   if (status === 'error') {
-    return (<div className="flex items-center justify-center h-full gap-2 px-6 bg-background"><AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" /><span className="text-xs text-destructive">{error ?? 'Erreur inconnue'}</span></div>)
+    return (<div className="flex items-center justify-center h-full gap-2 px-6 bg-background"><AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" /><span className="text-xs text-destructive">{error ?? t('results.error')}</span></div>)
   }
 
   // INSERT / UPDATE / DELETE success — no columns/rows returned
@@ -790,10 +799,10 @@ export function ResultsTable() {
       <div className="flex flex-col items-center justify-center h-full gap-2 bg-background">
         <CheckCircle2 className="h-8 w-8 text-success opacity-40" />
         <span className="text-sm text-muted-foreground">
-          Requête exécutée avec succès
+          {t('results.success')}
         </span>
         <span className="text-xs text-text-muted tabular-nums">
-          {rowCount} ligne{rowCount !== 1 ? 's' : ''} affectée{rowCount !== 1 ? 's' : ''} · {durationMs} ms
+          {rowCount} {rowCount !== 1 ? t('results.affected_plural') : t('results.affected')} · {durationMs} ms
         </span>
       </div>
     )
@@ -805,53 +814,53 @@ export function ResultsTable() {
       <div className="flex items-center gap-2 h-8 px-3 border-b border-border-subtle bg-surface flex-shrink-0">
         {isTableMode && someSelected ? (<>
           <Button variant="outline" size="sm" className="h-6 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleDeleteSelected}>
-            <Trash2 className="h-3 w-3" />Supprimer {selected.size} ligne{selected.size > 1 ? 's' : ''}
+            <Trash2 className="h-3 w-3" />{t('sel.delete')} {selected.size} {selected.size !== 1 ? t('sel.deleteLines') : t('sel.deleteLine')}
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-6 text-xs gap-1"><Copy className="h-3 w-3" />Copier<ChevronDown className="h-3 w-3 opacity-50" /></Button></DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-6 text-xs gap-1"><Copy className="h-3 w-3" />{t('sel.copy')}<ChevronDown className="h-3 w-3 opacity-50" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('csv')}>Copier en CSV</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('json')}>Copier en JSON</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('sql')}>Copier en SQL</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('csv')}>{t('sel.copyAsCsv')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('json')}>{t('sel.copyAsJson')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('sql')}>{t('sel.copyAsSql')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-6 text-xs gap-1"><Download className="h-3 w-3" />Exporter<ChevronDown className="h-3 w-3 opacity-50" /></Button></DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-6 text-xs gap-1"><Download className="h-3 w-3" />{t('sel.export')}<ChevronDown className="h-3 w-3 opacity-50" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem className="text-xs" onClick={() => handleExport('csv')}>Exporter en CSV</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => handleExport('json')}>Exporter en JSON</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => handleExport('sql')}>Exporter en SQL</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleExport('csv')}>{t('sel.exportAsCsv')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleExport('json')}>{t('sel.exportAsJson')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleExport('sql')}>{t('sel.exportAsSql')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </>) : (<>
           {status === 'done' && (<>
             <CheckCircle2 className="h-3 w-3 text-success flex-shrink-0" />
-            <span className="text-[11px] text-muted-foreground tabular-nums">{(totalCount ?? rowCount).toLocaleString('fr-FR')} ligne{(totalCount ?? rowCount) !== 1 ? 's' : ''}</span>
+            <span className="text-[11px] text-muted-foreground tabular-nums">{(totalCount ?? rowCount).toLocaleString('fr-FR')} {(totalCount ?? rowCount) !== 1 ? t('results.lines_plural') : t('results.lines')}</span>
             <span className="text-[11px] text-text-muted tabular-nums">{durationMs} ms</span>
             {sortBy && <span className="text-[11px] text-primary tabular-nums">ORDER BY {sortBy.column} {sortBy.direction.toUpperCase()}</span>}
           </>)}
-          {status === 'running' && (<div className="flex items-center gap-2 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /><span className="tabular-nums">{rows.length} lignes reçues...</span></div>)}
+          {status === 'running' && (<div className="flex items-center gap-2 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /><span className="tabular-nums">{rows.length} {t('editor.rowsReceived')}</span></div>)}
           {isTableMode && status === 'done' && (
             <div className="ml-auto flex items-center gap-1">
               <Button variant={showFilter ? 'default' : 'ghost'} size="sm" className="h-6 text-xs gap-1"
                 onClick={() => setTabState({ showFilter: !showFilter, showSort: false })}>
-                <Filter className="h-3 w-3" />Filtrer
+                <Filter className="h-3 w-3" />{t('table.filter')}
                 {filters.length > 0 && <span className="ml-0.5 bg-primary/20 text-primary rounded px-1 text-[10px]">{filters.length}</span>}
               </Button>
               <Button variant={showSort ? 'default' : 'ghost'} size="sm" className="h-6 text-xs gap-1"
                 onClick={() => setTabState({ showSort: !showSort, showFilter: false })}>
-                <ArrowDownUp className="h-3 w-3" />Trier
+                <ArrowDownUp className="h-3 w-3" />{t('table.sort')}
                 {sorts.length > 0 && <span className="ml-0.5 bg-primary/20 text-primary rounded px-1 text-[10px]">{sorts.length}</span>}
               </Button>
               <div className="w-px h-4 bg-border-subtle mx-1" />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Plus className="h-3 w-3" />Insérer<ChevronDown className="h-3 w-3 opacity-50" /></Button>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Plus className="h-3 w-3" />{t('table.insert')}<ChevronDown className="h-3 w-3 opacity-50" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'row' })}>Nouvelle ligne</DropdownMenuItem>
-                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'column' })}>Nouvelle colonne</DropdownMenuItem>
-                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'csv' })}>Importer CSV</DropdownMenuItem>
+                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'row' })}>{t('table.insertRow')}</DropdownMenuItem>
+                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'column' })}>{t('table.insertColumn')}</DropdownMenuItem>
+                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'csv' })}>{t('table.importCsv')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -932,14 +941,14 @@ export function ResultsTable() {
                       navigator.clipboard.writeText(text)
                     }}>
                       <ClipboardCopy className="h-3.5 w-3.5" />
-                      Copier la cellule
+                      {t('ctx.copyCell')}
                     </ContextMenuItem>
                     <ContextMenuItem className="gap-2 text-xs" onClick={() => {
                       const text = orderedColumns.map((c) => { const v = row[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')
                       navigator.clipboard.writeText(text)
                     }}>
                       <Copy className="h-3.5 w-3.5" />
-                      Copier la ligne
+                      {t('ctx.copyRow')}
                     </ContextMenuItem>
                     {isTableMode && ctxCell?.row === row && (<>
                       <ContextMenuSeparator />
@@ -956,18 +965,18 @@ export function ResultsTable() {
                         })
                       }}>
                         <Filter className="h-3.5 w-3.5" />
-                        Ajouter comme filtre
+                        {t('ctx.addAsFilter')}
                       </ContextMenuItem>
                     </>)}
                     <ContextMenuSeparator />
                     <ContextMenuItem className="gap-2 text-xs" onClick={() => setSheetState({ mode: 'edit', editRow: row })}>
                       <Pencil className="h-3.5 w-3.5" />
-                      Modifier l'enregistrement
+                      {t('ctx.editRecord')}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive" onClick={() => setDeleteConfirmRow(row)}>
                       <Trash2 className="h-3.5 w-3.5" />
-                      Supprimer l'enregistrement
+                      {t('ctx.deleteRecord')}
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -991,12 +1000,12 @@ export function ResultsTable() {
       {/* Delete confirmation dialog */}
       <Dialog open={deleteConfirmRow !== null} onOpenChange={(o) => { if (!o) setDeleteConfirmRow(null) }}>
         <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
-          <DialogHeader><DialogTitle className="text-base">Supprimer l'enregistrement</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">{t('ctx.deleteRecordTitle')}</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Êtes-vous sûr de vouloir supprimer cet enregistrement ? Cette action est irréversible.
+            {t('ctx.deleteRecordConfirm')}
           </p>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmRow(null)}>Annuler</Button>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmRow(null)}>{t('common.cancel')}</Button>
             <Button variant="destructive" size="sm" onClick={async () => {
               if (!deleteConfirmRow || !tableName) return
               const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
@@ -1008,7 +1017,7 @@ export function ResultsTable() {
               useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`)
               await executeQuery(true)
               setDeleteConfirmRow(null)
-            }}>Supprimer</Button>
+            }}>{t('common.delete')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

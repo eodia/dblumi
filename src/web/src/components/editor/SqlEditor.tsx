@@ -33,10 +33,17 @@ import { lintGutter, linter, type Diagnostic } from '@codemirror/lint'
 import { sql, PostgreSQL, MySQL, type SQLNamespace } from '@codemirror/lang-sql'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { useEditorStore } from '@/stores/editor.store'
+import { useI18n } from '@/i18n'
 import { connectionsApi, type Connection, type SchemaTable } from '@/api/connections'
 import { cn } from '@/lib/utils'
 
 type Props = { onSave?: () => void }
+
+// ── dblumi accent green ──
+const G = '#41cd2a'
+const G10 = '#41cd2a18'
+const G15 = '#41cd2a25'
+const G30 = '#41cd2a40'
 
 const dblumiEditorTheme = EditorView.theme({
   '&': {
@@ -46,10 +53,10 @@ const dblumiEditorTheme = EditorView.theme({
     backgroundColor: '#121314',
   },
   '.cm-scroller': { overflow: 'auto', fontFamily: 'inherit' },
-  '.cm-content': { caretColor: '#41cd2a', padding: '8px 0' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#41cd2a', borderLeftWidth: '2px' },
+  '.cm-content': { caretColor: G, padding: '8px 0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: G, borderLeftWidth: '2px' },
   '.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
-    backgroundColor: '#41cd2a18 !important',
+    backgroundColor: `${G10} !important`,
   },
   '.cm-gutters': {
     backgroundColor: '#121314',
@@ -59,40 +66,78 @@ const dblumiEditorTheme = EditorView.theme({
   },
   '.cm-activeLineGutter': { backgroundColor: '#171717', color: '#71717A' },
   '.cm-activeLine': { backgroundColor: '#17171780' },
+
   // Fold
   '.cm-foldPlaceholder': { backgroundColor: '#27272A', border: 'none', color: '#A1A1AA', padding: '0 4px' },
   '.cm-foldGutter span': { color: '#52525B', fontSize: '12px' },
   '.cm-foldGutter span:hover': { color: '#A1A1AA' },
+
   // Bracket matching
-  '.cm-matchingBracket': { backgroundColor: '#41cd2a25', outline: '1px solid #41cd2a40' },
+  '.cm-matchingBracket': { backgroundColor: G15, outline: `1px solid ${G30}` },
   '.cm-nonmatchingBracket': { backgroundColor: '#ef444425', outline: '1px solid #ef444440' },
-  // Search
+
+  // Search panel — dblumi look
   '.cm-searchMatch': { backgroundColor: '#f59e0b30', outline: '1px solid #f59e0b50' },
-  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: '#41cd2a30' },
-  '.cm-panels': { backgroundColor: '#1C1C1F', borderBottom: '1px solid #27272A', color: '#FAFAFA' },
-  '.cm-panels input, .cm-panels button': { fontFamily: 'inherit', fontSize: '12px' },
-  '.cm-panel.cm-search': { padding: '6px 8px' },
-  '.cm-panel.cm-search input': {
-    backgroundColor: '#27272A', border: '1px solid #3F3F46', borderRadius: '4px',
-    color: '#FAFAFA', padding: '2px 6px', outline: 'none',
+  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: `${G15}` },
+  '.cm-panels': { backgroundColor: '#171717', borderBottom: '1px solid #222323', color: '#FAFAFA' },
+  '.cm-panel.cm-search': {
+    padding: '8px 12px',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    alignItems: 'center',
+    fontSize: '12px',
   },
-  '.cm-panel.cm-search input:focus': { borderColor: '#41cd2a' },
+  '.cm-panel.cm-search input': {
+    backgroundColor: '#27272A',
+    border: '1px solid #3F3F46',
+    borderRadius: '6px',
+    color: '#FAFAFA',
+    padding: '4px 8px',
+    fontSize: '12px',
+    fontFamily: 'inherit',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+  },
+  '.cm-panel.cm-search input:focus': { borderColor: G, boxShadow: `0 0 0 1px ${G30}` },
   '.cm-panel.cm-search button': {
-    backgroundColor: '#27272A', border: '1px solid #3F3F46', borderRadius: '4px',
-    color: '#A1A1AA', padding: '2px 8px', cursor: 'pointer',
+    backgroundColor: '#27272A',
+    border: '1px solid #3F3F46',
+    borderRadius: '6px',
+    color: '#A1A1AA',
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
   },
   '.cm-panel.cm-search button:hover': { backgroundColor: '#3F3F46', color: '#FAFAFA' },
-  '.cm-panel.cm-search label': { color: '#A1A1AA', fontSize: '11px' },
+  '.cm-panel.cm-search button[name="close"]': {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#71717A',
+    padding: '4px',
+    borderRadius: '4px',
+  },
+  '.cm-panel.cm-search button[name="close"]:hover': { color: '#FAFAFA', backgroundColor: '#27272A' },
+  '.cm-panel.cm-search label': { color: '#A1A1AA', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' },
+  '.cm-panel.cm-search label input[type="checkbox"]': {
+    accentColor: G,
+  },
+  '.cm-panel.cm-search br': { display: 'none' },
+
   // Selection matches
-  '.cm-selectionMatch': { backgroundColor: '#41cd2a15' },
+  '.cm-selectionMatch': { backgroundColor: `${G10}` },
+
   // Lint
   '.cm-lintRange-warning': { backgroundImage: 'none', borderBottom: '1px dashed #f59e0b' },
   '.cm-lintRange-error': { backgroundImage: 'none', borderBottom: '1px dashed #ef4444' },
   '.cm-lint-marker': { width: '8px' },
   '.cm-tooltip.cm-tooltip-lint': {
-    backgroundColor: '#1C1C1F', border: '1px solid #27272A', borderRadius: '4px',
-    color: '#FAFAFA', fontSize: '12px',
+    backgroundColor: '#1C1C1F', border: '1px solid #27272A', borderRadius: '6px',
+    color: '#FAFAFA', fontSize: '12px', padding: '4px 8px',
   },
+
   // Autocomplete
   '.cm-tooltip.cm-tooltip-autocomplete': {
     backgroundColor: '#1C1C1F',
@@ -106,19 +151,31 @@ const dblumiEditorTheme = EditorView.theme({
     fontSize: '12px',
     maxHeight: '220px',
   },
-  '.cm-tooltip.cm-tooltip-autocomplete > ul > li': {
-    padding: '3px 8px',
-    color: '#A1A1AA',
-  },
-  '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {
-    backgroundColor: '#27272A',
-    color: '#FAFAFA',
-  },
+  '.cm-tooltip.cm-tooltip-autocomplete > ul > li': { padding: '3px 8px', color: '#A1A1AA' },
+  '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: '#27272A', color: '#FAFAFA' },
   '.cm-completionIcon': { width: '16px', paddingRight: '4px', opacity: '0.6' },
   '.cm-completionLabel': { color: '#FAFAFA' },
   '.cm-completionDetail': { color: '#71717A', fontStyle: 'normal', marginLeft: '8px', fontSize: '10px' },
-  '.cm-completionMatchedText': { color: '#41cd2a', textDecoration: 'none', fontWeight: 'bold' },
+  '.cm-completionMatchedText': { color: G, textDecoration: 'none', fontWeight: 'bold' },
 })
+
+// ── CodeMirror phrase translations ──
+const cmPhrasesFr: Record<string, string> = {
+  'Find': 'Rechercher', 'Replace': 'Remplacer', 'next': 'suivant', 'previous': 'précédent',
+  'all': 'tout', 'match case': 'respecter la casse', 'regexp': 'regex', 'by word': 'mot entier',
+  'replace': 'remplacer', 'replace all': 'tout remplacer', 'close': 'fermer',
+  'current match': 'correspondance actuelle', 'on line': 'à la ligne',
+  'replaced $ matches': '$ correspondance(s) remplacée(s)',
+  'replaced match on line $': 'correspondance remplacée à la ligne $',
+  'Go to line': 'Aller à la ligne', 'go': 'aller',
+  'Diagnostics': 'Diagnostics', 'No diagnostics': 'Aucun diagnostic',
+}
+// English: pass-through (CodeMirror defaults are English)
+const cmPhrasesEn: Record<string, string> = {}
+
+function getCmPhrases(locale: string) {
+  return EditorState.phrases.of(locale === 'fr' ? cmPhrasesFr : cmPhrasesEn)
+}
 
 /** Convert schema tables to CodeMirror SQLNamespace */
 function buildSqlSchema(tables: SchemaTable[]): SQLNamespace {
@@ -208,6 +265,8 @@ export function SqlEditor({ onSave }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const sqlCompartment = useRef(new Compartment())
+  const phrasesCompartment = useRef(new Compartment())
+  const { locale } = useI18n()
 
   const { tabs, activeTabId, activeConnectionId, setSql, setSelection, executeQuery, executeSelection } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
@@ -241,6 +300,9 @@ export function SqlEditor({ onSave }: Props) {
       state: EditorState.create({
         doc: sqlText,
         extensions: [
+          // i18n
+          phrasesCompartment.current.of(getCmPhrases(locale)),
+
           // Core
           history(),
           drawSelection(),
@@ -329,6 +391,15 @@ export function SqlEditor({ onSave }: Props) {
       effects: sqlCompartment.current.reconfigure(sqlExtension),
     })
   }, [sqlExtension])
+
+  // Reconfigure phrases when locale changes
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    view.dispatch({
+      effects: phrasesCompartment.current.reconfigure(getCmPhrases(locale)),
+    })
+  }, [locale])
 
   // Sync doc when tab switches
   useEffect(() => {

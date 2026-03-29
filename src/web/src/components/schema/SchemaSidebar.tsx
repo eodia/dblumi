@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '@/i18n'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import {
   ChevronRight,
@@ -56,6 +57,7 @@ function DriverIcon({ driver }: { driver: string }) {
 }
 
 export function SchemaSidebar({ connections }: Props) {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const { activeConnectionId, setActiveConnection, setSql } = useEditorStore()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -253,7 +255,7 @@ export function SchemaSidebar({ connections }: Props) {
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Filtrer les tables..."
+                  placeholder={t('common.filterTables')}
                   className="h-7 pl-7 pr-2 text-xs"
                 />
               </div>
@@ -265,7 +267,7 @@ export function SchemaSidebar({ connections }: Props) {
                 {isLoading && (
                   <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
                     <RefreshCw className="h-3 w-3 animate-spin" />
-                    Chargement du schema...
+                    {t('common.loading')}
                   </div>
                 )}
 
@@ -324,7 +326,7 @@ export function SchemaSidebar({ connections }: Props) {
                 })}
 
                 {tables?.length === 0 && !isLoading && (
-                  <p className="px-3 py-3 text-xs text-text-muted">Aucune table trouvee.</p>
+                  <p className="px-3 py-3 text-xs text-text-muted">{t('common.noTableFound')}</p>
                 )}
               </div>
             </ScrollArea>

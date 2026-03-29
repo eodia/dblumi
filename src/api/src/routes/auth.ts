@@ -40,6 +40,7 @@ auth.post(
       email: z.string().email(),
       password: z.string().min(8, 'Le mot de passe doit faire au moins 8 caractères.'),
       name: z.string().min(1).max(100),
+      language: z.enum(['fr', 'en']).optional(),
     })
   ),
   async (c) => {
@@ -47,7 +48,12 @@ auth.post(
 
     let result
     try {
-      result = await register(body)
+      result = await register({
+          email: body.email,
+          password: body.password,
+          name: body.name,
+          ...(body.language ? { language: body.language } : {}),
+        })
     } catch (e) {
       if (e instanceof AuthError) {
         const status = e.code === 'EMAIL_TAKEN' ? 409 : 400
@@ -122,5 +128,22 @@ auth.get('/me', authMiddleware, async (c) => {
 
   return c.json({ user })
 })
+
+// ── PATCH /language ───────────────────────────
+
+auth.patch(
+  '/language',
+  authMiddleware,
+  zValidator('json', z.object({ language: z.enum(['fr', 'en']) })),
+  async (c) => {
+    const userId = c.get('userId')
+    const { language } = c.req.valid('json')
+    const { db } = await import('../db/index.js')
+    const { users } = await import('../db/schema.js')
+    const { eq } = await import('drizzle-orm')
+    await db.update(users).set({ language }).where(eq(users.id, userId))
+    return c.json({ language })
+  }
+)
 
 export { auth }

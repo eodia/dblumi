@@ -1,15 +1,35 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/auth.store'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { AppShell } from './components/layout/AppShell'
+import { I18nContext, createTranslator, detectLocale, type Locale } from './i18n'
 
 type AuthView = 'login' | 'register'
 
 export function App() {
   const { user, hydrated, hydrate } = useAuthStore()
   const [view, setView] = useState<AuthView>('login')
+
+  // Locale: from user preference, or browser default
+  const [locale, setLocaleState] = useState<Locale>(detectLocale())
+
+  // Sync locale when user logs in
+  useEffect(() => {
+    if (user?.language) {
+      setLocaleState(user.language === 'en' ? 'en' : 'fr')
+    }
+  }, [user?.language])
+
+  const setLocale = useCallback((l: Locale) => {
+    setLocaleState(l)
+    // If logged in, persist to backend
+    if (user) useAuthStore.getState().setLanguage(l)
+  }, [user])
+
+  const t = useMemo(() => createTranslator(locale), [locale])
+  const i18nValue = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t])
 
   useEffect(() => {
     hydrate()
@@ -28,7 +48,7 @@ export function App() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
             </svg>
-            Initialisation...
+            {t('common.init')}
           </div>
         </div>
       </div>
@@ -37,18 +57,22 @@ export function App() {
 
   // ── Auth flow ──────────────────────────
   if (!user) {
-    return view === 'login' ? (
-      <LoginPage onSwitchToRegister={() => setView('register')} />
-    ) : (
-      <RegisterPage onSwitchToLogin={() => setView('login')} />
+    return (
+      <I18nContext.Provider value={i18nValue}>
+        {view === 'login' ? (
+          <LoginPage onSwitchToRegister={() => setView('register')} />
+        ) : (
+          <RegisterPage onSwitchToLogin={() => setView('login')} />
+        )}
+      </I18nContext.Provider>
     )
   }
 
   // ── Main app ───────────────────────────
   return (
-    <>
+    <I18nContext.Provider value={i18nValue}>
       <AppShell />
       <Toaster theme="dark" position="bottom-right" richColors />
-    </>
+    </I18nContext.Provider>
   )
 }

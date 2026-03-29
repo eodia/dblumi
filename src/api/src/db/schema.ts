@@ -18,6 +18,7 @@ export const users = sqliteTable('users', {
   oauthProvider: text('oauth_provider'),
   oauthProviderId: text('oauth_provider_id'),
   anthropicApiKey: blob('anthropic_api_key'),                // encrypted AES-256
+  language: text('language').default('fr'),
   createdAt: text('created_at')
     .notNull()
     .default(sql`(datetime('now'))`),
