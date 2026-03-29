@@ -784,6 +784,21 @@ export function ResultsTable() {
     return (<div className="flex items-center justify-center h-full gap-2 px-6 bg-background"><AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" /><span className="text-xs text-destructive">{error ?? 'Erreur inconnue'}</span></div>)
   }
 
+  // INSERT / UPDATE / DELETE success — no columns/rows returned
+  if (status === 'done' && columns.length === 0 && rows.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2 bg-background">
+        <CheckCircle2 className="h-8 w-8 text-success opacity-40" />
+        <span className="text-sm text-muted-foreground">
+          Requête exécutée avec succès
+        </span>
+        <span className="text-xs text-text-muted tabular-nums">
+          {rowCount} ligne{rowCount !== 1 ? 's' : ''} affectée{rowCount !== 1 ? 's' : ''} · {durationMs} ms
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Status / Action bar */}

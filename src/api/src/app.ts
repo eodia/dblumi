@@ -7,6 +7,7 @@ import { auth } from './routes/auth.js'
 import { connectionsRouter } from './routes/connections.js'
 import { queryRouter } from './routes/query.js'
 import { savedQueriesRouter } from './routes/saved-queries.js'
+import { copilotRouter } from './routes/copilot.js'
 
 const app = new Hono()
 
@@ -40,6 +41,7 @@ app.route('/api/v1/auth', auth)
 app.route('/api/v1/connections', connectionsRouter)
 app.route('/api/v1/query', queryRouter)
 app.route('/api/v1/saved-queries', savedQueriesRouter)
+app.route('/api/v1/copilot', copilotRouter)
 
 // ── Static files (production) ─────────────────
 app.use('/*', serveStatic({ root: './public' }))

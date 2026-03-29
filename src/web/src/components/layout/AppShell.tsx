@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
@@ -37,6 +38,7 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
+  Sparkles,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -102,7 +104,9 @@ import { ResultsTable } from '@/components/results/ResultsTable'
 import { GuardrailModal } from '@/components/results/GuardrailModal'
 import { ConnectionModal } from '@/components/connections/ConnectionModal'
 import { SaveQueryModal } from '@/components/saved-queries/SaveQueryModal'
+import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { SavedQueriesPanel } from '@/components/saved-queries/SavedQueriesPanel'
+import { CopilotPanel } from '@/components/copilot/CopilotPanel'
 import { cn } from '@/lib/utils'
 
 type NavPage = 'overview' | 'tables' | 'sql-editor'
@@ -333,7 +337,7 @@ function SortableTab({
 }
 
 // ── Unified tab bar (query + table tabs together) ────────────────────────
-function UnifiedTabBar({ onSave, onSaveAs }: { onSave: () => void; onSaveAs: () => void }) {
+function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onSave: () => void; onSaveAs: () => void; onToggleCopilot: () => void; copilotOpen: boolean }) {
   const { tabs, activeTabId, setActiveTab, addTab, closeTab, closeOthers, closeToLeft, closeToRight, closeAll, reorderTabs, executeQuery, executeSelection, selection, activeConnectionId } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const isRunning = activeTab?.result.status === 'running'
@@ -436,16 +440,47 @@ function UnifiedTabBar({ onSave, onSaveAs }: { onSave: () => void; onSaveAs: () 
             <TooltipContent>{activeConnectionId ? 'Ctrl+Enter' : 'Sélectionnez une connexion'}</TooltipContent>
           </Tooltip>
         )}
+
+        {/* Copilot toggle */}
+        <div className="w-px h-4 bg-border-subtle" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={copilotOpen ? 'default' : 'ghost'}
+              size="sm"
+              onClick={onToggleCopilot}
+              className="gap-1.5 h-6 px-2 text-xs"
+            >
+              <Sparkles className="h-3 w-3" />
+              <span className="hidden sm:inline">Copilot</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Copilot IA · Claude</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )
 }
 
 // ── Unified editor area — tab bar + content ──────────────────────────────
-function UnifiedEditorArea({ onSave, onSaveAs }: { onSave: () => void; onSaveAs: () => void }) {
+function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onSaveAs: () => void }) {
   const { tabs, activeTabId, activeConnectionId, addTab, closeTab, reloadTab } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const qcRef = useRef(useQueryClient())
+
+  const handleSave = useCallback(() => {
+    if (activeTab?.kind !== 'query') return
+    if (activeTab.savedQueryId) {
+      // Existing → auto-save
+      savedQueriesApi.update(activeTab.savedQueryId, { sql: activeTab.sql }).then(() => {
+        qcRef.current.invalidateQueries({ queryKey: ['saved-queries'] })
+        toast.success('Requête sauvegardée')
+      })
+    } else {
+      // New → open save modal
+      onSaveNew()
+    }
+  }, [activeTab, onSaveNew])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -460,51 +495,57 @@ function UnifiedEditorArea({ onSave, onSaveAs }: { onSave: () => void; onSaveAs:
         if (activeTab?.kind !== 'query') return
         e.preventDefault()
         if (e.shiftKey) {
-          // Ctrl+Shift+S → always "save as"
           onSaveAs()
-        } else if (activeTab.savedQueryId) {
-          // Ctrl+S on existing → auto-save
-          const sql = activeTab.sql
-          const id = activeTab.savedQueryId
-          savedQueriesApi.update(id, { sql }).then(() => {
-            qcRef.current.invalidateQueries({ queryKey: ['saved-queries'] })
-          })
         } else {
-          // Ctrl+S on new → open save modal
-          onSave()
+          handleSave()
         }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeTab, activeTabId, activeConnectionId, onSave, onSaveAs, reloadTab, closeTab, addTab])
+  }, [activeTab, activeTabId, activeConnectionId, handleSave, onSaveAs, reloadTab, closeTab, addTab])
+
+  const [copilotOpen, setCopilotOpen] = useState(false)
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <UnifiedTabBar onSave={onSave} onSaveAs={onSaveAs} />
+      <UnifiedTabBar onSave={handleSave} onSaveAs={onSaveAs} onToggleCopilot={() => setCopilotOpen((o) => !o)} copilotOpen={copilotOpen} />
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        {activeTab?.kind === 'query' && (
-          <ResizablePanelGroup direction="vertical" autoSaveId="dblumi-v">
-            <ResizablePanel defaultSize={50} minSize={20} id="editor">
-              <SqlEditor onSave={onSave} />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={50} minSize={15} id="results">
+        <ResizablePanelGroup direction="horizontal" autoSaveId="dblumi-h">
+          <ResizablePanel defaultSize={copilotOpen ? 70 : 100} minSize={40} id="main-area">
+            {activeTab?.kind === 'query' && (
+              <ResizablePanelGroup direction="vertical" autoSaveId="dblumi-v">
+                <ResizablePanel defaultSize={50} minSize={20} id="editor">
+                  <SqlEditor onSave={handleSave} />
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={50} minSize={15} id="results">
+                  <ResultsTable />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            )}
+
+            {activeTab?.kind === 'table' && (
               <ResultsTable />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        )}
+            )}
 
-        {activeTab?.kind === 'table' && (
-          <ResultsTable />
-        )}
+            {!activeTab && (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                Créez une requête ou explorez une table
+              </div>
+            )}
+          </ResizablePanel>
 
-        {!activeTab && (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Créez une requête ou explorez une table
-          </div>
-        )}
+          {copilotOpen && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={30} minSize={20} maxSize={50} id="copilot">
+                <CopilotPanel onClose={() => setCopilotOpen(false)} />
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
       </div>
     </div>
   )
@@ -844,10 +885,19 @@ function AppShellInner({
           {/* Unified editor area: sql-editor, tables expanded, or mobile (sidebar overlays) */}
           {(page === 'sql-editor' || (page === 'tables' && (!isCollapsed || isMobile))) && (
             <TooltipProvider delayDuration={300}>
-              <UnifiedEditorArea onSave={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
+              <UnifiedEditorArea onSaveNew={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
             </TooltipProvider>
           )}
         </div>
+
+        {/* Command palette */}
+        <CommandPalette
+          connections={connections}
+          onSaveNew={() => setSaveOpen(true)}
+          onSaveAs={() => setSaveOpen(true)}
+          onNewConnection={() => setConnModalOpen(true)}
+          setPage={setPage}
+        />
 
         {/* Modals */}
         <GuardrailModal />

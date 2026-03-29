@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { savedQueriesApi } from '@/api/saved-queries'
 import { useEditorStore } from '@/stores/editor.store'
 
@@ -35,6 +36,7 @@ export function SaveQueryModal({ onClose }: Props) {
       qc.invalidateQueries({ queryKey: ['saved-queries'] })
       loadQuery(sql, name.trim())
       setSavedQueryId(data.savedQuery.id)
+      toast.success('Requête sauvegardée')
       onClose()
     },
   })

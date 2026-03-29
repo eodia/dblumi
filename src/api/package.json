@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@dblumi/shared": "workspace:*",
     "@hono/node-server": "^1.13.7",
     "@hono/swagger-ui": "^0.5.0",

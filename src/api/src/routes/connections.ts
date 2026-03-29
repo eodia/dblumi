@@ -93,7 +93,7 @@ connectionsRouter.post(
   async (c) => {
     const userId = c.get('userId')
     const body = c.req.valid('json')
-    const conn = await createConnection({ ...body, color: body.color ?? null }, userId)
+    const conn = await createConnection({ ...body, color: body.color ?? null, environment: body.environment ?? null }, userId)
     return c.json({ connection: conn }, 201)
   }
 )

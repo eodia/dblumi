@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/auth.store'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
@@ -44,5 +45,10 @@ export function App() {
   }
 
   // ── Main app ───────────────────────────
-  return <AppShell />
+  return (
+    <>
+      <AppShell />
+      <Toaster theme="dark" position="bottom-right" richColors />
+    </>
+  )
 }
