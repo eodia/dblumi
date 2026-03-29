@@ -25,7 +25,7 @@
   --color-muted:                 #27272A;
   --color-muted-foreground:      #A1A1AA;
 
-  --color-accent:                #1C1C1F;
+  --color-accent:                #27272A;
   --color-accent-foreground:     #FAFAFA;
 
   --color-destructive:           #EF4444;
@@ -59,7 +59,7 @@
   --color-sidebar-foreground:    #FAFAFA;
   --color-sidebar-primary:       #41cd2a;
   --color-sidebar-primary-foreground: #000000;
-  --color-sidebar-accent:        #1C1C1F;
+  --color-sidebar-accent:        #27272A;
   --color-sidebar-accent-foreground: #FAFAFA;
   --color-sidebar-border:        #222323;
   --color-sidebar-ring:          #41cd2a;

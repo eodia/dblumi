@@ -11,7 +11,8 @@ export type GuardrailInfo = {
 
 export type QueryColumn = { name: string; dataType: string; nullable?: boolean }
 
-export type SortBy = { column: string; direction: 'asc' | 'desc' } | null
+export type SortEntry = { column: string; direction: 'asc' | 'desc' }
+export type SortBy = SortEntry | null
 
 export type TabResult = {
   status: QueryStatus
@@ -25,6 +26,7 @@ export type TabResult = {
   error: string | null
   guardrail: GuardrailInfo | null
   sortBy: SortBy
+  sortMulti: SortEntry[]
 }
 
 export type TabKind = 'query' | 'table'
@@ -51,6 +53,7 @@ const emptyResult = (): TabResult => ({
   error: null,
   guardrail: null,
   sortBy: null,
+  sortMulti: [],
 })
 
 type EditorState = {
@@ -77,6 +80,7 @@ type EditorState = {
   goToPage: (page: number) => Promise<void>
   setResultPageSize: (size: number) => Promise<void>
   sortByColumn: (column: string) => Promise<void>
+  sortByMulti: (sorts: SortEntry[]) => Promise<void>
   clearGuardrail: () => void
   clearResults: () => void
 }
@@ -109,15 +113,20 @@ function patchResult(
 
 /**
  * Build the effective SQL with ORDER BY.
- * When sortBy is null, returns the original SQL untouched.
- * When sortBy is set, wraps in a subquery so the UI sort takes
- * precedence without destroying the user's original ORDER BY.
+ * Supports multiple sort entries. When sorts is empty, returns the original SQL.
+ * Wraps in a subquery so the UI sort takes precedence without destroying
+ * the user's original ORDER BY.
  */
-function buildSortedSql(baseSql: string, sortBy: SortBy): string {
-  if (!sortBy) return baseSql
+function buildSortedSql(baseSql: string, sorts: SortEntry[]): string {
+  if (sorts.length === 0) return baseSql
   const clean = baseSql.trim().replace(/;+$/, '')
-  const dir = sortBy.direction.toUpperCase()
-  return `SELECT * FROM (${clean}) AS _s ORDER BY ${sortBy.column} ${dir}`
+  const orderClauses = sorts.map((s) => `${s.column} ${s.direction.toUpperCase()}`).join(', ')
+  return `SELECT * FROM (${clean}) AS _s ORDER BY ${orderClauses}`
+}
+
+/** Compat wrapper for single SortBy */
+function buildSortedSqlSingle(baseSql: string, sortBy: SortBy): string {
+  return sortBy ? buildSortedSql(baseSql, [sortBy]) : baseSql
 }
 
 // ── SSE helpers ─────────────────────────────────
@@ -361,8 +370,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { activeConnectionId, tabs, activeTabId } = get()
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !tab?.sql.trim()) return
-    const { pageSize, sortBy } = tab.result
-    const effectiveSql = buildSortedSql(tab.sql, sortBy)
+    const { pageSize, sortBy, sortMulti } = tab.result
+    const sorts = sortMulti.length > 0 ? sortMulti : sortBy ? [sortBy] : []
+    const effectiveSql = buildSortedSql(tab.sql, sorts)
     set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, totalCount: null }) })
     await Promise.all([
       runSse(activeConnectionId, effectiveSql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
@@ -375,8 +385,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !tab?.sql.trim()) return
     const { pageSize } = tab.result
-    // Reset sort when user manually executes
-    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, totalCount: null, sortBy: null }) })
+    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, totalCount: null, sortBy: null, sortMulti: [] }) })
     await Promise.all([
       runSse(activeConnectionId, tab.sql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), force),
       fetchTotalCount(activeConnectionId, tab.sql, activeTabId, get, set),
@@ -387,8 +396,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { activeConnectionId, tabs, activeTabId } = get()
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !tab?.sql.trim()) return
-    const { pageSize, sortBy } = tab.result
-    const effectiveSql = buildSortedSql(tab.sql, sortBy)
+    const { pageSize, sortBy, sortMulti } = tab.result
+    const sorts = sortMulti.length > 0 ? sortMulti : sortBy ? [sortBy] : []
+    const effectiveSql = buildSortedSql(tab.sql, sorts)
     set({ tabs: patchResult(get().tabs, activeTabId, { page }) })
     await fetchPageSse(activeConnectionId, effectiveSql, activeTabId, pageSize, page * pageSize, () => get().tabs, (tabs) => set({ tabs }))
   },
@@ -397,8 +407,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { activeConnectionId, tabs, activeTabId } = get()
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !tab?.sql.trim()) return
-    const { sortBy } = tab.result
-    const effectiveSql = buildSortedSql(tab.sql, sortBy)
+    const { sortBy, sortMulti } = tab.result
+    const sorts = sortMulti.length > 0 ? sortMulti : sortBy ? [sortBy] : []
+    const effectiveSql = buildSortedSql(tab.sql, sorts)
     set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, pageSize: size }) })
     await fetchPageSse(activeConnectionId, effectiveSql, activeTabId, size, 0, () => get().tabs, (tabs) => set({ tabs }))
   },
@@ -409,14 +420,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!activeConnectionId || !tab?.sql.trim()) return
     const { sortBy, pageSize } = tab.result
 
-    // Cycle: none → asc → desc → none
     let newSort: SortBy
     if (sortBy?.column !== column) newSort = { column, direction: 'asc' }
     else if (sortBy.direction === 'asc') newSort = { column, direction: 'desc' }
     else newSort = null
 
-    const effectiveSql = buildSortedSql(tab.sql, newSort)
-    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, sortBy: newSort, totalCount: null }) })
+    const sorts = newSort ? [newSort] : []
+    const effectiveSql = buildSortedSql(tab.sql, sorts)
+    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, sortBy: newSort, sortMulti: sorts, totalCount: null }) })
+    await Promise.all([
+      runSse(activeConnectionId, effectiveSql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
+      fetchTotalCount(activeConnectionId, tab.sql, activeTabId, get, set),
+    ])
+  },
+
+  sortByMulti: async (sorts: SortEntry[]) => {
+    const { activeConnectionId, tabs, activeTabId } = get()
+    const tab = tabs.find((t) => t.id === activeTabId)
+    if (!activeConnectionId || !tab?.sql.trim()) return
+    const { pageSize } = tab.result
+
+    const effectiveSql = buildSortedSql(tab.sql, sorts)
+    const sortBy = sorts[0] ?? null
+    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, sortBy, sortMulti: sorts, totalCount: null }) })
     await Promise.all([
       runSse(activeConnectionId, effectiveSql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
       fetchTotalCount(activeConnectionId, tab.sql, activeTabId, get, set),
