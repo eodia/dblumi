@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import {
   DndContext,
   PointerSensor,
@@ -99,10 +99,11 @@ function defaultTabState(): TabLocalState {
 
 // ── Pagination bar ───────────────────────────────
 export function PaginationBar({
-  page, totalPages, pageSize, totalRows, onPage, onPageSize, onRefresh,
+  page, totalPages, pageSize, totalRows, onPage, onPageSize, onRefresh, onExport,
 }: {
   page: number; totalPages: number; pageSize: number; totalRows: number
   onPage: (p: number) => void; onPageSize: (s: number) => void; onRefresh?: () => void
+  onExport?: (format: 'csv' | 'json' | 'sql') => void
 }) {
   const [inputValue, setInputValue] = useState('')
   const commitInput = () => {
@@ -137,6 +138,21 @@ export function PaginationBar({
         {totalRows.toLocaleString('fr-FR')}
       </span>
       <div className="flex items-center gap-1 flex-shrink-0">
+        {onExport && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs gap-1 mr-0.5">
+                <Download className="h-3.5 w-3.5" />
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem className="text-xs" onClick={() => onExport('csv')}>Exporter en CSV</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => onExport('json')}>Exporter en JSON</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => onExport('sql')}>Exporter en SQL</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {onRefresh && (
           <Button variant="ghost" size="sm" className="h-6 w-6 p-0 mr-1" onClick={onRefresh}><RefreshCw className="h-3.5 w-3.5" /></Button>
         )}
@@ -204,14 +220,22 @@ function SortableColumnHeader({ col, width, sortBy, onSort, onResize }: {
 }
 
 // ── Filter Panel ─────────────────────────────────
-function FilterPanel({ columns, filters, setFilters, onApply }: {
-  columns: QueryColumn[]; filters: FilterRow[]; setFilters: (f: FilterRow[]) => void; onApply: () => void
+function FilterPanel({ columns, filters, setFilters, onApply, onClear }: {
+  columns: QueryColumn[]; filters: FilterRow[]; setFilters: (f: FilterRow[]) => void; onApply: () => void; onClear: () => void
 }) {
   const addFilter = () => setFilters([...filters, { column: columns[0]?.name ?? '', operator: '=', value: '' }])
   const removeFilter = (i: number) => setFilters(filters.filter((_, j) => j !== i))
   const updateFilter = (i: number, patch: Partial<FilterRow>) =>
     setFilters(filters.map((f, j) => j === i ? { ...f, ...patch } : f))
   const noValue = (op: string) => op === 'IS NULL' || op === 'IS NOT NULL'
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onApply() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onApply])
 
   return (
     <div className="px-3 py-2 border-b border-border-subtle bg-surface space-y-2">
@@ -242,7 +266,8 @@ function FilterPanel({ columns, filters, setFilters, onApply }: {
             </DropdownMenuContent>
           </DropdownMenu>
           {!noValue(f.operator) && (
-            <Input value={f.value} onChange={(e) => updateFilter(i, { value: e.target.value })} placeholder="Saisir une valeur" className="h-7 text-xs flex-1 min-w-[120px]" />
+            <Input value={f.value} onChange={(e) => updateFilter(i, { value: e.target.value })} placeholder="Saisir une valeur" className="h-7 text-xs flex-1 min-w-[120px]"
+              onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onApply() } }} />
           )}
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeFilter(i)}><X className="h-3.5 w-3.5" /></Button>
         </div>
@@ -251,9 +276,9 @@ function FilterPanel({ columns, filters, setFilters, onApply }: {
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addFilter}><Plus className="h-3 w-3" />Ajouter un filtre</Button>
         <div className="flex-1" />
         {filters.length > 0 && (
-          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => setFilters([])}>Supprimer les filtres</Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={onClear} title="Supprimer et appliquer">Supprimer les filtres</Button>
         )}
-        <Button size="sm" className="h-7 text-xs" onClick={onApply}>Appliquer les filtres</Button>
+        <Button size="sm" className="h-7 text-xs" onClick={onApply} title="Ctrl+Enter">Appliquer les filtres</Button>
       </div>
     </div>
   )
@@ -281,6 +306,14 @@ function SortableRow({ id, children }: { id: string; children: (handle: React.Re
 function SortPanel({ columns, sorts, setSorts, onApply }: {
   columns: QueryColumn[]; sorts: SortEntry[]; setSorts: (s: SortEntry[]) => void; onApply: () => void
 }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onApply() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onApply])
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const ids = sorts.map((_, i) => `sort-${i}`)
 
@@ -355,7 +388,7 @@ function SortPanel({ columns, sorts, setSorts, onApply }: {
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex-1" />
-        <Button size="sm" className="h-7 text-xs" onClick={onApply} disabled={sorts.length === 0}>Appliquer le tri</Button>
+        <Button size="sm" className="h-7 text-xs" onClick={onApply} disabled={sorts.length === 0} title="Ctrl+Enter">Appliquer le tri</Button>
       </div>
     </div>
   )
@@ -814,7 +847,13 @@ export function ResultsTable() {
       {/* Filter panel */}
       {isTableMode && showFilter && (
         <FilterPanel columns={columns} filters={filters}
-          setFilters={(f) => setTabState({ filters: f })} onApply={handleApplyFilter} />
+          setFilters={(f) => setTabState({ filters: f })} onApply={handleApplyFilter}
+          onClear={() => {
+            setTabState({ filters: [], showFilter: false })
+            if (!tableName) return
+            useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`)
+            void executeQuery(true)
+          }} />
       )}
 
       {/* Sort panel */}
@@ -887,6 +926,24 @@ export function ResultsTable() {
                       <Copy className="h-3.5 w-3.5" />
                       Copier la ligne
                     </ContextMenuItem>
+                    {isTableMode && ctxCell?.row === row && (<>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem className="gap-2 text-xs" onClick={() => {
+                        const colName = ctxCell.colName
+                        const val = row[colName]
+                        const op = val === null ? 'IS NULL' : '='
+                        const filterValue = val === null ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+                        const ts = getTabState()
+                        setTabState({
+                          filters: [...ts.filters, { column: colName, operator: op, value: filterValue }],
+                          showFilter: true,
+                          showSort: false,
+                        })
+                      }}>
+                        <Filter className="h-3.5 w-3.5" />
+                        Ajouter comme filtre
+                      </ContextMenuItem>
+                    </>)}
                     <ContextMenuSeparator />
                     <ContextMenuItem className="gap-2 text-xs" onClick={() => setSheetState({ mode: 'edit', editRow: row })}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -907,7 +964,7 @@ export function ResultsTable() {
 
       {(rows.length > 0 || page > 0) && (
         <PaginationBar page={page} totalPages={totalPages} pageSize={pageSize} totalRows={total}
-          onPage={goToPage} onPageSize={setResultPageSize} onRefresh={reloadTab} />
+          onPage={goToPage} onPageSize={setResultPageSize} onRefresh={reloadTab} onExport={handleExport} />
       )}
 
       {/* Record sheet (insert / edit) */}

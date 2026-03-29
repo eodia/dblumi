@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
@@ -289,6 +289,7 @@ function SortableTab({
               : 'text-muted-foreground hover:text-foreground hover:bg-surface-raised',
             isDragging && 'opacity-50',
           )}
+          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); onClose() } }}
         >
           <div
             {...attributes}
@@ -316,12 +317,12 @@ function SortableTab({
 
       <ContextMenuContent className="w-52">
         <ContextMenuItem onClick={onClose}>
-          Close <ContextMenuShortcut>Ctrl+W</ContextMenuShortcut>
+          Fermer <ContextMenuShortcut>Alt+W</ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem onClick={onCloseOthers}>Close Others</ContextMenuItem>
+        <ContextMenuItem onClick={onCloseOthers}>Fermer les autres</ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={onCloseToLeft}>Close to the Left</ContextMenuItem>
-        <ContextMenuItem onClick={onCloseToRight}>Close to the Right</ContextMenuItem>
+        <ContextMenuItem onClick={onCloseToLeft}>Fermer à gauche</ContextMenuItem>
+        <ContextMenuItem onClick={onCloseToRight}>Fermer à droite</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={onCloseAll} className="text-destructive focus:text-destructive">
           Close All
@@ -332,8 +333,8 @@ function SortableTab({
 }
 
 // ── Unified tab bar (query + table tabs together) ────────────────────────
-function UnifiedTabBar({ onSave }: { onSave: () => void }) {
-  const { tabs, activeTabId, setActiveTab, addTab, closeTab, closeOthers, closeToLeft, closeToRight, closeAll, reorderTabs, executeQuery, activeConnectionId } = useEditorStore()
+function UnifiedTabBar({ onSave, onSaveAs }: { onSave: () => void; onSaveAs: () => void }) {
+  const { tabs, activeTabId, setActiveTab, addTab, closeTab, closeOthers, closeToLeft, closeToRight, closeAll, reorderTabs, executeQuery, executeSelection, selection, activeConnectionId } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const isRunning = activeTab?.result.status === 'running'
 
@@ -377,7 +378,7 @@ function UnifiedTabBar({ onSave }: { onSave: () => void }) {
                   <Plus className="h-3.5 w-3.5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Nouvelle requête</TooltipContent>
+              <TooltipContent>Nouvelle requête · Alt+N</TooltipContent>
             </Tooltip>
           </div>
         </SortableContext>
@@ -389,27 +390,47 @@ function UnifiedTabBar({ onSave }: { onSave: () => void }) {
           <span className="text-[11px] text-text-muted hidden sm:block mr-1">Sélectionnez une connexion</span>
         )}
         {activeTab?.kind === 'query' && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={onSave} className="gap-1.5 h-6 px-2 text-xs">
-                <Save className="h-3 w-3" />
-                <span className="hidden sm:inline">Sauvegarder</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Sauvegarder · Ctrl+S</TooltipContent>
-          </Tooltip>
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={onSave}
+                  className={cn('gap-1.5 h-6 px-2 text-xs', activeTab.savedQueryId && 'rounded-r-none')}>
+                  <Save className="h-3 w-3" />
+                  <span className="hidden sm:inline">Sauvegarder</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Sauvegarder · Ctrl+S</TooltipContent>
+            </Tooltip>
+            {activeTab.savedQueryId && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm"
+                    className="h-6 w-6 p-0 rounded-l-none border-l border-border-subtle">
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="gap-2 text-xs" onClick={onSaveAs}>
+                    <Save className="h-3.5 w-3.5" />
+                    Enregistrer sous…
+                    <span className="ml-auto text-text-muted text-[10px]">Ctrl+Shift+S</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         )}
         {activeTab?.kind === 'query' && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 size="sm"
-                onClick={() => executeQuery()}
+                onClick={() => selection ? executeSelection() : executeQuery()}
                 disabled={!activeConnectionId || isRunning}
                 className="gap-1.5 h-6 px-2.5 text-xs"
               >
                 {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
-                <span className="hidden sm:inline">Exécuter</span>
+                <span className="hidden sm:inline">{selection ? 'Exécuter la sélection' : 'Exécuter'}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>{activeConnectionId ? 'Ctrl+Enter' : 'Sélectionnez une connexion'}</TooltipContent>
@@ -421,30 +442,46 @@ function UnifiedTabBar({ onSave }: { onSave: () => void }) {
 }
 
 // ── Unified editor area — tab bar + content ──────────────────────────────
-function UnifiedEditorArea({ onSave }: { onSave: () => void }) {
+function UnifiedEditorArea({ onSave, onSaveAs }: { onSave: () => void; onSaveAs: () => void }) {
   const { tabs, activeTabId, activeConnectionId, addTab, closeTab, reloadTab } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
+  const qcRef = useRef(useQueryClient())
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey
-      if (!ctrl) return
 
-      if (e.key === 's') {
-        if (activeTab?.kind === 'query') { e.preventDefault(); onSave() }
-      } else if (e.key === 'w') {
-        e.preventDefault(); closeTab(activeTabId)
-      } else if (e.key === 't') {
-        e.preventDefault(); addTab()
+      // Alt+N → new tab, Alt+W → close tab
+      if (e.altKey && e.key === 'n') { e.preventDefault(); addTab(); return }
+      if (e.altKey && e.key === 'w') { e.preventDefault(); closeTab(activeTabId); return }
+
+      if (!ctrl) return
+      if (e.key === 's' || e.key === 'S') {
+        if (activeTab?.kind !== 'query') return
+        e.preventDefault()
+        if (e.shiftKey) {
+          // Ctrl+Shift+S → always "save as"
+          onSaveAs()
+        } else if (activeTab.savedQueryId) {
+          // Ctrl+S on existing → auto-save
+          const sql = activeTab.sql
+          const id = activeTab.savedQueryId
+          savedQueriesApi.update(id, { sql }).then(() => {
+            qcRef.current.invalidateQueries({ queryKey: ['saved-queries'] })
+          })
+        } else {
+          // Ctrl+S on new → open save modal
+          onSave()
+        }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeTab, activeTabId, activeConnectionId, onSave, reloadTab, closeTab, addTab])
+  }, [activeTab, activeTabId, activeConnectionId, onSave, onSaveAs, reloadTab, closeTab, addTab])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <UnifiedTabBar onSave={onSave} />
+      <UnifiedTabBar onSave={onSave} onSaveAs={onSaveAs} />
 
       <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab?.kind === 'query' && (
@@ -578,7 +615,7 @@ function AppShellInner({
                   sideOffset={4}
                 >
                   {/* Search input */}
-                  {connections.length > 3 && (
+                  {connections.length > 0 && (
                     <div className="px-2 py-1.5">
                       <div className="relative">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
@@ -770,16 +807,23 @@ function AppShellInner({
           {active && (
             <>
               <Separator orientation="vertical" className="h-4" />
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: active.color ?? '#71717A' }}
-                />
-                <span className="font-mono text-foreground">{active.name}</span>
-                <span className="text-text-muted">·</span>
-                <span className="font-mono">{active.database}</span>
-                {active.environment && <EnvBadge env={active.environment} />}
-              </div>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 overflow-hidden">
+                      <span
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: active.color ?? '#71717A' }}
+                      />
+                      <span className="font-mono text-foreground truncate">{active.name}</span>
+                      <span className="text-text-muted flex-shrink-0">·</span>
+                      <span className="font-mono truncate">{active.database}@{active.host}</span>
+                      {active.environment && <EnvBadge env={active.environment} />}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{active.name} · {active.database}@{active.host}:{active.port}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </>
           )}
         </header>
@@ -800,7 +844,7 @@ function AppShellInner({
           {/* Unified editor area: sql-editor, tables expanded, or mobile (sidebar overlays) */}
           {(page === 'sql-editor' || (page === 'tables' && (!isCollapsed || isMobile))) && (
             <TooltipProvider delayDuration={300}>
-              <UnifiedEditorArea onSave={() => setSaveOpen(true)} />
+              <UnifiedEditorArea onSave={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
             </TooltipProvider>
           )}
         </div>

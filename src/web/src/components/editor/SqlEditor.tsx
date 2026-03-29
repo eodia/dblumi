@@ -38,7 +38,7 @@ export function SqlEditor({ onSave }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
-  const { tabs, activeTabId, setSql, executeQuery } = useEditorStore()
+  const { tabs, activeTabId, setSql, setSelection, executeQuery, executeSelection } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const sqlText = activeTab?.sql ?? ''
   const isRunning = activeTab?.result.status === 'running'
@@ -56,13 +56,28 @@ export function SqlEditor({ onSave }: Props) {
           oneDark,
           dblumiEditorTheme,
           keymap.of([
-            { key: 'Mod-Enter', run: () => { executeQuery(); return true } },
-            { key: 'Ctrl-Enter', run: () => { executeQuery(); return true } },
+            { key: 'Mod-Enter', run: (view) => {
+              const sel = view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)
+              sel ? executeSelection() : executeQuery()
+              return true
+            }},
+            { key: 'Ctrl-Enter', run: (view) => {
+              const sel = view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)
+              sel ? executeSelection() : executeQuery()
+              return true
+            }},
             ...historyKeymap,
             ...defaultKeymap,
           ]),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) setSql(update.state.doc.toString())
+            if (update.selectionSet) {
+              const sel = update.state.sliceDoc(
+                update.state.selection.main.from,
+                update.state.selection.main.to,
+              )
+              setSelection(sel)
+            }
           }),
           EditorView.lineWrapping,
         ],

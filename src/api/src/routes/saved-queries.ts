@@ -21,8 +21,8 @@ const CreateSchema = z.object({
   sql: z.string().min(1).max(100_000),
   description: z.string().max(1000).optional(),
   connectionId: z.string().uuid().optional(),
-  folder: z.string().max(100).optional(),
-  sortOrder: z.number().int().optional(),
+  folder: z.string().max(100).nullable().optional(),
+  sortOrder: z.number().int().nullable().optional(),
 })
 
 const UpdateSchema = CreateSchema.partial()

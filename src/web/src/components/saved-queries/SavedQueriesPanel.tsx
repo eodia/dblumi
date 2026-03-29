@@ -34,7 +34,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search } from 'lucide-react'
+import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy } from 'lucide-react'
 import { savedQueriesApi, type SavedQuery } from '@/api/saved-queries'
 import { useEditorStore } from '@/stores/editor.store'
 import { useSidebar } from '@/components/ui/sidebar'
@@ -73,6 +73,7 @@ function QueryItem({
   folders,
   onLoad,
   onRename,
+  onDuplicate,
   onDelete,
   onMoveToFolder,
   onRequestNewFolder,
@@ -81,6 +82,7 @@ function QueryItem({
   folders: string[]
   onLoad: () => void
   onRename: (name: string) => void
+  onDuplicate: () => void
   onDelete: () => void
   onMoveToFolder: (folder: string | null) => void
   onRequestNewFolder: () => void
@@ -163,6 +165,10 @@ function QueryItem({
             </ContextMenuSubContent>
           </ContextMenuSub>
 
+          <ContextMenuItem className="gap-2 text-xs" onClick={onDuplicate}>
+            <Copy className="h-3.5 w-3.5" />
+            Dupliquer
+          </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
             className="gap-2 text-xs text-destructive focus:text-destructive"
@@ -285,8 +291,18 @@ export function SavedQueriesPanel() {
       key={q.id}
       query={q}
       folders={folders}
-      onLoad={() => { openQuery(q.sql, q.name); if (isMobile) setOpenMobile(false) }}
+      onLoad={() => { openQuery(q.sql, q.name, q.id); if (isMobile) setOpenMobile(false) }}
       onRename={(name) => updateMutation.mutate({ id: q.id, data: { name } })}
+      onDuplicate={() => {
+        const payload: Parameters<typeof savedQueriesApi.create>[0] = {
+          name: `${q.name} (copie)`,
+          sql: q.sql,
+        }
+        if (q.connectionId) payload.connectionId = q.connectionId
+        if (q.description) payload.description = q.description
+        if (q.folder) payload.folder = q.folder
+        savedQueriesApi.create(payload).then(() => qc.invalidateQueries({ queryKey: ['saved-queries'] }))
+      }}
       onDelete={() => deleteMutation.mutate(q.id)}
       onMoveToFolder={(folder) =>
         updateMutation.mutate({ id: q.id, data: { folder: folder ?? null } })

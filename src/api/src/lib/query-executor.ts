@@ -99,6 +99,10 @@ function injectLimit(sql: string, limit: number, offset = 0): string {
     return trimmed
   }
 
+  // Detect user-provided LIMIT
+  const userLimitMatch = trimmed.match(/\bLIMIT\s+(\d+)/i)
+  const userLimit = userLimitMatch ? parseInt(userLimitMatch[1]!, 10) : null
+
   // Strip existing LIMIT / OFFSET clauses
   let clean = trimmed
     .replace(/\bLIMIT\s+\d+\s*,\s*\d+/i, '') // MySQL LIMIT offset, count
@@ -106,7 +110,10 @@ function injectLimit(sql: string, limit: number, offset = 0): string {
     .replace(/\bLIMIT\s+\d+/i, '')
     .trim()
 
-  let result = `${clean}\nLIMIT ${limit}`
+  // Use the smaller of user LIMIT and pagination LIMIT
+  const effectiveLimit = userLimit !== null ? Math.min(userLimit, limit) : limit
+
+  let result = `${clean}\nLIMIT ${effectiveLimit}`
   if (offset > 0) result += ` OFFSET ${offset}`
   return result
 }
