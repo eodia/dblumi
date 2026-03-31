@@ -41,6 +41,7 @@ export const fr = {
   'tab.closeOthers': 'Fermer les autres',
   'tab.closeLeft': 'Fermer à gauche',
   'tab.closeRight': 'Fermer à droite',
+  'tab.closeAll': 'Fermer tous',
 
   // ── Editor ──
   'editor.save': 'Sauvegarder',
@@ -191,5 +192,10 @@ export const fr = {
   'common.noTableFound': 'Aucune table trouvée.',
   'common.filterTables': 'Filtrer les tables...',
   'common.schema': 'Schema',
+  'fn.addParam': 'Ajouter un paramètre',
   'common.overviewPlaceholder': 'Project Overview — à venir',
+  'common.dropTable': 'Supprimer la table',
+  'common.dropView': 'Supprimer la vue',
+  'common.dropTableConfirm': 'et toutes ses données ? Cette action est irréversible.',
+  'common.dropViewConfirm': '? Cette action est irréversible.',
 } as const

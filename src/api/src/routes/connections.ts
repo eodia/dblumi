@@ -214,24 +214,21 @@ type SchemaRow = {
   data_type: string
   is_nullable: string
   is_primary_key: boolean
+  table_type: string
+}
+
+type SchemaItem = {
+  name: string
+  type: 'table' | 'view'
+  columns: Array<{ name: string; dataType: string; nullable: boolean; primaryKey: boolean }>
 }
 
 function groupByTable(rows: SchemaRow[]) {
-  const map = new Map<
-    string,
-    {
-      name: string
-      columns: Array<{
-        name: string
-        dataType: string
-        nullable: boolean
-        primaryKey: boolean
-      }>
-    }
-  >()
+  const map = new Map<string, SchemaItem>()
   for (const row of rows) {
     if (!map.has(row.table_name)) {
-      map.set(row.table_name, { name: row.table_name, columns: [] })
+      const isView = row.table_type === 'VIEW'
+      map.set(row.table_name, { name: row.table_name, type: isView ? 'view' : 'table', columns: [] })
     }
     map.get(row.table_name)!.columns.push({
       name: row.column_name,
@@ -244,6 +241,14 @@ function groupByTable(rows: SchemaRow[]) {
   return { tables: Array.from(map.values()) }
 }
 
+type FunctionRow = {
+  name: string
+  kind: string       // 'function' or 'procedure'
+  return_type: string
+  arguments: string
+  language: string
+}
+
 async function getPgSchema(pool: PgPool) {
   const client = await pool.connect()
   try {
@@ -253,6 +258,7 @@ async function getPgSchema(pool: PgPool) {
         c.column_name,
         c.data_type,
         c.is_nullable,
+        t.table_type,
         CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_primary_key
       FROM information_schema.columns c
       JOIN information_schema.tables t
@@ -264,10 +270,27 @@ async function getPgSchema(pool: PgPool) {
           ON tc.constraint_name = ku.constraint_name AND tc.table_schema = ku.table_schema
         WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_schema = 'public'
       ) pk ON pk.table_name = c.table_name AND pk.column_name = c.column_name
-      WHERE c.table_schema = 'public' AND t.table_type = 'BASE TABLE'
-      ORDER BY c.table_name, c.ordinal_position
+      WHERE c.table_schema = 'public' AND t.table_type IN ('BASE TABLE', 'VIEW')
+      ORDER BY t.table_type, c.table_name, c.ordinal_position
     `)
-    return groupByTable(rows)
+
+    const { rows: funcRows } = await client.query<FunctionRow>(`
+      SELECT
+        p.proname AS name,
+        CASE WHEN p.prokind = 'p' THEN 'procedure' ELSE 'function' END AS kind,
+        pg_get_function_result(p.oid) AS return_type,
+        pg_get_function_identity_arguments(p.oid) AS arguments,
+        l.lanname AS language
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      JOIN pg_language l ON l.oid = p.prolang
+      WHERE n.nspname = 'public'
+        AND p.prokind IN ('f', 'p')
+      ORDER BY p.prokind, p.proname
+    `)
+
+    const result = groupByTable(rows)
+    return { ...result, functions: funcRows }
   } finally {
     client.release()
   }
@@ -282,14 +305,29 @@ async function getMySQLSchema(pool: MySQLPool) {
         c.COLUMN_NAME  AS column_name,
         c.DATA_TYPE    AS data_type,
         c.IS_NULLABLE  AS is_nullable,
+        t.TABLE_TYPE   AS table_type,
         CASE WHEN c.COLUMN_KEY = 'PRI' THEN true ELSE false END AS is_primary_key
       FROM information_schema.COLUMNS c
       JOIN information_schema.TABLES t
         ON t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_SCHEMA = c.TABLE_SCHEMA
-      WHERE c.TABLE_SCHEMA = DATABASE() AND t.TABLE_TYPE = 'BASE TABLE'
-      ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION
+      WHERE c.TABLE_SCHEMA = DATABASE() AND t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+      ORDER BY t.TABLE_TYPE, c.TABLE_NAME, c.ORDINAL_POSITION
     `)
-    return groupByTable(rows as SchemaRow[])
+
+    const [funcRows] = await conn.query(`
+      SELECT
+        ROUTINE_NAME AS name,
+        LOWER(ROUTINE_TYPE) AS kind,
+        DTD_IDENTIFIER AS return_type,
+        ROUTINE_COMMENT AS arguments,
+        EXTERNAL_LANGUAGE AS language
+      FROM information_schema.ROUTINES
+      WHERE ROUTINE_SCHEMA = DATABASE()
+      ORDER BY ROUTINE_TYPE, ROUTINE_NAME
+    `)
+
+    const result = groupByTable(rows as SchemaRow[])
+    return { ...result, functions: funcRows as FunctionRow[] }
   } finally {
     conn.release()
   }
@@ -372,5 +410,92 @@ connectionsRouter.post(
     }
   }
 )
+
+// ──────────────────────────────────────────────
+// GET /connections/:id/function/:name
+// ──────────────────────────────────────────────
+
+connectionsRouter.get('/:id/function/:name', async (c) => {
+  const userId = c.get('userId')
+  const connectionId = c.req.param('id')
+  const funcName = c.req.param('name')
+
+  let poolOpts
+  try {
+    poolOpts = await getPoolOptions(connectionId, userId)
+  } catch {
+    return c.json(problem(404, 'Connexion introuvable.'), 404)
+  }
+
+  const pool = await connectionManager.getPool(connectionId, poolOpts)
+
+  try {
+    if (poolOpts.driver === 'postgresql') {
+      const pgPool = pool as PgPool
+      const client = await pgPool.connect()
+      try {
+        const { rows } = await client.query(`
+          SELECT
+            p.proname AS name,
+            CASE WHEN p.prokind = 'p' THEN 'procedure' ELSE 'function' END AS kind,
+            pg_get_function_result(p.oid) AS return_type,
+            pg_get_function_identity_arguments(p.oid) AS arguments,
+            l.lanname AS language,
+            pg_get_functiondef(p.oid) AS source
+          FROM pg_proc p
+          JOIN pg_namespace n ON n.oid = p.pronamespace
+          JOIN pg_language l ON l.oid = p.prolang
+          WHERE n.nspname = 'public' AND p.proname = $1
+          LIMIT 1
+        `, [funcName])
+        if (!rows[0]) return c.json(problem(404, 'Fonction introuvable.'), 404)
+
+        // Parse arguments into structured params
+        const argStr = (rows[0] as Record<string, unknown>).arguments as string
+        const params = argStr ? argStr.split(',').map((a) => {
+          const parts = a.trim().split(/\s+/)
+          return { name: parts[0] ?? '', type: parts.slice(1).join(' ') || 'text' }
+        }) : []
+
+        return c.json({ function: { ...rows[0], params } })
+      } finally {
+        client.release()
+      }
+    } else {
+      const mysqlPool = pool as MySQLPool
+      const conn = await mysqlPool.getConnection()
+      try {
+        const [rows] = await conn.query(`
+          SELECT
+            ROUTINE_NAME AS name,
+            LOWER(ROUTINE_TYPE) AS kind,
+            DTD_IDENTIFIER AS return_type,
+            ROUTINE_DEFINITION AS source,
+            EXTERNAL_LANGUAGE AS language
+          FROM information_schema.ROUTINES
+          WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_NAME = ?
+          LIMIT 1
+        `, [funcName])
+        const arr = rows as Record<string, unknown>[]
+        if (!arr[0]) return c.json(problem(404, 'Fonction introuvable.'), 404)
+
+        // Get params
+        const [paramRows] = await conn.query(`
+          SELECT PARAMETER_NAME AS name, DATA_TYPE AS type, PARAMETER_MODE AS mode
+          FROM information_schema.PARAMETERS
+          WHERE SPECIFIC_SCHEMA = DATABASE() AND SPECIFIC_NAME = ?
+          ORDER BY ORDINAL_POSITION
+        `, [funcName])
+
+        return c.json({ function: { ...arr[0], params: paramRows } })
+      } finally {
+        conn.release()
+      }
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to get function'
+    return c.json(problem(502, message), 502)
+  }
+})
 
 export { connectionsRouter }

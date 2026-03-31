@@ -40,6 +40,8 @@ import {
   MoreHorizontal,
   Sparkles,
   Languages,
+  Eye,
+  Braces,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -98,7 +100,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable'
-import { connectionsApi, type Connection, type SchemaTable } from '@/api/connections'
+import { connectionsApi, type Connection, type SchemaTable, type SchemaFunction } from '@/api/connections'
 import { savedQueriesApi } from '@/api/saved-queries'
 import { useAuthStore } from '@/stores/auth.store'
 import { useEditorStore } from '@/stores/editor.store'
@@ -144,11 +146,16 @@ function EnvBadge({ env }: { env: string }) {
 
 // ── Schema tree (shown inline in sidebar when Tables is selected) ───────
 function SchemaNav({ connectionId }: { connectionId: string }) {
-  const { openTable } = useEditorStore()
+  const { openTable, openFunction, activeConnectionId, executeQuery, setSql } = useEditorStore()
   const { isMobile, setOpenMobile } = useSidebar()
   const { t } = useI18n()
+  const { data: connListData } = useQuery({ queryKey: ['connections'], queryFn: connectionsApi.list, staleTime: 5 * 60 * 1000 })
+  const isProd = connListData?.connections.find((c) => c.id === connectionId)?.environment?.toLowerCase() === 'prod'
+  const qcSchema = useQueryClient()
   const [tableSearch, setTableSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [sectionsOpen, setSectionsOpen] = useState<{ tables: boolean; views: boolean; functions: boolean }>({ tables: true, views: true, functions: true })
+  const [dropTarget, setDropTarget] = useState<{ name: string; type: 'table' | 'view' | 'function' | 'procedure' } | null>(null)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['schema', connectionId],
@@ -163,6 +170,9 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
       t.name.toLowerCase().includes(lc) ||
       t.columns.some((c) => c.name.toLowerCase().includes(lc)),
   )
+  const functions: SchemaFunction[] = (data?.functions ?? []).filter(
+    (f) => f.name.toLowerCase().includes(lc),
+  )
 
   const toggle = (name: string) =>
     setExpanded((s) => {
@@ -174,7 +184,7 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
   return (
     <>
       {/* search + refresh — hidden when sidebar is collapsed */}
-      <div className="group-data-[collapsible=icon]:hidden flex items-center gap-1 px-2 pb-1.5">
+      <div className="group-data-[collapsible=icon]:hidden flex items-center gap-1 px-2 pt-1 pb-1.5">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-text-muted pointer-events-none" />
           <Input
@@ -192,7 +202,7 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
         </button>
       </div>
 
-      {/* table list — hidden when sidebar is collapsed */}
+      {/* table + view list — hidden when sidebar is collapsed */}
       <div className="group-data-[collapsible=icon]:hidden overflow-y-auto flex-1 px-1 pb-2">
         {isLoading && (
           <div className="flex items-center gap-2 px-3 py-3 text-xs text-muted-foreground">
@@ -201,62 +211,180 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
           </div>
         )}
 
-        {tables?.map((table) => {
-          const isOpen = expanded.has(table.name)
-          return (
-            <div key={table.name}>
-              <div className="flex items-center gap-0 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
-                {/* Arrow — toggles expand only */}
-                <button
-                  onClick={() => toggle(table.name)}
-                  className="flex items-center justify-center w-6 h-7 flex-shrink-0 rounded-l-md"
-                >
-                  {isOpen ? (
-                    <ChevronDown className="h-3 w-3 text-text-muted" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 text-text-muted" />
-                  )}
-                </button>
-                {/* Table name — opens the tab */}
-                <button
-                  onClick={() => { void openTable(table.name); if (isMobile) setOpenMobile(false) }}
-                  className="flex-1 flex items-center gap-1.5 py-[5px] pr-1.5 min-w-0"
-                >
-                  <Table2 className="h-3 w-3 flex-shrink-0 text-primary/70" />
-                  <span className="truncate font-mono">{table.name}</span>
-                  <span className="ml-auto text-[10px] text-text-muted opacity-60 flex-shrink-0 tabular-nums">
-                    {table.columns.length}
-                  </span>
-                </button>
-              </div>
+        {(() => {
+          const onlyTables = tables?.filter((item) => item.type !== 'view') ?? []
+          const onlyViews = tables?.filter((item) => item.type === 'view') ?? []
 
-              {isOpen && (
-                <div className="ml-3 pl-2 border-l border-sidebar-border">
-                  {table.columns.map((col) => (
-                    <div
-                      key={col.name}
-                      className="flex items-center gap-1.5 px-1.5 py-[3px] text-[11px] text-text-muted hover:text-muted-foreground transition-colors"
-                    >
-                      {col.primaryKey ? (
-                        <Key className="h-2.5 w-2.5 text-warning flex-shrink-0" />
-                      ) : (
-                        <Columns3 className="h-2.5 w-2.5 opacity-30 flex-shrink-0" />
-                      )}
-                      <span className="truncate font-mono">{col.name}</span>
-                      <span className="ml-auto text-[10px] opacity-40 font-mono flex-shrink-0">
-                        {col.dataType}
-                      </span>
+          const handleDrop = async () => {
+            if (!dropTarget) return
+            const typeMap: Record<string, string> = { table: 'TABLE', view: 'VIEW', function: 'FUNCTION', procedure: 'PROCEDURE' }
+            const keyword = typeMap[dropTarget.type] ?? 'TABLE'
+            setSql(`DROP ${keyword} ${dropTarget.name}`)
+            await executeQuery(true)
+            setSql('')
+            qcSchema.invalidateQueries({ queryKey: ['schema', connectionId] })
+            setDropTarget(null)
+          }
+
+          const renderItem = (item: SchemaTable) => {
+            const isOpen = expanded.has(item.name)
+            const isView = item.type === 'view'
+            return (
+              <ContextMenu key={item.name}>
+                <ContextMenuTrigger asChild>
+                  <div>
+                    <div className="flex items-center gap-0 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+                      <button onClick={() => toggle(item.name)} className="flex items-center justify-center w-6 h-7 flex-shrink-0 rounded-l-md">
+                        {isOpen ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}
+                      </button>
+                      <button onClick={() => { void openTable(item.name); if (isMobile) setOpenMobile(false) }} className="flex-1 flex items-center gap-1.5 py-[5px] pr-1.5 min-w-0">
+                        {isView ? <Eye className={cn('h-3 w-3 flex-shrink-0', isProd ? 'text-destructive/70' : 'text-blue-400/70')} /> : <Table2 className={cn('h-3 w-3 flex-shrink-0', isProd ? 'text-destructive/70' : 'text-primary/70')} />}
+                        <span className="truncate font-mono">{item.name}</span>
+                        <span className="ml-auto text-[10px] text-text-muted opacity-60 flex-shrink-0 tabular-nums">{item.columns.length}</span>
+                      </button>
                     </div>
+                    {isOpen && (
+                      <div className="ml-3 pl-2 border-l border-sidebar-border">
+                        {item.columns.map((col) => (
+                          <div key={col.name} className="flex items-center gap-1.5 px-1.5 py-[3px] text-[11px] text-text-muted hover:text-muted-foreground transition-colors">
+                            {col.primaryKey ? <Key className="h-2.5 w-2.5 text-warning flex-shrink-0" /> : <Columns3 className="h-2.5 w-2.5 opacity-30 flex-shrink-0" />}
+                            <span className="truncate font-mono">{col.name}</span>
+                            <span className="ml-auto text-[10px] opacity-40 font-mono flex-shrink-0">{col.dataType}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-44">
+                  <ContextMenuItem className="gap-2 text-xs" onClick={() => { void openTable(item.name); if (isMobile) setOpenMobile(false) }}>
+                    <Table2 className="h-3.5 w-3.5" />
+                    {t('sq.open')}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive"
+                    onClick={() => setDropTarget({ name: item.name, type: isView ? 'view' : 'table' })}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {t('common.delete')}
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            )
+          }
+
+          const toggleSection = (key: 'tables' | 'views' | 'functions') =>
+            setSectionsOpen((s) => ({ ...s, [key]: !s[key] }))
+
+          return (
+            <>
+              {/* Tables accordion */}
+              {onlyTables.length > 0 && (
+                <div>
+                  <button onClick={() => toggleSection('tables')}
+                    className="w-full flex items-center gap-1.5 px-2 pt-2 pb-1 hover:bg-sidebar-accent rounded-md transition-colors">
+                    <Table2 className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-primary/50')} />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Tables</span>
+                    <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyTables.length}</span>
+                    <span className="ml-auto">{sectionsOpen.tables ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}</span>
+                  </button>
+                  {sectionsOpen.tables && onlyTables.map(renderItem)}
+                </div>
+              )}
+
+              {/* Views accordion */}
+              {onlyViews.length > 0 && (
+                <div>
+                  <button onClick={() => toggleSection('views')}
+                    className="w-full flex items-center gap-1.5 px-2 pt-2 pb-1 hover:bg-sidebar-accent rounded-md transition-colors">
+                    <Eye className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-blue-400/50')} />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Views</span>
+                    <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyViews.length}</span>
+                    <span className="ml-auto">{sectionsOpen.views ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}</span>
+                  </button>
+                  {sectionsOpen.views && onlyViews.map(renderItem)}
+                </div>
+              )}
+
+              {/* Functions & Procedures accordion */}
+              {functions.length > 0 && (
+                <div>
+                  <button onClick={() => toggleSection('functions')}
+                    className="w-full flex items-center gap-1.5 px-2 pt-2 pb-1 hover:bg-sidebar-accent rounded-md transition-colors">
+                    <Braces className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-orange-400/50')} />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Functions</span>
+                    <span className="text-[10px] text-text-muted/50 tabular-nums">{functions.length}</span>
+                    <span className="ml-auto">{sectionsOpen.functions ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}</span>
+                  </button>
+                  {sectionsOpen.functions && functions.map((fn) => (
+                    <ContextMenu key={`${fn.kind}-${fn.name}`}>
+                      <ContextMenuTrigger asChild>
+                        <button
+                          onClick={async () => {
+                            if (!activeConnectionId) return
+                            try {
+                              const res = await connectionsApi.getFunction(activeConnectionId, fn.name)
+                              openFunction(res.function.name, res.function.source ?? '', res.function.params ?? [])
+                            } catch { /* ignore */ }
+                          }}
+                          className="w-full flex items-center gap-1.5 px-1.5 py-[5px] ml-1 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                        >
+                          <Braces className={cn('h-3 w-3 flex-shrink-0', fn.kind === 'procedure' ? 'text-purple-400/70' : isProd ? 'text-destructive/70' : 'text-orange-400/70')} />
+                          <span className="truncate font-mono">{fn.name}</span>
+                          <span className="ml-auto text-[10px] text-text-muted/40 font-mono flex-shrink-0 truncate max-w-[80px]">
+                            {fn.kind === 'procedure' ? 'proc' : fn.return_type || 'fn'}
+                          </span>
+                        </button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-44">
+                        <ContextMenuItem className="gap-2 text-xs" onClick={async () => {
+                          if (!activeConnectionId) return
+                          try {
+                            const res = await connectionsApi.getFunction(activeConnectionId, fn.name)
+                            openFunction(res.function.name, res.function.source ?? '', res.function.params ?? [])
+                          } catch { /* ignore */ }
+                        }}>
+                          <Braces className="h-3.5 w-3.5" />
+                          {t('sq.open')}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive"
+                          onClick={() => setDropTarget({ name: fn.name, type: fn.kind === 'procedure' ? 'procedure' : 'function' })}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {t('common.delete')}
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
                   ))}
                 </div>
               )}
-            </div>
-          )
-        })}
 
-        {tables?.length === 0 && !isLoading && (
-          <p className="px-3 py-2 text-xs text-text-muted">{t('common.noTableFound')}</p>
-        )}
+              {onlyTables.length === 0 && onlyViews.length === 0 && functions.length === 0 && !isLoading && (
+                <p className="px-3 py-2 text-xs text-text-muted">{t('common.noTableFound')}</p>
+              )}
+
+              {/* Drop confirmation dialog */}
+              <Dialog open={dropTarget !== null} onOpenChange={(o) => { if (!o) setDropTarget(null) }}>
+                <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
+                  <DialogHeader>
+                    <DialogTitle className="text-base">
+                      {dropTarget?.type === 'view' ? 'DROP VIEW' : 'DROP TABLE'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <p className="text-sm text-muted-foreground">
+                    {dropTarget?.type === 'view'
+                      ? <>{t('common.dropView')} <span className="font-semibold text-foreground font-mono">{dropTarget?.name}</span> {t('common.dropViewConfirm')}</>
+                      : <>{t('common.dropTable')} <span className="font-semibold text-foreground font-mono">{dropTarget?.name}</span> {t('common.dropTableConfirm')}</>
+                    }
+                  </p>
+                  <DialogFooter>
+                    <Button variant="ghost" size="sm" onClick={() => setDropTarget(null)}>{t('common.cancel')}</Button>
+                    <Button variant="destructive" size="sm" onClick={handleDrop}>{t('common.delete')}</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
+          )
+        })()}
       </div>
     </>
   )
@@ -310,6 +438,8 @@ function SortableTab({
           >
             {tab.kind === 'table'
               ? <Table2 className="h-3 w-3 flex-shrink-0 opacity-60" />
+              : tab.kind === 'function'
+              ? <Braces className="h-3 w-3 flex-shrink-0 opacity-60 text-orange-400" />
               : <TerminalSquare className="h-3 w-3 flex-shrink-0 opacity-60" />
             }
             <span className={cn('truncate max-w-[120px]', tab.kind === 'table' && 'font-mono')}>
@@ -336,7 +466,7 @@ function SortableTab({
         <ContextMenuItem onClick={onCloseToRight}>{t('tab.closeRight')}</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={onCloseAll} className="text-destructive focus:text-destructive">
-          {t('tab.close')}
+          {t('tab.closeAll')}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -401,19 +531,19 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
         {!activeConnectionId && (
           <span className="text-[11px] text-text-muted hidden sm:block mr-1">{t('editor.selectConnection')}</span>
         )}
-        {activeTab?.kind === 'query' && (
+        {(activeTab?.kind === 'query' || activeTab?.kind === 'function') && (
           <div className="flex items-center">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="sm" onClick={onSave}
-                  className={cn('gap-1.5 h-6 px-2 text-xs', activeTab.savedQueryId && 'rounded-r-none')}>
+                  className={cn('gap-1.5 h-6 px-2 text-xs', (activeTab.savedQueryId || activeTab.kind === 'function') && 'rounded-r-none')}>
                   <Save className="h-3 w-3" />
                   <span className="hidden sm:inline">{t('editor.save')}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.saveTooltip')}</TooltipContent>
             </Tooltip>
-            {activeTab.savedQueryId && (
+            {(activeTab.savedQueryId || activeTab.kind === 'function') && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm"
@@ -432,12 +562,25 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
             )}
           </div>
         )}
-        {activeTab?.kind === 'query' && (
+        {(activeTab?.kind === 'query' || activeTab?.kind === 'function') && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 size="sm"
-                onClick={() => selection ? executeSelection() : executeQuery()}
+                onClick={() => {
+                  if (activeTab?.kind === 'function') {
+                    // Always build SQL from function params
+                    const args = activeTab.functionParams.map((p) => {
+                      if (p.value === '' || p.value.toUpperCase() === 'NULL') return 'NULL'
+                      if (['int', 'integer', 'bigint', 'numeric', 'float', 'double'].some((t) => p.type.toLowerCase().includes(t))) return p.value
+                      return `'${p.value.replace(/'/g, "''")}'`
+                    }).join(', ')
+                    useEditorStore.getState().setSql(`SELECT * FROM ${activeTab.name}(${args})`)
+                    void executeQuery(true)
+                  } else {
+                    selection ? executeSelection() : executeQuery()
+                  }
+                }}
                 disabled={!activeConnectionId || isRunning}
                 className="gap-1.5 h-6 px-2.5 text-xs"
               >
@@ -471,6 +614,106 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
 }
 
 // ── Unified editor area — tab bar + content ──────────────────────────────
+// ── Function editor with parameters panel ───────────────────────────────
+function FunctionEditor() {
+  const { t } = useI18n()
+  const { tabs, activeTabId, activeConnectionId, executeQuery, setSql, setFunctionParams } = useEditorStore()
+  const activeTab = tabs.find((t) => t.id === activeTabId)
+  const params = activeTab?.functionParams ?? []
+  const funcName = activeTab?.name ?? ''
+
+  const updateParam = (i: number, value: string) => {
+    const next = [...params]
+    next[i] = { ...next[i]!, value }
+    setFunctionParams(next)
+  }
+
+  const addParam = () => {
+    setFunctionParams([...params, { name: `param_${params.length + 1}`, type: 'text', value: '' }])
+  }
+
+  const removeParam = (i: number) => {
+    setFunctionParams(params.filter((_, j) => j !== i))
+  }
+
+  const buildFunctionSql = useCallback(() => {
+    const args = params.map((p) => {
+      if (p.value === '' || p.value.toUpperCase() === 'NULL') return 'NULL'
+      if (p.type.toLowerCase().includes('int') || p.type.toLowerCase().includes('numeric') || p.type.toLowerCase().includes('float') || p.type.toLowerCase().includes('double')) {
+        return p.value
+      }
+      return `'${p.value.replace(/'/g, "''")}'`
+    }).join(', ')
+    return `SELECT * FROM ${funcName}(${args})`
+  }, [params, funcName])
+
+  // Intercept Ctrl+Enter to build SQL from params before executing
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        if (!activeConnectionId) return
+        setSql(buildFunctionSql())
+        void executeQuery(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [activeConnectionId, buildFunctionSql, setSql, executeQuery])
+
+  const updateParamType = (i: number, type: string) => {
+    const next = [...params]
+    next[i] = { ...next[i]!, type }
+    setFunctionParams(next)
+  }
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Parameters panel */}
+      <div className="border-b border-border-subtle bg-surface px-3 py-2 space-y-2 flex-shrink-0">
+        {params.map((p, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <span className="text-xs text-text-muted font-mono min-w-[80px] truncate">{p.name}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] font-mono text-text-muted/70 gap-1 min-w-[70px] justify-between">
+                  {p.type}
+                  <ChevronDown className="h-2.5 w-2.5 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {['text', 'integer', 'bigint', 'numeric', 'boolean', 'date', 'timestamp', 'uuid', 'jsonb'].map((t) => (
+                  <DropdownMenuItem key={t} className="text-xs font-mono" onClick={() => updateParamType(i, t)}>{t}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Input
+              value={p.value}
+              onChange={(e) => updateParam(i, e.target.value)}
+              placeholder="NULL"
+              className="h-7 text-xs flex-1 min-w-[100px]"
+            />
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeParam(i)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addParam}>
+            <Plus className="h-3 w-3" />
+            {t('fn.addParam')}
+          </Button>
+        </div>
+      </div>
+
+      {/* SQL source (read-only view) */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <SqlEditor />
+      </div>
+    </div>
+  )
+}
+
 function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onSaveAs: () => void }) {
   const { t } = useI18n()
   const { tabs, activeTabId, activeConnectionId, addTab, closeTab, reloadTab } = useEditorStore()
@@ -501,7 +744,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
 
       if (!ctrl) return
       if (e.key === 's' || e.key === 'S') {
-        if (activeTab?.kind !== 'query') return
+        if (activeTab?.kind !== 'query' && activeTab?.kind !== 'function') return
         e.preventDefault()
         if (e.shiftKey) {
           onSaveAs()
@@ -537,6 +780,18 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
 
             {activeTab?.kind === 'table' && (
               <ResultsTable />
+            )}
+
+            {activeTab?.kind === 'function' && (
+              <ResizablePanelGroup direction="vertical" autoSaveId="dblumi-fn-v">
+                <ResizablePanel defaultSize={50} minSize={20} id="fn-editor">
+                  <FunctionEditor />
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={50} minSize={15} id="fn-results">
+                  <ResultsTable />
+                </ResizablePanel>
+              </ResizablePanelGroup>
             )}
 
             {!activeTab && (
@@ -898,23 +1153,10 @@ function AppShellInner({
 
         {/* Page content */}
         <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
-          {page === 'overview' && (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-              {t('common.overviewPlaceholder')}
-            </div>
-          )}
-
-          {/* Tables collapsed (desktop only): full schema page */}
-          {page === 'tables' && isCollapsed && !isMobile && (
-            <SchemaSidebar connections={connections} />
-          )}
-
-          {/* Unified editor area: sql-editor, tables expanded, or mobile (sidebar overlays) */}
-          {(page === 'sql-editor' || (page === 'tables' && (!isCollapsed || isMobile))) && (
-            <TooltipProvider delayDuration={300}>
-              <UnifiedEditorArea onSaveNew={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
-            </TooltipProvider>
-          )}
+          {/* Always show the editor area */}
+          <TooltipProvider delayDuration={300}>
+            <UnifiedEditorArea onSaveNew={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
+          </TooltipProvider>
         </div>
 
         {/* Command palette */}

@@ -14,10 +14,13 @@
     "build": "pnpm --filter @dblumi/shared build && pnpm --filter @dblumi/web build && pnpm --filter @dblumi/api build",
     "start": "pnpm --filter @dblumi/api start",
     "test": "pnpm -r test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "concurrently": "^9.1.2",
     "typescript": "^5.7.3"
   }

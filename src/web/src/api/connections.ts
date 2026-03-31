@@ -32,12 +32,21 @@ export type CreateConnectionInput = {
 
 export type SchemaTable = {
   name: string
+  type?: 'table' | 'view'
   columns: Array<{
     name: string
     dataType: string
     nullable: boolean
     primaryKey: boolean
   }>
+}
+
+export type SchemaFunction = {
+  name: string
+  kind: 'function' | 'procedure'
+  return_type: string
+  arguments: string
+  language: string
 }
 
 export const connectionsApi = {
@@ -53,5 +62,7 @@ export const connectionsApi = {
   testRaw: (data: { driver: DbDriver; host: string; port: number; database: string; username: string; password: string; ssl: boolean }) =>
     api.post<{ ok: boolean; latencyMs?: number; error?: string }>('/connections/test-raw', data),
   schema: (id: string) =>
-    api.get<{ tables: SchemaTable[] }>(`/connections/${id}/schema`),
+    api.get<{ tables: SchemaTable[]; functions?: SchemaFunction[] }>(`/connections/${id}/schema`),
+  getFunction: (id: string, name: string) =>
+    api.get<{ function: SchemaFunction & { source: string; params: Array<{ name: string; type: string }> } }>(`/connections/${id}/function/${name}`),
 }

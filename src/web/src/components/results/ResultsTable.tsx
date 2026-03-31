@@ -607,7 +607,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="sm:max-w-md bg-card flex flex-col overflow-hidden">
         <SheetHeader><SheetTitle>{titles[mode]}</SheetTitle></SheetHeader>
-        <div className="mt-4 flex-1 overflow-y-auto px-0.5 space-y-3">
+        <div className="mt-4 flex-1 overflow-y-auto px-3 space-y-3">
           {(mode === 'row' || mode === 'edit') && (
             <div className="space-y-3">
               {columns.map((col) => (

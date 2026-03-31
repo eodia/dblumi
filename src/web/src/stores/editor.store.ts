@@ -31,7 +31,9 @@ export type TabResult = {
   executedSql: string | null
 }
 
-export type TabKind = 'query' | 'table'
+export type TabKind = 'query' | 'table' | 'function'
+
+export type FunctionParam = { name: string; type: string; value: string }
 
 export type QueryTab = {
   id: string
@@ -40,6 +42,7 @@ export type QueryTab = {
   sql: string
   result: TabResult
   savedQueryId: string | null
+  functionParams: FunctionParam[]
 }
 
 const DEFAULT_PAGE_SIZE = 100
@@ -76,6 +79,8 @@ type EditorState = {
   loadQuery: (sql: string, name: string) => void
   openQuery: (sql: string, name: string, savedQueryId?: string) => void
   openTable: (tableName: string) => Promise<void>
+  openFunction: (name: string, source: string, params: Array<{ name: string; type: string }>) => void
+  setFunctionParams: (params: FunctionParam[]) => void
   reorderTabs: (fromId: string, toId: string) => void
   closeOthers: (id: string) => void
   closeToLeft: (id: string) => void
@@ -94,7 +99,7 @@ type EditorState = {
 }
 
 function makeQueryTab(n: number): QueryTab {
-  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null }
+  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [] }
 }
 
 function makeTableTab(tableName: string): QueryTab {
@@ -104,6 +109,7 @@ function makeTableTab(tableName: string): QueryTab {
     kind: 'table',
     sql: `SELECT * FROM ${tableName}`,
     savedQueryId: null,
+    functionParams: [],
     result: emptyResult(),
   }
 }
@@ -339,6 +345,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         fetchTotalCount(activeConnectionId, tab.sql, tab.id, get, set),
       ])
     }
+  },
+
+  openFunction: (name, source, params) => {
+    const { tabs } = get()
+    const existing = tabs.find((t) => t.kind === 'function' && t.name === name)
+    if (existing) {
+      set({ activeTabId: existing.id })
+      return
+    }
+    const tab: QueryTab = {
+      id: crypto.randomUUID(),
+      name,
+      kind: 'function',
+      sql: source,
+      result: emptyResult(),
+      savedQueryId: null,
+      functionParams: params.map((p) => ({ ...p, value: '' })),
+    }
+    set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
+  },
+
+  setFunctionParams: (params) => {
+    const { tabs, activeTabId } = get()
+    set({ tabs: tabs.map((t) => t.id === activeTabId ? { ...t, functionParams: params } : t) })
   },
 
   closeOthers: (id) => {
