@@ -65,4 +65,8 @@ export const connectionsApi = {
     api.get<{ tables: SchemaTable[]; functions?: SchemaFunction[] }>(`/connections/${id}/schema`),
   getFunction: (id: string, name: string) =>
     api.get<{ function: SchemaFunction & { source: string; params: Array<{ name: string; type: string }> } }>(`/connections/${id}/function/${name}`),
+  databases: (id: string) =>
+    api.get<{ databases: string[] }>(`/connections/${id}/databases`),
+  switchDatabase: (id: string, database: string) =>
+    api.post<{ database: string }>(`/connections/${id}/switch-database`, { database }),
 }

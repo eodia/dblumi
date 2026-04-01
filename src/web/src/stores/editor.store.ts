@@ -89,6 +89,7 @@ type EditorState = {
 
   executeQuery: (force?: boolean) => Promise<void>
   executeSelection: () => Promise<void>
+  executeSql: (sql: string) => Promise<void>
   reloadTab: () => Promise<void>
   goToPage: (page: number) => Promise<void>
   setResultPageSize: (size: number) => Promise<void>
@@ -448,6 +449,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     await Promise.all([
       runSse(activeConnectionId, selection, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
       fetchTotalCount(activeConnectionId, selection, activeTabId, get, set),
+    ])
+  },
+
+  executeSql: async (sql: string) => {
+    const { activeConnectionId, tabs, activeTabId } = get()
+    const tab = tabs.find((t) => t.id === activeTabId)
+    if (!activeConnectionId || !sql.trim()) return
+    const { pageSize } = tab?.result ?? { pageSize: 100 }
+    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, totalCount: null, sortBy: null, sortMulti: [], executedSql: sql }) })
+    await Promise.all([
+      runSse(activeConnectionId, sql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
+      fetchTotalCount(activeConnectionId, sql, activeTabId, get, set),
     ])
   },
 

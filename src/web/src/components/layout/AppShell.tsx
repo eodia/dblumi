@@ -42,6 +42,7 @@ import {
   Languages,
   Eye,
   Braces,
+  Settings2,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -113,10 +114,12 @@ import { SaveQueryModal } from '@/components/saved-queries/SaveQueryModal'
 import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { SavedQueriesPanel } from '@/components/saved-queries/SavedQueriesPanel'
 import { CopilotPanel } from '@/components/copilot/CopilotPanel'
+import { AdminPage } from '@/components/admin/AdminPage'
+import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
 
-type NavPage = 'overview' | 'tables' | 'sql-editor'
+type NavPage = 'overview' | 'tables' | 'sql-editor' | 'admin'
 
 const NAV_ITEMS = [
   { id: 'overview' as NavPage, labelKey: 'nav.overview' as const, icon: LayoutDashboard },
@@ -124,10 +127,7 @@ const NAV_ITEMS = [
   { id: 'sql-editor' as NavPage, labelKey: 'nav.sqlEditor' as const, icon: TerminalSquare },
 ]
 
-function DriverIcon({ driver }: { driver: string }) {
-  if (driver === 'postgresql') return <span className="text-xs">🐘</span>
-  return <span className="text-xs">🐬</span>
-}
+import { DriverIcon } from '@/components/ui/driver-icon'
 
 function EnvBadge({ env }: { env: string }) {
   let cls = 'bg-muted text-muted-foreground border-border'
@@ -396,6 +396,7 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
 function SortableTab({
   tab,
   isActive,
+  isProd,
   onActivate,
   onClose,
   onCloseOthers,
@@ -405,6 +406,7 @@ function SortableTab({
 }: {
   tab: import('@/stores/editor.store').QueryTab
   isActive: boolean
+  isProd?: boolean
   onActivate: () => void
   onClose: () => void
   onCloseOthers: () => void
@@ -424,7 +426,7 @@ function SortableTab({
           className={cn(
             'group flex items-center gap-1.5 px-3 h-full text-xs border-r border-border-subtle select-none flex-shrink-0 transition-colors',
             isActive
-              ? 'bg-background text-foreground border-b-2 border-b-primary -mb-px'
+              ? cn('bg-background text-foreground border-b-2 -mb-px', isProd ? 'border-b-destructive' : 'border-b-primary')
               : 'text-muted-foreground hover:text-foreground hover:bg-surface-raised',
             isDragging && 'opacity-50',
           )}
@@ -479,6 +481,8 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
   const { tabs, activeTabId, setActiveTab, addTab, closeTab, closeOthers, closeToLeft, closeToRight, closeAll, reorderTabs, executeQuery, executeSelection, selection, activeConnectionId } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const isRunning = activeTab?.result.status === 'running'
+  const connCache = useQueryClient().getQueryData<{ connections: Connection[] }>(['connections'])
+  const isProdEnv = connCache?.connections.find((c) => c.id === activeConnectionId)?.environment?.toLowerCase() === 'prod'
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -492,18 +496,18 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
   }
 
   return (
-    <div className="flex items-stretch h-9 border-b border-border-subtle bg-surface flex-shrink-0 overflow-x-auto">
+    <div className="flex items-stretch h-9 border-b border-border-subtle bg-surface flex-shrink-0">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
-          <div className="flex items-stretch min-w-0 flex-1">
+          <div className="flex items-stretch min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
             {tabs.map((tab) => (
               <SortableTab
                 key={tab.id}
                 tab={tab}
                 isActive={tab.id === activeTabId}
+                isProd={isProdEnv}
                 onActivate={() => setActiveTab(tab.id)}
                 onClose={() => closeTab(tab.id)}
-
                 onCloseOthers={() => closeOthers(tab.id)}
                 onCloseToLeft={() => closeToLeft(tab.id)}
                 onCloseToRight={() => closeToRight(tab.id)}
@@ -569,14 +573,12 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
                 size="sm"
                 onClick={() => {
                   if (activeTab?.kind === 'function') {
-                    // Always build SQL from function params
                     const args = activeTab.functionParams.map((p) => {
                       if (p.value === '' || p.value.toUpperCase() === 'NULL') return 'NULL'
                       if (['int', 'integer', 'bigint', 'numeric', 'float', 'double'].some((t) => p.type.toLowerCase().includes(t))) return p.value
                       return `'${p.value.replace(/'/g, "''")}'`
                     }).join(', ')
-                    useEditorStore.getState().setSql(`SELECT * FROM ${activeTab.name}(${args})`)
-                    void executeQuery(true)
+                    void useEditorStore.getState().executeSql(`SELECT * FROM ${activeTab.name}(${args})`)
                   } else {
                     selection ? executeSelection() : executeQuery()
                   }
@@ -617,7 +619,7 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
 // ── Function editor with parameters panel ───────────────────────────────
 function FunctionEditor() {
   const { t } = useI18n()
-  const { tabs, activeTabId, activeConnectionId, executeQuery, setSql, setFunctionParams } = useEditorStore()
+  const { tabs, activeTabId, activeConnectionId, executeSql, setFunctionParams } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const params = activeTab?.functionParams ?? []
   const funcName = activeTab?.name ?? ''
@@ -647,19 +649,18 @@ function FunctionEditor() {
     return `SELECT * FROM ${funcName}(${args})`
   }, [params, funcName])
 
-  // Intercept Ctrl+Enter to build SQL from params before executing
+  // Intercept Ctrl+Enter to execute function with params
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault()
         if (!activeConnectionId) return
-        setSql(buildFunctionSql())
-        void executeQuery(true)
+        void executeSql(buildFunctionSql())
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeConnectionId, buildFunctionSql, setSql, executeQuery])
+  }, [activeConnectionId, buildFunctionSql, executeSql])
 
   const updateParamType = (i: number, type: string) => {
     const next = [...params]
@@ -721,18 +722,25 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
   const qcRef = useRef(useQueryClient())
 
   const handleSave = useCallback(() => {
+    if (activeTab?.kind === 'function') {
+      // Function → execute CREATE OR REPLACE to update in DB
+      if (!activeConnectionId || !activeTab.sql.trim()) return
+      useEditorStore.getState().executeSql(activeTab.sql).then(() => {
+        qcRef.current.invalidateQueries({ queryKey: ['schema', activeConnectionId] })
+        toast.success(t('sq.saved'))
+      })
+      return
+    }
     if (activeTab?.kind !== 'query') return
     if (activeTab.savedQueryId) {
-      // Existing → auto-save
       savedQueriesApi.update(activeTab.savedQueryId, { sql: activeTab.sql }).then(() => {
         qcRef.current.invalidateQueries({ queryKey: ['saved-queries'] })
         toast.success(t('sq.saved'))
       })
     } else {
-      // New → open save modal
       onSaveNew()
     }
-  }, [activeTab, onSaveNew])
+  }, [activeTab, activeConnectionId, onSaveNew])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -816,6 +824,78 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
 }
 
 // ── Inner shell — needs useSidebar() which requires SidebarProvider ─────
+// ── Database switcher (shown below connection selector) ──────────────────
+function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
+  const { t } = useI18n()
+  const qc = useQueryClient()
+  const [selectedDb, setSelectedDb] = useState<string>('')
+  const [dbSearch, setDbSearch] = useState('')
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['databases', connectionId],
+    queryFn: () => connectionsApi.databases(connectionId),
+    staleTime: 60 * 1000,
+  })
+
+  const handleSwitch = async (db: string) => {
+    if (db === selectedDb) return
+    await connectionsApi.switchDatabase(connectionId, db)
+    setSelectedDb(db)
+    setDbSearch('')
+    qc.invalidateQueries({ queryKey: ['schema', connectionId] })
+  }
+
+  const databases = data?.databases ?? []
+  const displayDb = selectedDb || databases[0] || 'default'
+  const lc = dbSearch.toLowerCase()
+  const filtered = lc ? databases.filter((db) => db.toLowerCase().includes(lc)) : databases
+
+  return (
+    <div className="group-data-[collapsible=icon]:hidden px-3 pb-1">
+      <DropdownMenu onOpenChange={(open) => { if (!open) setDbSearch('') }}>
+        <DropdownMenuTrigger asChild>
+          <button className="w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors">
+            <Database className="h-3 w-3 flex-shrink-0 opacity-50" />
+            <span className="font-mono truncate">{displayDb}</span>
+            <ChevronDown className="h-3 w-3 ml-auto opacity-50" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56">
+          <div className="px-2 py-1.5">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-text-muted pointer-events-none" />
+              <Input
+                value={dbSearch}
+                onChange={(e) => setDbSearch(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
+                placeholder={t('conn.search')}
+                className="h-7 pl-7 pr-2 text-xs"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {isLoading && (
+              <div className="px-2 py-2 text-xs text-muted-foreground flex items-center gap-2">
+                <RefreshCw className="h-3 w-3 animate-spin" /> {t('common.loading')}
+              </div>
+            )}
+            {filtered.map((db) => (
+              <DropdownMenuItem key={db} className="gap-2 text-xs font-mono cursor-pointer" onClick={() => handleSwitch(db)}>
+                {db}
+                {db === displayDb && <Check className="h-3 w-3 ml-auto text-primary" />}
+              </DropdownMenuItem>
+            ))}
+            {filtered.length === 0 && !isLoading && (
+              <div className="px-2 py-2 text-xs text-muted-foreground text-center">{t('table.noResults')}</div>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
 function AppShellInner({
   connections,
   page,
@@ -958,8 +1038,8 @@ function AppShellInner({
                           <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                         )}
                       </DropdownMenuItem>
-                      {/* Edit / Delete actions */}
-                      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/conn:opacity-100 transition-opacity">
+                      {/* Edit / Delete actions (admin only) */}
+                      {user?.role === 'admin' && <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/conn:opacity-100 transition-opacity">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -981,7 +1061,7 @@ function AppShellInner({
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   ))}
 
@@ -991,19 +1071,25 @@ function AppShellInner({
                     </div>
                   )}
 
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setConnModalOpen(true)}
-                    className="gap-2 cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="text-sm">{t('conn.new')}</span>
-                  </DropdownMenuItem>
+                  {user?.role === 'admin' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setConnModalOpen(true)} className="gap-2 cursor-pointer">
+                        <Plus className="h-4 w-4" />
+                        <span className="text-sm">{t('conn.new')}</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+
+        {/* ═══ Database switcher — only for server-level connections (no database configured) ═══ */}
+        {activeConnectionId && active && !active.database && (
+          <DatabaseSwitcher connectionId={activeConnectionId} />
+        )}
 
         {/* ═══ Content — Navigation + inline schema/queries ═══ */}
         <SidebarContent className="overflow-hidden">
@@ -1085,7 +1171,8 @@ function AppShellInner({
                   sideOffset={4}
                 >
                   <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                    {user?.email}
+                    <div>{user?.email}</div>
+                    <div className="text-[10px] text-text-muted mt-0.5">{t(`user.role.${user?.role ?? 'viewer'}` as 'user.role.admin')}</div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>
@@ -1104,6 +1191,12 @@ function AppShellInner({
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => setPage('admin')} className="gap-2 cursor-pointer">
+                      <Settings2 className="h-4 w-4" />
+                      {t('admin.title')}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="gap-2 cursor-pointer">
                     <LogOut className="h-4 w-4" />
@@ -1153,10 +1246,13 @@ function AppShellInner({
 
         {/* Page content */}
         <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
-          {/* Always show the editor area */}
-          <TooltipProvider delayDuration={300}>
-            <UnifiedEditorArea onSaveNew={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
-          </TooltipProvider>
+          {page === 'admin' && user?.role === 'admin' ? (
+            <AdminPage />
+          ) : (
+            <TooltipProvider delayDuration={300}>
+              <UnifiedEditorArea onSaveNew={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
+            </TooltipProvider>
+          )}
         </div>
 
         {/* Command palette */}
@@ -1188,17 +1284,18 @@ function AppShellInner({
               {t('conn.deleteAction')} <span className="font-semibold text-foreground">{deleteConfirmConn?.name}</span> ?
               {t('conn.deleteConfirm')}
             </p>
+            <div className="pt-2">
+              <SlideToConfirm
+                label={t('admin.slideToDelete')}
+                confirmLabel={t('common.delete')}
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onConfirm={() => deleteConfirmConn && deleteMutation.mutate(deleteConfirmConn.id)}
+              />
+            </div>
             <DialogFooter>
               <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmConn(null)}>
                 {t('common.cancel')}
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={deleteMutation.isPending}
-                onClick={() => deleteConfirmConn && deleteMutation.mutate(deleteConfirmConn.id)}
-              >
-                {deleteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('common.delete')}
               </Button>
             </DialogFooter>
           </DialogContent>

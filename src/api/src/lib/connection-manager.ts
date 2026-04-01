@@ -52,7 +52,7 @@ class ConnectionManager {
       const pool = new Pool({
         host: opts.host,
         port: opts.port,
-        database: opts.database,
+        database: opts.database || 'postgres',
         user: opts.username,
         password: opts.password,
         ...(opts.ssl ? { ssl: { rejectUnauthorized: false } } : { ssl: false }),
@@ -71,7 +71,7 @@ class ConnectionManager {
       const pool = mysql.createPool({
         host: opts.host,
         port: opts.port,
-        database: opts.database,
+        ...(opts.database ? { database: opts.database } : {}),
         user: opts.username,
         password: opts.password,
         ...(opts.ssl ? { ssl: {} } : {}),

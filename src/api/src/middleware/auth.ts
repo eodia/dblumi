@@ -39,3 +39,11 @@ export const authMiddleware = createMiddleware<AuthVariables>(async (c, next) =>
 
   await next()
 })
+
+export const adminMiddleware = createMiddleware<AuthVariables>(async (c, next) => {
+  const role = c.get('userRole')
+  if (role !== 'admin') {
+    throw new HTTPException(403, { message: 'Admin access required' })
+  }
+  await next()
+})

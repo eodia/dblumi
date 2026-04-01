@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { authMiddleware } from '../middleware/auth.js'
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import {
   listConnections,
   getConnection,
@@ -31,7 +31,7 @@ const CreateSchema = z.object({
   driver: z.enum(['postgresql', 'mysql']),
   host: z.string().min(1),
   port: z.number().int().min(1).max(65535),
-  database: z.string().min(1),
+  database: z.string().default(''),
   username: z.string().min(1),
   password: z.string(),
   ssl: z.boolean().default(false),
@@ -89,6 +89,7 @@ connectionsRouter.get('/:id', async (c) => {
 
 connectionsRouter.post(
   '/',
+  adminMiddleware,
   zValidator('json', CreateSchema),
   async (c) => {
     const userId = c.get('userId')
@@ -104,6 +105,7 @@ connectionsRouter.post(
 
 connectionsRouter.put(
   '/:id',
+  adminMiddleware,
   zValidator('json', UpdateSchema),
   async (c) => {
     const userId = c.get('userId')
@@ -127,7 +129,7 @@ connectionsRouter.put(
 // DELETE /connections/:id
 // ──────────────────────────────────────────────
 
-connectionsRouter.delete('/:id', async (c) => {
+connectionsRouter.delete('/:id', adminMiddleware, async (c) => {
   const userId = c.get('userId')
   try {
     await deleteConnection(c.req.param('id'), userId)
@@ -163,7 +165,7 @@ const TestRawSchema = z.object({
   driver: z.enum(['postgresql', 'mysql']),
   host: z.string().min(1),
   port: z.number().int(),
-  database: z.string().min(1),
+  database: z.string().default(''),
   username: z.string().min(1),
   password: z.string(),
   ssl: z.boolean().default(false),
@@ -450,12 +452,19 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
         `, [funcName])
         if (!rows[0]) return c.json(problem(404, 'Fonction introuvable.'), 404)
 
-        // Parse arguments into structured params
+        // Parse arguments — only keep IN params (exclude OUT, INOUT output-only)
         const argStr = (rows[0] as Record<string, unknown>).arguments as string
         const params = argStr ? argStr.split(',').map((a) => {
           const parts = a.trim().split(/\s+/)
+          // pg_get_function_identity_arguments may prefix with IN/OUT/INOUT
+          const mode = parts[0]?.toUpperCase()
+          if (mode === 'OUT') return null
+          if (mode === 'IN' || mode === 'INOUT') {
+            return { name: parts[1] ?? '', type: parts.slice(2).join(' ') || 'text' }
+          }
+          // No mode prefix — it's an IN param by default
           return { name: parts[0] ?? '', type: parts.slice(1).join(' ') || 'text' }
-        }) : []
+        }).filter(Boolean) : []
 
         return c.json({ function: { ...rows[0], params } })
       } finally {
@@ -479,11 +488,12 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
         const arr = rows as Record<string, unknown>[]
         if (!arr[0]) return c.json(problem(404, 'Fonction introuvable.'), 404)
 
-        // Get params
+        // Get params — only IN and INOUT (exclude OUT)
         const [paramRows] = await conn.query(`
-          SELECT PARAMETER_NAME AS name, DATA_TYPE AS type, PARAMETER_MODE AS mode
+          SELECT PARAMETER_NAME AS name, DATA_TYPE AS type
           FROM information_schema.PARAMETERS
           WHERE SPECIFIC_SCHEMA = DATABASE() AND SPECIFIC_NAME = ?
+            AND PARAMETER_MODE IN ('IN', 'INOUT')
           ORDER BY ORDINAL_POSITION
         `, [funcName])
 
@@ -497,5 +507,76 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
     return c.json(problem(502, message), 502)
   }
 })
+
+// ──────────────────────────────────────────────
+// GET /connections/:id/databases
+// ──────────────────────────────────────────────
+
+connectionsRouter.get('/:id/databases', async (c) => {
+  const userId = c.get('userId')
+  const connectionId = c.req.param('id')
+
+  let poolOpts
+  try {
+    poolOpts = await getPoolOptions(connectionId, userId)
+  } catch {
+    return c.json(problem(404, 'Connexion introuvable.'), 404)
+  }
+
+  const pool = await connectionManager.getPool(connectionId, poolOpts)
+
+  try {
+    if (poolOpts.driver === 'postgresql') {
+      const pgPool = pool as PgPool
+      const client = await pgPool.connect()
+      try {
+        const { rows } = await client.query(`
+          SELECT datname AS name FROM pg_database
+          WHERE datistemplate = false
+          ORDER BY datname
+        `)
+        return c.json({ databases: rows.map((r: Record<string, unknown>) => r.name as string) })
+      } finally {
+        client.release()
+      }
+    } else {
+      const mysqlPool = pool as MySQLPool
+      const conn = await mysqlPool.getConnection()
+      try {
+        const [rows] = await conn.query('SHOW DATABASES')
+        const dbs = (rows as Array<Record<string, unknown>>).map((r) => Object.values(r)[0] as string)
+        return c.json({ databases: dbs })
+      } finally {
+        conn.release()
+      }
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to list databases'
+    return c.json(problem(502, message), 502)
+  }
+})
+
+// ──────────────────────────────────────────────
+// POST /connections/:id/switch-database
+// ──────────────────────────────────────────────
+
+connectionsRouter.post(
+  '/:id/switch-database',
+  zValidator('json', z.object({ database: z.string().min(1) })),
+  async (c) => {
+    const userId = c.get('userId')
+    const connectionId = c.req.param('id')
+    const { database } = c.req.valid('json')
+
+    // Release existing pool so it reconnects with the new DB
+    await connectionManager.release(connectionId)
+
+    // Re-create pool with the new database (runtime only, not persisted to connection config)
+    const poolOpts = await getPoolOptions(connectionId, userId)
+    await connectionManager.getPool(connectionId, { ...poolOpts, database })
+
+    return c.json({ database })
+  }
+)
 
 export { connectionsRouter }

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { CheckCircle, XCircle, Loader2, Link2, FormInput } from 'lucide-react'
+import { DriverIcon } from '@/components/ui/driver-icon'
 import { connectionsApi, type Connection, type CreateConnectionInput, type DbDriver } from '@/api/connections'
 import { cn } from '@/lib/utils'
 
@@ -347,7 +348,7 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
           <Separator />
 
           <DialogFooter className="flex-row justify-between sm:justify-between">
-            <Button type="button" variant="ghost" size="sm" onClick={handleTest} disabled={testing || !form.host || !form.database}>
+            <Button type="button" variant="ghost" size="sm" onClick={handleTest} disabled={testing || !form.host}>
               {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Tester
             </Button>
@@ -399,7 +400,7 @@ function ManualFields({
                 d === 'postgresql' && 'border-r border-border-strong',
               )}
             >
-              {d === 'postgresql' ? '🐘 PostgreSQL' : '🐬 MySQL'}
+              {d === 'postgresql' ? <><DriverIcon driver="postgresql" className="h-3.5 w-3.5 inline-block mr-1" /> PostgreSQL</> : <><DriverIcon driver="mysql" className="h-3.5 w-3.5 inline-block mr-1" /> MySQL</>}
             </button>
           ))}
         </div>
@@ -424,8 +425,8 @@ function ManualFields({
 
       {/* Database */}
       <div className="space-y-1.5">
-        <Label>Base de donnees</Label>
-        <Input value={form.database} onChange={(e) => set('database', e.target.value)} required />
+        <Label>Base de données <span className="text-text-muted font-normal text-xs">(optionnel — serveur entier)</span></Label>
+        <Input value={form.database} onChange={(e) => set('database', e.target.value)} placeholder="Laisser vide pour tout le serveur" />
       </div>
 
       {/* Username + Password */}

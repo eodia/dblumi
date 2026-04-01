@@ -49,12 +49,7 @@ import { cn } from '@/lib/utils'
 
 type Props = { connections: Connection[] }
 
-// ── DB icon by driver ───────────────────────────
-function DriverIcon({ driver }: { driver: string }) {
-  if (driver === 'postgresql')
-    return <span className="text-[11px] leading-none select-none">🐘</span>
-  return <span className="text-[11px] leading-none select-none">🐬</span>
-}
+import { DriverIcon } from '@/components/ui/driver-icon'
 
 export function SchemaSidebar({ connections }: Props) {
   const { t } = useI18n()

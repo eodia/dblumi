@@ -20,6 +20,11 @@ const CopilotSchema = z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string().min(1),
   })).min(1),
+  context: z.object({
+    tabKind: z.enum(['query', 'table', 'function']),
+    tabName: z.string(),
+    sql: z.string(),
+  }).optional(),
 })
 
 // ── Schema fetching (reuse logic from connections route) ──
@@ -95,7 +100,7 @@ copilotRouter.post(
   '/',
   zValidator('json', CopilotSchema),
   async (c) => {
-    const { connectionId, messages } = c.req.valid('json')
+    const { connectionId, messages, context } = c.req.valid('json')
     const userId = c.get('userId')
 
     // Resolve connection
@@ -106,14 +111,45 @@ copilotRouter.post(
       return c.json({ type: 'error', message: 'Connexion introuvable.' }, 404)
     }
 
-    // Fetch schema for context
+    // Fetch schema + functions for context
     let schema: Awaited<ReturnType<typeof fetchSchema>> = []
+    let functions: Array<{ name: string; kind: string; return_type: string; arguments: string }> = []
     try {
       const pool = await connectionManager.getPool(connectionId, poolOpts)
       schema = await fetchSchema(pool, poolOpts.driver)
+
+      // Fetch functions/procedures
+      if (poolOpts.driver === 'postgresql') {
+        const pgPool = pool as PgPool
+        const client = await pgPool.connect()
+        try {
+          const { rows } = await client.query(`
+            SELECT p.proname AS name,
+              CASE WHEN p.prokind = 'p' THEN 'procedure' ELSE 'function' END AS kind,
+              pg_get_function_result(p.oid) AS return_type,
+              pg_get_function_identity_arguments(p.oid) AS arguments
+            FROM pg_proc p
+            JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
+            ORDER BY p.proname
+          `)
+          functions = rows as typeof functions
+        } finally { client.release() }
+      } else {
+        const mysqlPool = pool as MySQLPool
+        const conn = await mysqlPool.getConnection()
+        try {
+          const [rows] = await conn.query(`
+            SELECT ROUTINE_NAME AS name, LOWER(ROUTINE_TYPE) AS kind,
+              DTD_IDENTIFIER AS return_type, '' AS arguments
+            FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE()
+            ORDER BY ROUTINE_NAME
+          `)
+          functions = rows as typeof functions
+        } finally { conn.release() }
+      }
     } catch (err) {
       logger.warn({ err }, 'Failed to fetch schema for copilot')
-      schema = []
     }
 
     // Stream response
@@ -126,8 +162,10 @@ copilotRouter.post(
           userId,
           messages,
           schema,
+          functions,
           poolOpts.driver,
           poolOpts.database,
+          context,
         )) {
           if (chunk.type === 'text') {
             await send('text', { text: chunk.text })

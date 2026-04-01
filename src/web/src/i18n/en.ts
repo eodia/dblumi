@@ -180,6 +180,9 @@ export const en = {
   'cmd.active': 'active',
 
   // ── User menu ──
+  'user.role.admin': 'Administrator',
+  'user.role.editor': 'Editor',
+  'user.role.viewer': 'Viewer',
   'user.language': 'Language',
   'user.french': 'Français',
   'user.english': 'English',
@@ -192,6 +195,20 @@ export const en = {
   'common.noTableFound': 'No tables found.',
   'common.filterTables': 'Filter tables...',
   'common.schema': 'Schema',
+  // ── Admin ──
+  'admin.title': 'Administration',
+  'admin.users': 'Users',
+  'admin.connections': 'Connections',
+  'admin.noUsers': 'No users.',
+  'admin.editUser': 'Edit user',
+  'admin.deleteUser': 'Delete user',
+  'admin.deleteUserConfirm': 'Delete this user? Their saved queries and personal connections will be removed.',
+  'admin.cannotDeleteSelf': 'You cannot delete your own account.',
+  'admin.role': 'Role',
+  'admin.userSaved': 'User updated',
+  'admin.userDeleted': 'User deleted',
+  'admin.slideToDelete': 'Slide to delete',
+
   'fn.addParam': 'Add parameter',
   'common.overviewPlaceholder': 'Project Overview — coming soon',
   'common.dropTable': 'Drop table',

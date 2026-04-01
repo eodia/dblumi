@@ -3,7 +3,7 @@ import { Bot, Send, Copy, Play, Loader2, X, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/stores/editor.store'
-import { streamCopilot, type CopilotMessage } from '@/api/copilot'
+import { streamCopilot, type CopilotMessage, type CopilotContext } from '@/api/copilot'
 import { SqlHighlight } from './SqlHighlight'
 import { useI18n } from '@/i18n'
 
@@ -98,7 +98,12 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
 
     try {
       let fullText = ''
-      for await (const chunk of streamCopilot(activeConnectionId, newMessages)) {
+      const ctx: CopilotContext | undefined = activeTab ? {
+        tabKind: activeTab.kind,
+        tabName: activeTab.name,
+        sql: activeTab.sql,
+      } : undefined
+      for await (const chunk of streamCopilot(activeConnectionId, newMessages, ctx)) {
         if (chunk.type === 'text') {
           fullText += chunk.text
           setMessages((prev) => {
