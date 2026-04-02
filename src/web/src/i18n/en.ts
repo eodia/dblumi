@@ -194,6 +194,8 @@ export const en = {
   'copilot.copySql': 'Copy SQL',
   'copilot.insertToEditor': 'Insert into editor',
   'copilot.errorContact': 'Unable to contact the copilot.',
+  'copilot.subtitleOpenai': 'OpenAI',
+  'copilot.subtitleAzure': 'Azure OpenAI',
 
   // ── Command palette ──
   'cmd.placeholder': 'Search for an action, table, or query...',

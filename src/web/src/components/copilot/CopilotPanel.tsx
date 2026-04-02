@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { settingsApi } from '@/api/settings'
 import { Bot, Send, Copy, Play, Loader2, X, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -67,6 +69,12 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
   const { t } = useI18n()
   const { activeConnectionId, setSql, tabs, activeTabId } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
+
+  const { data: copilotInfo } = useQuery({
+    queryKey: ['copilot-info'],
+    queryFn: settingsApi.getCopilotInfo,
+    staleTime: Infinity,
+  })
 
   const [messages, setMessages] = useState<CopilotMessage[]>([])
   const [input, setInput] = useState('')
@@ -145,7 +153,11 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
       <div className="flex items-center gap-2 h-8 px-3 border-b border-border-subtle bg-surface flex-shrink-0">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
         <span className="text-xs font-semibold">{t('copilot.title')}</span>
-        <span className="text-[10px] text-text-muted">{t('copilot.subtitle')}</span>
+        <span className="text-[10px] text-text-muted">{copilotInfo?.provider === 'openai'
+          ? t('copilot.subtitleOpenai')
+          : copilotInfo?.provider === 'azure-openai'
+          ? t('copilot.subtitleAzure')
+          : t('copilot.subtitle')}</span>
         <div className="flex-1" />
         <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={onClose}>
           <X className="h-3 w-3" />
