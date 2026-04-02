@@ -1,6 +1,6 @@
 import { api } from './client'
 
-export type DbDriver = 'postgresql' | 'mysql'
+export type DbDriver = 'postgresql' | 'mysql' | 'oracle'
 
 export type Connection = {
   id: string
@@ -53,6 +53,14 @@ export type SchemaFunction = {
   language: string
 }
 
+export type DbStats = {
+  version: string | null
+  encoding: string | null
+  timezone: string | null
+  sizePretty: string | null
+  sizeBytes: number | null
+}
+
 export const connectionsApi = {
   list: () => api.get<{ connections: Connection[] }>('/connections'),
   get: (id: string) => api.get<{ connection: Connection }>(`/connections/${id}`),
@@ -73,6 +81,7 @@ export const connectionsApi = {
     api.get<{ databases: string[] }>(`/connections/${id}/databases`),
   switchDatabase: (id: string, database: string) =>
     api.post<{ database: string }>(`/connections/${id}/switch-database`, { database }),
+  stats: (id: string) => api.get<DbStats>(`/connections/${id}/stats`),
   getConnectionShares: (id: string) =>
     api.get<{ groups: Array<{ id: string; name: string; color: string | null }>; users: Array<{ id: string; name: string; email: string }> }>(`/connections/${id}/shares`),
   setConnectionShares: (id: string, groupIds: string[], userIds: string[]) =>
