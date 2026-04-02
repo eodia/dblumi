@@ -116,6 +116,7 @@ import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { SavedQueriesPanel } from '@/components/saved-queries/SavedQueriesPanel'
 import { CopilotPanel } from '@/components/copilot/CopilotPanel'
 import { AdminPage } from '@/components/admin/AdminPage'
+import { OverviewPage } from '@/components/overview/OverviewPage'
 import { TableStructureEditor } from '@/components/schema/TableStructureEditor'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import {
@@ -1069,43 +1070,46 @@ function AppShellInner({
                     <div key={conn.id} className="group/conn relative">
                       <DropdownMenuItem
                         onClick={() => setActiveConnection(conn.id)}
-                        className="gap-2 cursor-pointer pr-8"
+                        className={cn(
+                          'gap-2 cursor-pointer group-hover/conn:bg-black/20',
+                          conn.id === activeConnectionId && 'border border-primary/60',
+                        )}
                       >
-                        <span
-                          className="flex-shrink-0"
-                        >
+                        <span className="flex-shrink-0">
                           <DriverIcon driver={conn.driver} environment={conn.environment} />
                         </span>
                         <span className="flex-1 truncate text-sm">{conn.name}</span>
-                        {conn.environment && <EnvBadge env={conn.environment} />}
-                        {conn.id === activeConnectionId && (
-                          <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        {conn.environment && (
+                          <span className="ml-auto group-hover/conn:opacity-0 transition-opacity">
+                            <EnvBadge env={conn.environment} />
+                          </span>
                         )}
                       </DropdownMenuItem>
-                      {/* Edit / Delete actions (own connections or admin) */}
-                      {(conn.createdBy === user?.id || user?.role === 'admin') && <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/conn:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingConn(conn)
-                            setConnModalOpen(true)
-                          }}
-                          className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeleteConfirmConn(conn)
-                          }}
-                          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>}
+                      {(conn.createdBy === user?.id || user?.role === 'admin') && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/conn:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingConn(conn)
+                              setConnModalOpen(true)
+                            }}
+                            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteConfirmConn(conn)
+                            }}
+                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
 
@@ -1266,6 +1270,8 @@ function AppShellInner({
         <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
           {page === 'admin' && user?.role === 'admin' ? (
             <AdminPage />
+          ) : page === 'overview' ? (
+            <OverviewPage />
           ) : (
             <TooltipProvider delayDuration={300}>
               <UnifiedEditorArea onSaveNew={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />
