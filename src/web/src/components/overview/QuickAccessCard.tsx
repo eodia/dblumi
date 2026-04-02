@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { savedQueriesApi } from '@/api/saved-queries'
 import { useEditorStore, type TableVisitEntry } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
-import { Table2, Star, BarChart2 } from 'lucide-react'
+import { Table2, Star, BarChart2, Share2 } from 'lucide-react'
 
 type Props = { connectionId: string }
 
@@ -104,6 +104,7 @@ export function QuickAccessCard({ connectionId }: Props) {
                   className="flex-1 text-left flex items-center gap-2 rounded px-2 py-1.5 hover:bg-surface-raised transition-colors"
                 >
                   <span className="text-xs truncate">{q.name}</span>
+                  {q.shared && <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />}
                 </button>
                 <button
                   type="button"
@@ -120,7 +121,10 @@ export function QuickAccessCard({ connectionId }: Props) {
         {/* All saved queries for pinning */}
         {allSaved.filter((q) => !pinned.includes(q.id)).slice(0, 4).map((q) => (
           <div key={q.id} className="flex items-center gap-1">
-            <span className="flex-1 text-xs text-muted-foreground truncate px-2">{q.name}</span>
+            <span className="flex-1 text-xs text-muted-foreground truncate px-2 flex items-center gap-1">
+              {q.name}
+              {q.shared && <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />}
+            </span>
             <button
               type="button"
               onClick={() => toggle(q.id)}

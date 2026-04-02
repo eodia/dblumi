@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { savedQueriesApi } from '@/api/saved-queries'
 import { useEditorStore, type QueryHistoryEntry } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
-import { Clock, BookMarked } from 'lucide-react'
+import { Clock, BookMarked, Share2 } from 'lucide-react'
 
 type Props = { connectionId: string }
 
@@ -85,6 +85,7 @@ export function ActivityCard({ connectionId }: Props) {
                   className="w-full text-left flex items-center gap-2 rounded px-2 py-1.5 hover:bg-surface-raised transition-colors"
                 >
                   <span className="text-xs truncate flex-1">{q.name}</span>
+                  {q.shared && <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />}
                   {q.folder && <span className="text-[10px] text-muted-foreground flex-shrink-0">{q.folder}</span>}
                 </button>
               </li>
