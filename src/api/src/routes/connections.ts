@@ -20,6 +20,7 @@ import { connectionManager } from '../lib/connection-manager.js'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
+import type { Pool as OraclePool } from 'oracledb'
 
 const connectionsRouter = new Hono<AuthVariables>()
 
@@ -32,7 +33,7 @@ connectionsRouter.use('*', authMiddleware)
 
 const CreateSchema = z.object({
   name: z.string().min(1).max(100),
-  driver: z.enum(['postgresql', 'mysql']),
+  driver: z.enum(['postgresql', 'mysql', 'oracle']),
   host: z.string().min(1),
   port: z.number().int().min(1).max(65535),
   database: z.string().default(''),
@@ -163,7 +164,7 @@ connectionsRouter.post('/:id/test', async (c) => {
 // ──────────────────────────────────────────────
 
 const TestRawSchema = z.object({
-  driver: z.enum(['postgresql', 'mysql']),
+  driver: z.enum(['postgresql', 'mysql', 'oracle']),
   host: z.string().min(1),
   port: z.number().int(),
   database: z.string().default(''),
@@ -188,11 +189,16 @@ connectionsRouter.post(
         const client = await pgPool.connect()
         await client.query('SELECT 1')
         client.release()
-      } else {
+      } else if (opts.driver === 'mysql') {
         const mysqlPool = pool as import('mysql2/promise').Pool
         const conn = await mysqlPool.getConnection()
         await conn.query('SELECT 1')
         conn.release()
+      } else {
+        const oraclePool = pool as OraclePool
+        const conn = await oraclePool.getConnection()
+        await conn.execute('SELECT 1 FROM dual')
+        await conn.close()
       }
 
       return c.json({ ok: true, latencyMs: Date.now() - start })
@@ -444,6 +450,77 @@ async function getMySQLSchema(pool: MySQLPool) {
   }
 }
 
+async function getOracleSchema(pool: OraclePool) {
+  const conn = await pool.getConnection()
+  try {
+    const { rows: colRows } = await conn.execute<[string, string, string, string, number]>(`
+      SELECT
+        c.TABLE_NAME,
+        c.COLUMN_NAME,
+        c.DATA_TYPE,
+        c.NULLABLE,
+        CASE WHEN p.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PK
+      FROM USER_TAB_COLUMNS c
+      LEFT JOIN (
+        SELECT cc.TABLE_NAME, cc.COLUMN_NAME
+        FROM USER_CONSTRAINTS uc
+        JOIN USER_CONS_COLUMNS cc ON cc.CONSTRAINT_NAME = uc.CONSTRAINT_NAME
+        WHERE uc.CONSTRAINT_TYPE = 'P'
+      ) p ON p.TABLE_NAME = c.TABLE_NAME AND p.COLUMN_NAME = c.COLUMN_NAME
+      ORDER BY c.TABLE_NAME, c.COLUMN_ID
+    `, [], { outFormat: 4001 /* ARRAY */ })
+
+    const map = new Map<string, SchemaItem>()
+    for (const row of (colRows ?? []) as [string, string, string, string, number][]) {
+      const [tableName, columnName, dataType, nullable, isPk] = row
+      if (!tableName) continue
+      if (!map.has(tableName)) {
+        map.set(tableName, { name: tableName, type: 'table', comment: '', columns: [], indexes: [], foreignKeys: [] })
+      }
+      map.get(tableName)!.columns.push({
+        name: columnName ?? '',
+        dataType: dataType ?? 'unknown',
+        nullable: nullable === 'Y',
+        primaryKey: isPk === 1,
+      })
+    }
+
+    const { rows: fkRows } = await conn.execute<[string, string, string, string, string, string]>(`
+      SELECT
+        uc.TABLE_NAME,
+        uc.CONSTRAINT_NAME,
+        cc.COLUMN_NAME,
+        rc.TABLE_NAME AS REF_TABLE,
+        rcc.COLUMN_NAME AS REF_COLUMN,
+        uc.DELETE_RULE
+      FROM USER_CONSTRAINTS uc
+      JOIN USER_CONS_COLUMNS cc ON cc.CONSTRAINT_NAME = uc.CONSTRAINT_NAME
+      JOIN USER_CONSTRAINTS rc ON rc.CONSTRAINT_NAME = uc.R_CONSTRAINT_NAME
+      JOIN USER_CONS_COLUMNS rcc ON rcc.CONSTRAINT_NAME = uc.R_CONSTRAINT_NAME AND rcc.POSITION = cc.POSITION
+      WHERE uc.CONSTRAINT_TYPE = 'R'
+      ORDER BY uc.TABLE_NAME, uc.CONSTRAINT_NAME, cc.POSITION
+    `, [], { outFormat: 4001 })
+
+    for (const row of (fkRows ?? []) as [string, string, string, string, string, string][]) {
+      const [tableName, constraintName, columnName, refTable, refColumn, deleteRule] = row
+      if (!tableName) continue
+      const table = map.get(tableName)
+      if (!table) continue
+      let fk = table.foreignKeys.find((f) => f.name === constraintName)
+      if (!fk) {
+        fk = { name: constraintName ?? '', fields: [], referencedDatabase: '', referencedTable: refTable ?? '', referencedFields: [], onDelete: deleteRule ?? 'NO ACTION', onUpdate: 'NO ACTION' }
+        table.foreignKeys.push(fk)
+      }
+      fk.fields.push(columnName ?? '')
+      fk.referencedFields.push(refColumn ?? '')
+    }
+
+    return { tables: Array.from(map.values()), functions: [] }
+  } finally {
+    await conn.close()
+  }
+}
+
 connectionsRouter.get('/:id/schema', async (c) => {
   const userId = c.get('userId')
   const connectionId = c.req.param('id')
@@ -464,7 +541,9 @@ connectionsRouter.get('/:id/schema', async (c) => {
     const schema =
       poolOpts.driver === 'postgresql'
         ? await getPgSchema(pool as PgPool)
-        : await getMySQLSchema(pool as MySQLPool)
+        : poolOpts.driver === 'mysql'
+        ? await getMySQLSchema(pool as MySQLPool)
+        : await getOracleSchema(pool as OraclePool)
     return c.json(schema)
   } catch (err) {
     const raw = err instanceof Error ? err.message : String(err)
@@ -506,13 +585,21 @@ connectionsRouter.post(
         } finally {
           client.release()
         }
-      } else {
+      } else if (poolOpts.driver === 'mysql') {
         const conn = await (pool as MySQLPool).getConnection()
         try {
           const [rows] = await conn.query(`SELECT COUNT(*) AS count FROM ${table}`)
           count = Number((rows as Array<Record<string, unknown>>)[0]!['count'])
         } finally {
           conn.release()
+        }
+      } else {
+        const conn = await (pool as OraclePool).getConnection()
+        try {
+          const result = await conn.execute(`SELECT COUNT(*) AS "count" FROM ${table}`, [], { outFormat: 4002 })
+          count = Number((result.rows as Record<string, unknown>[])[0]!['count'])
+        } finally {
+          await conn.close()
         }
       }
       return c.json({ count })
@@ -580,7 +667,7 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
       } finally {
         client.release()
       }
-    } else {
+    } else if (poolOpts.driver === 'mysql') {
       const mysqlPool = pool as MySQLPool
       const conn = await mysqlPool.getConnection()
       try {
@@ -598,7 +685,6 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
         const arr = rows as Record<string, unknown>[]
         if (!arr[0]) return c.json(problem(404, 'Fonction introuvable.'), 404)
 
-        // Get params — only IN and INOUT (exclude OUT)
         const [paramRows] = await conn.query(`
           SELECT PARAMETER_NAME AS name, DATA_TYPE AS type
           FROM information_schema.PARAMETERS
@@ -610,6 +696,27 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
         return c.json({ function: { ...arr[0], params: paramRows } })
       } finally {
         conn.release()
+      }
+    } else {
+      const oraclePool = pool as OraclePool
+      const conn = await oraclePool.getConnection()
+      try {
+        const { rows } = await conn.execute<[string, string, string, string]>(`
+          SELECT
+            OBJECT_NAME AS name,
+            OBJECT_TYPE AS kind,
+            NULL AS return_type,
+            NULL AS source
+          FROM USER_OBJECTS
+          WHERE OBJECT_NAME = :name AND OBJECT_TYPE IN ('FUNCTION', 'PROCEDURE')
+          FETCH FIRST 1 ROWS ONLY
+        `, { name: funcName }, { outFormat: 4001 })
+        const arr = rows as [string, string, string, string][]
+        if (!arr[0]) return c.json(problem(404, 'Fonction introuvable.'), 404)
+        const [name, kind, return_type] = arr[0]
+        return c.json({ function: { name, kind: kind?.toLowerCase(), return_type, source: '', language: 'plsql', params: [], arguments: '' } })
+      } finally {
+        await conn.close()
       }
     }
   } catch (err) {
@@ -649,7 +756,7 @@ connectionsRouter.get('/:id/databases', async (c) => {
       } finally {
         client.release()
       }
-    } else {
+    } else if (poolOpts.driver === 'mysql') {
       const mysqlPool = pool as MySQLPool
       const conn = await mysqlPool.getConnection()
       try {
@@ -658,6 +765,20 @@ connectionsRouter.get('/:id/databases', async (c) => {
         return c.json({ databases: dbs })
       } finally {
         conn.release()
+      }
+    } else {
+      const oraclePool = pool as OraclePool
+      const conn = await oraclePool.getConnection()
+      try {
+        const { rows } = await conn.execute<[string]>(
+          `SELECT USERNAME FROM ALL_USERS ORDER BY USERNAME`,
+          [],
+          { outFormat: 4001 }
+        )
+        const dbs = (rows as [string][]).map((r) => r[0] ?? '')
+        return c.json({ databases: dbs })
+      } finally {
+        await conn.close()
       }
     }
   } catch (err) {
@@ -737,5 +858,102 @@ connectionsRouter.put(
     return c.json({ groupIds, userIds })
   },
 )
+
+async function getDbStats(pool: PgPool | MySQLPool | OraclePool, driver: string) {
+  let version: string | null = null
+  let encoding: string | null = null
+  let timezone: string | null = null
+  let sizePretty: string | null = null
+  let sizeBytes: number | null = null
+
+  try {
+    if (driver === 'postgresql') {
+      const pg = pool as PgPool
+      const client = await pg.connect()
+      try {
+        const { rows } = await client.query(`
+          SELECT
+            version() AS version,
+            current_setting('server_encoding') AS encoding,
+            current_setting('TimeZone') AS timezone,
+            pg_size_pretty(pg_database_size(current_database())) AS size_pretty,
+            pg_database_size(current_database()) AS size_bytes
+        `)
+        version = (rows[0] as Record<string,unknown>)?.version as string ?? null
+        encoding = (rows[0] as Record<string,unknown>)?.encoding as string ?? null
+        timezone = (rows[0] as Record<string,unknown>)?.timezone as string ?? null
+        sizePretty = (rows[0] as Record<string,unknown>)?.size_pretty as string ?? null
+        sizeBytes = Number((rows[0] as Record<string,unknown>)?.size_bytes ?? null) || null
+      } finally { client.release() }
+    } else if (driver === 'mysql') {
+      const mysql = pool as MySQLPool
+      const conn = await mysql.getConnection()
+      try {
+        const [[vrow]] = await conn.query('SELECT VERSION() AS v') as [Record<string,unknown>[], unknown]
+        version = (vrow as Record<string,unknown>)?.v as string ?? null
+        const [[encrow]] = await conn.query("SELECT @@character_set_server AS e") as [Record<string,unknown>[], unknown]
+        encoding = (encrow as Record<string,unknown>)?.e as string ?? null
+        const [[tzrow]] = await conn.query("SELECT @@global.time_zone AS z") as [Record<string,unknown>[], unknown]
+        timezone = (tzrow as Record<string,unknown>)?.z as string ?? null
+        const [[srow]] = await conn.query(`
+          SELECT ROUND(SUM(data_length + index_length), 0) AS sb
+          FROM information_schema.TABLES
+          WHERE table_schema = DATABASE()
+        `) as [Record<string,unknown>[], unknown]
+        sizeBytes = Number((srow as Record<string,unknown>)?.sb) || null
+        if (sizeBytes) sizePretty = sizeBytes > 1_073_741_824
+          ? `${(sizeBytes / 1_073_741_824).toFixed(1)} GB`
+          : sizeBytes > 1_048_576
+          ? `${(sizeBytes / 1_048_576).toFixed(1)} MB`
+          : `${Math.round(sizeBytes / 1024)} KB`
+      } finally { conn.release() }
+    } else {
+      // Oracle: best-effort, many views need DBA grants
+      const oracle = pool as OraclePool
+      const conn = await oracle.getConnection()
+      try {
+        const r1 = await conn.execute<[string]>('SELECT banner FROM v$version WHERE ROWNUM = 1', [], { outFormat: 4001 })
+        version = (r1.rows?.[0] as [string])?.[0] ?? null
+      } catch { /* v$version may need DBA */ }
+      try {
+        const conn2 = await oracle.getConnection()
+        try {
+          const r2 = await conn2.execute<[number]>('SELECT SUM(bytes) FROM user_segments', [], { outFormat: 4001 })
+          sizeBytes = Number((r2.rows?.[0] as [number])?.[0]) || null
+          if (sizeBytes) sizePretty = sizeBytes > 1_073_741_824
+            ? `${(sizeBytes / 1_073_741_824).toFixed(1)} GB`
+            : `${(sizeBytes / 1_048_576).toFixed(1)} MB`
+        } finally { await conn2.close() }
+      } catch { /* segments may not be accessible */ }
+      try { await conn.close() } catch { /* ignore */ }
+    }
+  } catch (err) {
+    logger.warn({ err }, 'getDbStats partial failure')
+  }
+
+  return { version, encoding, timezone, sizePretty, sizeBytes }
+}
+
+connectionsRouter.get('/:id/stats', async (c) => {
+  const userId = c.get('userId')
+  const connectionId = c.req.param('id')
+
+  let poolOpts
+  try {
+    poolOpts = await getPoolOptions(connectionId, userId)
+  } catch {
+    return c.json(problem(404, 'Connexion introuvable.'), 404)
+  }
+
+  const pool = await connectionManager.getPool(connectionId, poolOpts)
+
+  try {
+    const stats = await getDbStats(pool, poolOpts.driver)
+    return c.json(stats)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Stats unavailable'
+    return c.json(problem(502, message), 502)
+  }
+})
 
 export { connectionsRouter }
