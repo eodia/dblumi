@@ -18,6 +18,11 @@ const ConfigSchema = z.object({
     .transform((v) => v === 'true')
     .default('false'),
   ANTHROPIC_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().optional(),
+  AZURE_OPENAI_API_KEY: z.string().optional(),
+  AZURE_OPENAI_ENDPOINT: z.string().optional(),
+  AZURE_OPENAI_DEPLOYMENT: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
