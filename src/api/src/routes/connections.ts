@@ -866,51 +866,51 @@ async function getDbStats(pool: PgPool | MySQLPool | OraclePool, driver: string)
   let sizePretty: string | null = null
   let sizeBytes: number | null = null
 
-  try {
-    if (driver === 'postgresql') {
-      const pg = pool as PgPool
-      const client = await pg.connect()
-      try {
-        const { rows } = await client.query(`
-          SELECT
-            version() AS version,
-            current_setting('server_encoding') AS encoding,
-            current_setting('TimeZone') AS timezone,
-            pg_size_pretty(pg_database_size(current_database())) AS size_pretty,
-            pg_database_size(current_database()) AS size_bytes
-        `)
-        version = (rows[0] as Record<string,unknown>)?.version as string ?? null
-        encoding = (rows[0] as Record<string,unknown>)?.encoding as string ?? null
-        timezone = (rows[0] as Record<string,unknown>)?.timezone as string ?? null
-        sizePretty = (rows[0] as Record<string,unknown>)?.size_pretty as string ?? null
-        sizeBytes = Number((rows[0] as Record<string,unknown>)?.size_bytes ?? null) || null
-      } finally { client.release() }
-    } else if (driver === 'mysql') {
-      const mysql = pool as MySQLPool
-      const conn = await mysql.getConnection()
-      try {
-        const [[vrow]] = await conn.query('SELECT VERSION() AS v') as [Record<string,unknown>[], unknown]
-        version = (vrow as Record<string,unknown>)?.v as string ?? null
-        const [[encrow]] = await conn.query("SELECT @@character_set_server AS e") as [Record<string,unknown>[], unknown]
-        encoding = (encrow as Record<string,unknown>)?.e as string ?? null
-        const [[tzrow]] = await conn.query("SELECT @@global.time_zone AS z") as [Record<string,unknown>[], unknown]
-        timezone = (tzrow as Record<string,unknown>)?.z as string ?? null
-        const [[srow]] = await conn.query(`
-          SELECT ROUND(SUM(data_length + index_length), 0) AS sb
-          FROM information_schema.TABLES
-          WHERE table_schema = DATABASE()
-        `) as [Record<string,unknown>[], unknown]
-        sizeBytes = Number((srow as Record<string,unknown>)?.sb) || null
-        if (sizeBytes) sizePretty = sizeBytes > 1_073_741_824
-          ? `${(sizeBytes / 1_073_741_824).toFixed(1)} GB`
-          : sizeBytes > 1_048_576
-          ? `${(sizeBytes / 1_048_576).toFixed(1)} MB`
-          : `${Math.round(sizeBytes / 1024)} KB`
-      } finally { conn.release() }
-    } else {
-      // Oracle: best-effort, many views need DBA grants
-      const oracle = pool as OraclePool
-      const conn = await oracle.getConnection()
+  if (driver === 'postgresql') {
+    const pg = pool as PgPool
+    const client = await pg.connect()
+    try {
+      const { rows } = await client.query(`
+        SELECT
+          version() AS version,
+          current_setting('server_encoding') AS encoding,
+          current_setting('TimeZone') AS timezone,
+          pg_size_pretty(pg_database_size(current_database())) AS size_pretty,
+          pg_database_size(current_database()) AS size_bytes
+      `)
+      version = (rows[0] as Record<string,unknown>)?.version as string ?? null
+      encoding = (rows[0] as Record<string,unknown>)?.encoding as string ?? null
+      timezone = (rows[0] as Record<string,unknown>)?.timezone as string ?? null
+      sizePretty = (rows[0] as Record<string,unknown>)?.size_pretty as string ?? null
+      sizeBytes = Number((rows[0] as Record<string,unknown>)?.size_bytes ?? null) || null
+    } finally { client.release() }
+  } else if (driver === 'mysql') {
+    const mysql = pool as MySQLPool
+    const conn = await mysql.getConnection()
+    try {
+      const [[vrow]] = await conn.query('SELECT VERSION() AS v') as [Record<string,unknown>[], unknown]
+      version = (vrow as Record<string,unknown>)?.v as string ?? null
+      const [[encrow]] = await conn.query("SELECT @@character_set_server AS e") as [Record<string,unknown>[], unknown]
+      encoding = (encrow as Record<string,unknown>)?.e as string ?? null
+      const [[tzrow]] = await conn.query("SELECT @@global.time_zone AS z") as [Record<string,unknown>[], unknown]
+      timezone = (tzrow as Record<string,unknown>)?.z as string ?? null
+      const [[srow]] = await conn.query(`
+        SELECT ROUND(SUM(data_length + index_length), 0) AS sb
+        FROM information_schema.TABLES
+        WHERE table_schema = DATABASE()
+      `) as [Record<string,unknown>[], unknown]
+      sizeBytes = Number((srow as Record<string,unknown>)?.sb) || null
+      if (sizeBytes) sizePretty = sizeBytes > 1_073_741_824
+        ? `${(sizeBytes / 1_073_741_824).toFixed(1)} GB`
+        : sizeBytes > 1_048_576
+        ? `${(sizeBytes / 1_048_576).toFixed(1)} MB`
+        : `${Math.round(sizeBytes / 1024)} KB`
+    } finally { conn.release() }
+  } else {
+    // Oracle: best-effort, many views need DBA grants
+    const oracle = pool as OraclePool
+    const conn = await oracle.getConnection()
+    try {
       try {
         const r1 = await conn.execute<[string]>('SELECT banner FROM v$version WHERE ROWNUM = 1', [], { outFormat: 4001 })
         version = (r1.rows?.[0] as [string])?.[0] ?? null
@@ -922,13 +922,12 @@ async function getDbStats(pool: PgPool | MySQLPool | OraclePool, driver: string)
           sizeBytes = Number((r2.rows?.[0] as [number])?.[0]) || null
           if (sizeBytes) sizePretty = sizeBytes > 1_073_741_824
             ? `${(sizeBytes / 1_073_741_824).toFixed(1)} GB`
-            : `${(sizeBytes / 1_048_576).toFixed(1)} MB`
+            : sizeBytes > 1_048_576
+            ? `${(sizeBytes / 1_048_576).toFixed(1)} MB`
+            : `${Math.round(sizeBytes / 1024)} KB`
         } finally { await conn2.close() }
       } catch { /* segments may not be accessible */ }
-      try { await conn.close() } catch { /* ignore */ }
-    }
-  } catch (err) {
-    logger.warn({ err }, 'getDbStats partial failure')
+    } finally { try { await conn.close() } catch { /* ignore */ } }
   }
 
   return { version, encoding, timezone, sizePretty, sizeBytes }
