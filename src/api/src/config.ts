@@ -18,6 +18,7 @@ const ConfigSchema = z.object({
     .transform((v) => v === 'true')
     .default('false'),
   ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_MODEL: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().optional(),
   AZURE_OPENAI_API_KEY: z.string().optional(),

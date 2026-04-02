@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI, { AzureOpenAI } from 'openai'
 import { config } from '../config.js'
+import { logger } from '../logger.js'
 import { db } from '../db/index.js'
 import { users } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
@@ -23,8 +24,17 @@ export class CopilotError extends Error {
 
 /** Détecte le provider actif depuis les variables d'environnement. */
 export function getActiveProvider(): 'anthropic' | 'openai' | 'azure-openai' {
-  if (config.OPENAI_API_KEY) return 'openai'
-  if (config.AZURE_OPENAI_API_KEY && config.AZURE_OPENAI_ENDPOINT) return 'azure-openai'
+  const hasOpenai = !!config.OPENAI_API_KEY
+  const hasAzure = !!(config.AZURE_OPENAI_API_KEY && config.AZURE_OPENAI_ENDPOINT)
+  const hasAnthropic = !!(config.ANTHROPIC_API_KEY)
+
+  const count = [hasOpenai, hasAzure, hasAnthropic].filter(Boolean).length
+  if (count > 1) {
+    logger.warn('Multiple AI providers configured. Priority: openai > azure-openai > anthropic.')
+  }
+
+  if (hasOpenai) return 'openai'
+  if (hasAzure) return 'azure-openai'
   return 'anthropic'
 }
 
@@ -126,7 +136,7 @@ async function* streamAnthropic(
   const client = new Anthropic({ apiKey })
   try {
     const stream = client.messages.stream({
-      model: 'claude-sonnet-4-20250514',
+      model: config.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: systemPrompt,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
