@@ -441,23 +441,24 @@ function ManualFields({
       <div className="space-y-1.5">
         <Label>Driver</Label>
         <div className="inline-flex w-full rounded-md border border-border-strong overflow-hidden">
-          {(['postgresql', 'mysql'] as const).map((d) => (
+          {(['postgresql', 'mysql', 'oracle'] as const).map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => {
                 set('driver', d)
-                set('port', d === 'postgresql' ? 5432 : 3306)
+                set('port', d === 'postgresql' ? 5432 : d === 'mysql' ? 3306 : 1521)
               }}
               className={cn(
                 'flex-1 h-9 text-xs font-medium transition-colors',
                 form.driver === d
                   ? 'bg-surface-overlay text-foreground'
                   : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-raised',
-                d === 'postgresql' && 'border-r border-border-strong',
+                d !== 'oracle' && 'border-r border-border-strong',
               )}
             >
-              {d === 'postgresql' ? <><DriverIcon driver="postgresql" className="h-3.5 w-3.5 inline-block mr-1" /> PostgreSQL</> : <><DriverIcon driver="mysql" className="h-3.5 w-3.5 inline-block mr-1" /> MySQL</>}
+              <DriverIcon driver={d} className="h-3.5 w-3.5 inline-block mr-1" />
+              {d === 'postgresql' ? 'PostgreSQL' : d === 'mysql' ? 'MySQL' : 'Oracle'}
             </button>
           ))}
         </div>

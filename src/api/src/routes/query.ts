@@ -5,12 +5,13 @@ import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth.js'
 import { getPoolOptions } from '../services/connection.service.js'
 import { connectionManager } from '../lib/connection-manager.js'
-import { executePg, executeMySQL } from '../lib/query-executor.js'
+import { executePg, executeMySQL, executeOracle } from '../lib/query-executor.js'
 import { detectGuardrail } from '../lib/guardrail.js'
 import { logger } from '../logger.js'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
+import type { Pool as OraclePool } from 'oracledb'
 
 const queryRouter = new Hono<AuthVariables>()
 queryRouter.use('*', authMiddleware)
@@ -68,7 +69,9 @@ queryRouter.post(
         const result =
           poolOpts.driver === 'postgresql'
             ? await executePg(pool as PgPool, sql, limit, offset)
-            : await executeMySQL(pool as MySQLPool, sql, limit, offset)
+            : poolOpts.driver === 'mysql'
+            ? await executeMySQL(pool as MySQLPool, sql, limit, offset)
+            : await executeOracle(pool as OraclePool, sql, limit, offset)
 
         // Columns first
         await send('columns', result.columns)

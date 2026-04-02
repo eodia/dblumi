@@ -1,10 +1,12 @@
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
+import type { Pool as OraclePool } from 'oracledb'
 import { logger } from '../logger.js'
 
 type PoolEntry =
   | { driver: 'postgresql'; pool: PgPool }
   | { driver: 'mysql'; pool: MySQLPool }
+  | { driver: 'oracle'; pool: OraclePool }
 
 /**
  * Singleton manager — one pool per active connection ID.
@@ -13,7 +15,7 @@ type PoolEntry =
 class ConnectionManager {
   private readonly pools = new Map<string, PoolEntry>()
 
-  async getPool(id: string, opts: PoolOptions): Promise<PgPool | MySQLPool> {
+  async getPool(id: string, opts: PoolOptions): Promise<PgPool | MySQLPool | OraclePool> {
     const existing = this.pools.get(id)
     if (existing) return existing.pool
 
@@ -27,7 +29,11 @@ class ConnectionManager {
     if (!entry) return
 
     try {
-      await entry.pool.end()
+      if (entry.driver === 'oracle') {
+        await (entry.pool as OraclePool).close(0)
+      } else {
+        await entry.pool.end()
+      }
       logger.info({ connectionId: id }, 'Connection pool released')
     } catch (err) {
       logger.warn({ connectionId: id, err }, 'Error releasing pool')
@@ -66,7 +72,7 @@ class ConnectionManager {
       })
       logger.info({ connectionId: id, driver: 'postgresql' }, 'Pool created')
       return { driver: 'postgresql', pool }
-    } else {
+    } else if (opts.driver === 'mysql') {
       const mysql = await import('mysql2/promise')
       const pool = mysql.createPool({
         host: opts.host,
@@ -80,12 +86,28 @@ class ConnectionManager {
       })
       logger.info({ connectionId: id, driver: 'mysql' }, 'Pool created')
       return { driver: 'mysql', pool }
+    } else {
+      const oracledb = await import('oracledb')
+      const connectString = opts.database
+        ? `${opts.host}:${opts.port}/${opts.database}`
+        : `${opts.host}:${opts.port}`
+      const pool = await oracledb.createPool({
+        user: opts.username,
+        password: opts.password,
+        connectString,
+        poolMax: 5,
+        poolMin: 0,
+        poolTimeout: 30,
+        connectTimeout: 10,
+      })
+      logger.info({ connectionId: id, driver: 'oracle' }, 'Pool created')
+      return { driver: 'oracle', pool }
     }
   }
 }
 
 export type PoolOptions = {
-  driver: 'postgresql' | 'mysql'
+  driver: 'postgresql' | 'mysql' | 'oracle'
   host: string
   port: number
   database: string

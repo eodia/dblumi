@@ -815,45 +815,87 @@ export function ResultsTable() {
     setEditingCell(null)
   }, [])
 
-  const anchorCellRef = useRef<CellRef | null>(null)
+  const setNullSelectedCells = useCallback(async () => {
+    if (!isTableMode || !tableName || !activeConnectionId || selectedCells.size === 0 || editingCell) return
+    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
+    if (!pkCol) return
 
-  const handleCellClick = useCallback((rowIdx: number, colName: string, e: React.MouseEvent) => {
-    if (!isTableMode) return
+    for (const key of selectedCells) {
+      const [riStr, colName] = key.split(':')
+      if (!riStr || !colName) continue
+      const row = rows[parseInt(riStr, 10)]
+      if (!row) continue
+      const pk = row[pkCol.name]
+      const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
+      const sql = `UPDATE ${tableName} SET ${colName} = NULL WHERE ${pkCol.name} = ${pl}`
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _ of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) { /* drain */ }
+    }
+
+    setSelectedCells(new Set())
+    await reloadTab()
+  }, [isTableMode, tableName, activeConnectionId, selectedCells, editingCell, columns, rows, reloadTab])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' && isTableMode && selectedCells.size > 0 && !editingCell) {
+        e.preventDefault()
+        void setNullSelectedCells()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isTableMode, selectedCells, editingCell, setNullSelectedCells])
+
+  const anchorCellRef = useRef<CellRef | null>(null)
+  const isDraggingRef = useRef(false)
+
+  const selectRect = useCallback((anchor: CellRef, rowIdx: number, colName: string) => {
+    const colNames = orderedColumns.map((c) => c.name)
+    const colIdx1 = colNames.indexOf(anchor.colName)
+    const colIdx2 = colNames.indexOf(colName)
+    const minRow = Math.min(anchor.rowIdx, rowIdx)
+    const maxRow = Math.max(anchor.rowIdx, rowIdx)
+    const minCol = Math.min(colIdx1, colIdx2)
+    const maxCol = Math.max(colIdx1, colIdx2)
+    const next = new Set<string>()
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        next.add(cellKey(r, colNames[c]!))
+      }
+    }
+    return next
+  }, [orderedColumns])
+
+  const handleCellMouseDown = useCallback((rowIdx: number, colName: string, e: React.MouseEvent) => {
+    if (!isTableMode || e.button !== 0) return
     e.preventDefault()
-    const key = cellKey(rowIdx, colName)
+    isDraggingRef.current = true
 
     if (e.shiftKey && anchorCellRef.current) {
-      // Shift+click: select rectangle from anchor to current (Excel-style)
-      const anchor = anchorCellRef.current
-      const colNames = orderedColumns.map((c) => c.name)
-      const colIdx1 = colNames.indexOf(anchor.colName)
-      const colIdx2 = colNames.indexOf(colName)
-      const minRow = Math.min(anchor.rowIdx, rowIdx)
-      const maxRow = Math.max(anchor.rowIdx, rowIdx)
-      const minCol = Math.min(colIdx1, colIdx2)
-      const maxCol = Math.max(colIdx1, colIdx2)
-
-      const next = new Set<string>()
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          next.add(cellKey(r, colNames[c]!))
-        }
-      }
-      setSelectedCells(next)
+      // Shift+mousedown: extend rectangle from anchor
+      setSelectedCells(selectRect(anchorCellRef.current, rowIdx, colName))
     } else if (e.ctrlKey || e.metaKey) {
-      // Ctrl+click: toggle cell
+      // Ctrl+mousedown: toggle cell, set new anchor
       anchorCellRef.current = { rowIdx, colName }
+      const key = cellKey(rowIdx, colName)
       setSelectedCells((prev) => {
         const next = new Set(prev)
         next.has(key) ? next.delete(key) : next.add(key)
         return next
       })
     } else {
-      // Normal click: single select + set anchor
+      // Normal mousedown: single select + set anchor
       anchorCellRef.current = { rowIdx, colName }
-      setSelectedCells(new Set([key]))
+      setSelectedCells(new Set([cellKey(rowIdx, colName)]))
     }
-  }, [isTableMode, orderedColumns])
+  }, [isTableMode, selectRect])
+
+  const handleCellMouseEnter = useCallback((rowIdx: number, colName: string) => {
+    if (!isDraggingRef.current || !isTableMode || !anchorCellRef.current) return
+    setSelectedCells(selectRect(anchorCellRef.current, rowIdx, colName))
+  }, [isTableMode, selectRect])
+
 
   const handleApplyFilter = useCallback(() => {
     if (!tableName) return
@@ -1065,8 +1107,9 @@ export function ResultsTable() {
                           'border-transparent hover:border-primary/30',
                         )}
                         style={{ width: getColWidth(col.name) }}
-                        onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
-                        onClick={(e) => handleCellClick(i, col.name, e)}
+                        onMouseDown={(e) => handleCellMouseDown(i, col.name, e)}
+                        onMouseEnter={() => handleCellMouseEnter(i, col.name)}
+                        onMouseUp={() => { isDraggingRef.current = false }}
                         onDoubleClick={() => startEditing(i, col.name)}
                         onContextMenu={() => setCtxCell({ row, colName: col.name })}>
                         {isEditing ? (

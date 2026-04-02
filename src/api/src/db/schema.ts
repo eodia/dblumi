@@ -30,7 +30,7 @@ export const users = sqliteTable('users', {
 export const connections = sqliteTable('connections', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  driver: text('driver', { enum: ['postgresql', 'mysql'] }).notNull(),
+  driver: text('driver', { enum: ['postgresql', 'mysql', 'oracle'] }).notNull(),
   host: text('host').notNull(),
   port: integer('port').notNull(),
   database: text('database').notNull(),

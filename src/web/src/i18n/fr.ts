@@ -181,7 +181,7 @@ export const fr = {
 
   // ── Copilot ──
   'copilot.title': 'Copilot',
-  'copilot.subtitle': 'Claude · schema-aware',
+  'copilot.subtitle': 'Claude',
   'copilot.tooltip': 'Copilot IA · Claude',
   'copilot.selectConnection': 'Sélectionnez une connexion pour utiliser le copilot',
   'copilot.placeholder': 'Demandez au copilot...',

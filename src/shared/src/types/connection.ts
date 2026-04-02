@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const DbDriverSchema = z.enum(['postgresql', 'mysql'])
+export const DbDriverSchema = z.enum(['postgresql', 'mysql', 'oracle'])
 export type DbDriver = z.infer<typeof DbDriverSchema>
 
 export const ConnectionSchema = z.object({

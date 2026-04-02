@@ -273,11 +273,16 @@ export async function testConnection(
       const client = await pgPool.connect()
       await client.query('SELECT 1')
       client.release()
-    } else {
+    } else if (row.driver === 'mysql') {
       const mysqlPool = pool as import('mysql2/promise').Pool
       const conn = await mysqlPool.getConnection()
       await conn.query('SELECT 1')
       conn.release()
+    } else {
+      const oraclePool = pool as import('oracledb').Pool
+      const conn = await oraclePool.getConnection()
+      await conn.execute('SELECT 1 FROM dual')
+      await conn.close()
     }
 
     return { ok: true, latencyMs: Date.now() - start }

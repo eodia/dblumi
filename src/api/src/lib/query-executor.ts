@@ -1,5 +1,6 @@
 import type { Pool as PgPool, QueryResult } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
+import type { Pool as OraclePool } from 'oracledb'
 import type { QueryColumn } from '@dblumi/shared'
 
 export type ExecutionResult = {
@@ -84,8 +85,72 @@ export async function executeMySQL(
 }
 
 // ──────────────────────────────────────────────
+// Oracle execution
+// ──────────────────────────────────────────────
+
+export async function executeOracle(
+  pool: OraclePool,
+  sql: string,
+  limit: number,
+  offset = 0,
+): Promise<ExecutionResult> {
+  const conn = await pool.getConnection()
+  const start = Date.now()
+
+  try {
+    const wrappedSql = injectOracleLimit(sql, limit, offset)
+    const result = await conn.execute(wrappedSql, [], { outFormat: 4002 /* OBJECT */ })
+
+    const columns: QueryColumn[] = (result.metaData ?? []).map((m) => ({
+      name: m.name,
+      dataType: String(m.dbTypeName ?? 'unknown'),
+    }))
+
+    const rows = (result.rows ?? []) as Record<string, unknown>[]
+
+    return {
+      columns,
+      rows,
+      rowCount: rows.length,
+      durationMs: Date.now() - start,
+    }
+  } finally {
+    await conn.close()
+  }
+}
+
+// ──────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────
+
+/**
+ * Oracle pagination using OFFSET/FETCH (requires Oracle 12c+).
+ */
+function injectOracleLimit(sql: string, limit: number, offset = 0): string {
+  const trimmed = sql.trim().replace(/;+$/, '')
+  const upper = trimmed.toUpperCase()
+
+  if (!upper.startsWith('SELECT') && !upper.startsWith('WITH')) {
+    return trimmed
+  }
+
+  const userLimitMatch = trimmed.match(/\bFETCH\s+FIRST\s+(\d+)\s+ROWS/i)
+  const userLimit = userLimitMatch ? parseInt(userLimitMatch[1]!, 10) : null
+
+  let clean = trimmed
+    .replace(/\bOFFSET\s+\d+\s+ROWS\b/i, '')
+    .replace(/\bFETCH\s+(FIRST|NEXT)\s+\d+\s+ROWS\s+(ONLY|WITH TIES)\b/i, '')
+    .trim()
+
+  const effectiveLimit = userLimit !== null ? Math.min(userLimit, limit) : limit
+
+  if (effectiveLimit >= 10000 && userLimit === null) {
+    return clean
+  }
+
+  let result = `${clean}\nOFFSET ${offset} ROWS FETCH NEXT ${effectiveLimit} ROWS ONLY`
+  return result
+}
 
 /**
  * Wraps SELECT statements in a subquery with LIMIT.
