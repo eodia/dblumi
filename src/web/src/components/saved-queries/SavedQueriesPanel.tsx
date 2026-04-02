@@ -39,6 +39,7 @@ import { Label } from '@/components/ui/label'
 import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy, Share2 } from 'lucide-react'
 import { savedQueriesApi, type SavedQuery } from '@/api/saved-queries'
 import { useEditorStore } from '@/stores/editor.store'
+import { useAuthStore } from '@/stores/auth.store'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { ComboboxChips } from '@/components/ui/combobox-chips'
@@ -203,6 +204,7 @@ export function SavedQueriesPanel() {
   const { t } = useI18n()
   const qc = useQueryClient()
   const { openQuery, activeConnectionId } = useEditorStore()
+  const userId = useAuthStore((s) => s.user?.id)
   const { isMobile, setOpenMobile } = useSidebar()
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
 
@@ -241,10 +243,10 @@ export function SavedQueriesPanel() {
   })
 
   const ownQueries = (data?.savedQueries ?? []).filter(
-    (q) => q.connectionId === activeConnectionId && !q.shared,
+    (q) => q.connectionId === activeConnectionId && q.createdBy === userId,
   )
   const sharedQueries = (data?.savedQueries ?? []).filter(
-    (q) => q.connectionId === activeConnectionId && q.shared,
+    (q) => q.connectionId === activeConnectionId && q.shared && q.createdBy !== userId,
   )
 
   const lc = search.toLowerCase()
