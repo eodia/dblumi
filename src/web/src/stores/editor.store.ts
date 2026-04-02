@@ -150,6 +150,45 @@ function buildSortedSqlSingle(baseSql: string, sortBy: SortBy): string {
   return sortBy ? buildSortedSql(baseSql, [sortBy]) : baseSql
 }
 
+// ── localStorage helpers ──────────────────────────────
+export type QueryHistoryEntry = {
+  sql: string
+  connectionId: string
+  executedAt: string
+  durationMs: number
+}
+
+export type TableVisitEntry = {
+  tableName: string
+  connectionId: string
+  visitCount: number
+  lastVisited: string
+}
+
+export function saveQueryHistory(sql: string, connectionId: string, durationMs: number) {
+  try {
+    const key = 'dblumi:qhistory'
+    const existing: QueryHistoryEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]')
+    const entry: QueryHistoryEntry = { sql: sql.trim(), connectionId, executedAt: new Date().toISOString(), durationMs }
+    localStorage.setItem(key, JSON.stringify([entry, ...existing].slice(0, 50)))
+  } catch { /* localStorage may be unavailable */ }
+}
+
+export function recordTableVisit(tableName: string, connectionId: string) {
+  try {
+    const key = 'dblumi:tvisits'
+    const existing: TableVisitEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]')
+    const idx = existing.findIndex((e) => e.tableName === tableName && e.connectionId === connectionId)
+    if (idx >= 0) {
+      existing[idx]!.visitCount += 1
+      existing[idx]!.lastVisited = new Date().toISOString()
+    } else {
+      existing.push({ tableName, connectionId, visitCount: 1, lastVisited: new Date().toISOString() })
+    }
+    localStorage.setItem(key, JSON.stringify(existing))
+  } catch { /* localStorage may be unavailable */ }
+}
+
 // ── SSE helpers ─────────────────────────────────
 
 /** Full query execution — resets columns, rows, fetches a page */
@@ -347,6 +386,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   openTable: async (tableName) => {
     const { tabs, activeConnectionId } = get()
+    if (activeConnectionId) recordTableVisit(tableName, activeConnectionId)
     const existing = tabs.find((t) => t.kind === 'table' && t.name === tableName && t.connectionId === activeConnectionId)
     if (existing) {
       set({ activeTabId: existing.id })
@@ -454,6 +494,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       runSse(activeConnectionId, tab.sql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), force),
       fetchTotalCount(activeConnectionId, tab.sql, activeTabId, get, set),
     ])
+    const done = get().tabs.find((t) => t.id === activeTabId)
+    if (done?.result.status === 'done') {
+      saveQueryHistory(tab.sql, activeConnectionId, done.result.durationMs)
+    }
   },
 
   executeSelection: async () => {
