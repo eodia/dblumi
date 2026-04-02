@@ -75,8 +75,7 @@ function ConnectionRow({ conn, onEdit, onDelete }: {
 }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-border-subtle hover:bg-surface-raised/50 transition-colors">
-      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: conn.color ?? '#71717A' }} />
-      <DriverIcon driver={conn.driver} className="h-3.5 w-3.5" />
+      <DriverIcon driver={conn.driver} environment={conn.environment} />
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium truncate block">{conn.name}</span>
         <span className="text-xs text-muted-foreground font-mono truncate block">{conn.database ? `${conn.database}@${conn.host}` : conn.host}:{conn.port}</span>

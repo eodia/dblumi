@@ -1010,15 +1010,7 @@ function AppShellInner({
                   >
                     {active ? (
                       <>
-                        <span
-                          className="flex h-6 w-6 items-center justify-center rounded-md text-xs flex-shrink-0"
-                          style={{
-                            backgroundColor: (active.color ?? '#71717A') + '20',
-                            color: active.color ?? '#71717A',
-                          }}
-                        >
-                          <DriverIcon driver={active.driver} />
-                        </span>
+                        <DriverIcon driver={active.driver} environment={active.environment} />
                         <div className="grid flex-1 text-left text-sm leading-tight">
                           <span className="truncate font-semibold">
                             {active.name}
@@ -1080,10 +1072,9 @@ function AppShellInner({
                         className="gap-2 cursor-pointer pr-8"
                       >
                         <span
-                          className="flex h-5 w-5 items-center justify-center rounded text-[10px] flex-shrink-0"
-                          style={{ backgroundColor: (conn.color ?? '#71717A') + '20' }}
+                          className="flex-shrink-0"
                         >
-                          <DriverIcon driver={conn.driver} />
+                          <DriverIcon driver={conn.driver} environment={conn.environment} />
                         </span>
                         <span className="flex-1 truncate text-sm">{conn.name}</span>
                         {conn.environment && <EnvBadge env={conn.environment} />}

@@ -140,7 +140,7 @@ export function SchemaSidebar({ connections }: Props) {
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: conn.color ?? '#71717A' }}
                     />
-                    <DriverIcon driver={conn.driver} />
+                    <DriverIcon driver={conn.driver} environment={conn.environment} />
                     <span className="truncate flex-1 text-[13px]">{conn.name}</span>
                     <span
                       onClick={(e) => {
