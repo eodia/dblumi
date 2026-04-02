@@ -20,7 +20,7 @@ export function OverviewPage() {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-6 space-y-4">
+    <div className="h-full overflow-auto p-6 space-y-4">
       <StatsCards connectionId={activeConnectionId} />
       <ConnectionHealthCard connectionId={activeConnectionId} />
       <ActivityCard connectionId={activeConnectionId} />
