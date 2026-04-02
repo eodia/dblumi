@@ -13,6 +13,7 @@ export type Connection = {
   ssl: boolean
   color: string | null
   environment: string | null
+  createdBy: string
   createdAt: string
   updatedAt: string
 }
@@ -33,12 +34,15 @@ export type CreateConnectionInput = {
 export type SchemaTable = {
   name: string
   type?: 'table' | 'view'
+  comment?: string
   columns: Array<{
     name: string
     dataType: string
     nullable: boolean
     primaryKey: boolean
   }>
+  indexes?: Array<{ name: string; columns: string[]; unique: boolean }>
+  foreignKeys?: Array<{ name: string; fields: string[]; referencedDatabase: string; referencedTable: string; referencedFields: string[]; onDelete: string; onUpdate: string }>
 }
 
 export type SchemaFunction = {
@@ -69,4 +73,8 @@ export const connectionsApi = {
     api.get<{ databases: string[] }>(`/connections/${id}/databases`),
   switchDatabase: (id: string, database: string) =>
     api.post<{ database: string }>(`/connections/${id}/switch-database`, { database }),
+  getConnectionShares: (id: string) =>
+    api.get<{ groups: Array<{ id: string; name: string; color: string | null }>; users: Array<{ id: string; name: string; email: string }> }>(`/connections/${id}/shares`),
+  setConnectionShares: (id: string, groupIds: string[], userIds: string[]) =>
+    api.put<{ groupIds: string[]; userIds: string[] }>(`/connections/${id}/shares`, { groupIds, userIds }),
 }

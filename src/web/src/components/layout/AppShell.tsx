@@ -43,6 +43,7 @@ import {
   Eye,
   Braces,
   Settings2,
+  Upload,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -115,7 +116,14 @@ import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { SavedQueriesPanel } from '@/components/saved-queries/SavedQueriesPanel'
 import { CopilotPanel } from '@/components/copilot/CopilotPanel'
 import { AdminPage } from '@/components/admin/AdminPage'
+import { TableStructureEditor } from '@/components/schema/TableStructureEditor'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
 
@@ -146,7 +154,7 @@ function EnvBadge({ env }: { env: string }) {
 
 // ── Schema tree (shown inline in sidebar when Tables is selected) ───────
 function SchemaNav({ connectionId }: { connectionId: string }) {
-  const { openTable, openFunction, activeConnectionId, executeQuery, setSql } = useEditorStore()
+  const { openTable, openFunction, activeConnectionId, executeQuery, setSql, setPendingCsvImport } = useEditorStore()
   const { isMobile, setOpenMobile } = useSidebar()
   const { t } = useI18n()
   const { data: connListData } = useQuery({ queryKey: ['connections'], queryFn: connectionsApi.list, staleTime: 5 * 60 * 1000 })
@@ -156,6 +164,7 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [sectionsOpen, setSectionsOpen] = useState<{ tables: boolean; views: boolean; functions: boolean }>({ tables: true, views: true, functions: true })
   const [dropTarget, setDropTarget] = useState<{ name: string; type: 'table' | 'view' | 'function' | 'procedure' } | null>(null)
+  const [structureTable, setStructureTable] = useState<SchemaTable | null>(null)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['schema', connectionId],
@@ -261,6 +270,16 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
                     <Table2 className="h-3.5 w-3.5" />
                     {t('sq.open')}
                   </ContextMenuItem>
+                  {!isView && (<>
+                    <ContextMenuItem className="gap-2 text-xs" onClick={() => setStructureTable(item)}>
+                      <Settings2 className="h-3.5 w-3.5" />
+                      {t('table.modifyStructure')}
+                    </ContextMenuItem>
+                    <ContextMenuItem className="gap-2 text-xs" onClick={() => { void openTable(item.name); setPendingCsvImport(item.name) }}>
+                      <Upload className="h-3.5 w-3.5" />
+                      {t('table.importCsv')}
+                    </ContextMenuItem>
+                  </>)}
                   <ContextMenuSeparator />
                   <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive"
                     onClick={() => setDropTarget({ name: item.name, type: isView ? 'view' : 'table' })}>
@@ -278,28 +297,33 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
           return (
             <>
               {/* Tables accordion */}
-              {onlyTables.length > 0 && (
-                <div>
+              <div>
+                <div className="flex items-center gap-0 px-2 pt-2 pb-1">
                   <button onClick={() => toggleSection('tables')}
-                    className="w-full flex items-center gap-1.5 px-2 pt-2 pb-1 hover:bg-sidebar-accent rounded-md transition-colors">
+                    className="flex-1 flex items-center gap-1.5 hover:bg-sidebar-accent rounded-md transition-colors py-0.5">
+                    {sectionsOpen.tables ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}
                     <Table2 className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-primary/50')} />
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Tables</span>
                     <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyTables.length}</span>
-                    <span className="ml-auto">{sectionsOpen.tables ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}</span>
                   </button>
-                  {sectionsOpen.tables && onlyTables.map(renderItem)}
+                  <button onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}
+                    className="p-1 rounded text-text-muted hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                    title={t('table.newTable')}>
+                    <Plus className="h-3 w-3" />
+                  </button>
                 </div>
-              )}
+                {sectionsOpen.tables && onlyTables.map(renderItem)}
+              </div>
 
               {/* Views accordion */}
               {onlyViews.length > 0 && (
                 <div>
                   <button onClick={() => toggleSection('views')}
                     className="w-full flex items-center gap-1.5 px-2 pt-2 pb-1 hover:bg-sidebar-accent rounded-md transition-colors">
+                    {sectionsOpen.views ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}
                     <Eye className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-blue-400/50')} />
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Views</span>
                     <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyViews.length}</span>
-                    <span className="ml-auto">{sectionsOpen.views ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}</span>
                   </button>
                   {sectionsOpen.views && onlyViews.map(renderItem)}
                 </div>
@@ -310,10 +334,10 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
                 <div>
                   <button onClick={() => toggleSection('functions')}
                     className="w-full flex items-center gap-1.5 px-2 pt-2 pb-1 hover:bg-sidebar-accent rounded-md transition-colors">
+                    {sectionsOpen.functions ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}
                     <Braces className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-orange-400/50')} />
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Functions</span>
                     <span className="text-[10px] text-text-muted/50 tabular-nums">{functions.length}</span>
-                    <span className="ml-auto">{sectionsOpen.functions ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}</span>
                   </button>
                   {sectionsOpen.functions && functions.map((fn) => (
                     <ContextMenu key={`${fn.kind}-${fn.name}`}>
@@ -376,9 +400,13 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
                       : <>{t('common.dropTable')} <span className="font-semibold text-foreground font-mono">{dropTarget?.name}</span> {t('common.dropTableConfirm')}</>
                     }
                   </p>
-                  <DialogFooter>
-                    <Button variant="ghost" size="sm" onClick={() => setDropTarget(null)}>{t('common.cancel')}</Button>
-                    <Button variant="destructive" size="sm" onClick={handleDrop}>{t('common.delete')}</Button>
+                  <DialogFooter className="flex-col gap-2 sm:flex-col">
+                    <SlideToConfirm
+                      variant="destructive"
+                      label={dropTarget?.type === 'view' ? 'DROP VIEW' : 'DROP TABLE'}
+                      onConfirm={handleDrop}
+                    />
+                    <Button variant="ghost" size="sm" className="w-full" onClick={() => setDropTarget(null)}>{t('common.cancel')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -386,10 +414,29 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
           )
         })()}
       </div>
+
+      {/* Table structure Sheet */}
+      <Sheet open={structureTable !== null} onOpenChange={(o) => { if (!o) setStructureTable(null) }}>
+        <SheetContent className="sm:max-w-2xl bg-card flex flex-col overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>{t('table.modifyStructure')}</SheetTitle>
+          </SheetHeader>
+          {structureTable && (
+            <TableStructureEditor
+              table={structureTable}
+              connectionId={activeConnectionId!}
+              driver={(connListData?.connections.find((c) => c.id === connectionId)?.driver ?? 'postgresql') as 'postgresql' | 'mysql'}
+              onClose={() => {
+                setStructureTable(null)
+                qcSchema.invalidateQueries({ queryKey: ['schema', connectionId] })
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
-
 
 
 // ── Sortable single tab ───────────────────────────────────────────────────
@@ -416,6 +463,8 @@ function SortableTab({
 }) {
   const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
+  const connCache = useQueryClient().getQueryData<{ connections: Connection[] }>(['connections'])
+  const connColor = tab.connectionId ? connCache?.connections.find((c) => c.id === tab.connectionId)?.color ?? undefined : undefined
 
   return (
     <ContextMenu>
@@ -438,11 +487,9 @@ function SortableTab({
             onClick={onActivate}
             className="flex items-center gap-1.5 cursor-pointer"
           >
-            {tab.kind === 'table'
-              ? <Table2 className="h-3 w-3 flex-shrink-0 opacity-60" />
-              : tab.kind === 'function'
-              ? <Braces className="h-3 w-3 flex-shrink-0 opacity-60 text-orange-400" />
-              : <TerminalSquare className="h-3 w-3 flex-shrink-0 opacity-60" />
+            {tab.kind === 'table' ? <Table2 className="h-3 w-3 flex-shrink-0 opacity-70" style={connColor ? { color: connColor } : undefined} />
+              : tab.kind === 'function' ? <Braces className="h-3 w-3 flex-shrink-0 opacity-70" style={connColor ? { color: connColor } : undefined} />
+              : <TerminalSquare className="h-3 w-3 flex-shrink-0 opacity-70" style={connColor ? { color: connColor } : undefined} />
             }
             <span className={cn('truncate max-w-[120px]', tab.kind === 'table' && 'font-mono')}>
               {tab.name}
@@ -913,12 +960,18 @@ function AppShellInner({
   connModalOpen: boolean
   setConnModalOpen: (v: boolean) => void
 }) {
-  const { user, logout } = useAuthStore()
+  const { user, logout: rawLogout } = useAuthStore()
   const { activeConnectionId, setActiveConnection } = useEditorStore()
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
   const { t, locale, setLocale } = useI18n()
   const qc = useQueryClient()
+
+  const logout = useCallback(async () => {
+    await rawLogout()
+    qc.clear()
+    setActiveConnection(null)
+  }, [rawLogout, qc, setActiveConnection])
 
   const [connSearch, setConnSearch] = useState('')
   const [editingConn, setEditingConn] = useState<Connection | undefined>()
@@ -1038,8 +1091,8 @@ function AppShellInner({
                           <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                         )}
                       </DropdownMenuItem>
-                      {/* Edit / Delete actions (admin only) */}
-                      {user?.role === 'admin' && <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/conn:opacity-100 transition-opacity">
+                      {/* Edit / Delete actions (own connections or admin) */}
+                      {(conn.createdBy === user?.id || user?.role === 'admin') && <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/conn:opacity-100 transition-opacity">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1071,15 +1124,11 @@ function AppShellInner({
                     </div>
                   )}
 
-                  {user?.role === 'admin' && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setConnModalOpen(true)} className="gap-2 cursor-pointer">
-                        <Plus className="h-4 w-4" />
-                        <span className="text-sm">{t('conn.new')}</span>
-                      </DropdownMenuItem>
-                    </>
-                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setConnModalOpen(true)} className="gap-2 cursor-pointer">
+                    <Plus className="h-4 w-4" />
+                    <span className="text-sm">{t('conn.new')}</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarMenuItem>
@@ -1220,28 +1269,6 @@ function AppShellInner({
           <span className="text-sm font-extrabold tracking-tight">
             db<span className="text-primary glow-primary">lumi</span>
           </span>
-          {active && (
-            <>
-              <Separator orientation="vertical" className="h-4" />
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: active.color ?? '#71717A' }}
-                      />
-                      <span className="font-mono text-foreground truncate">{active.name}</span>
-                      <span className="text-text-muted flex-shrink-0">·</span>
-                      <span className="font-mono truncate">{active.database}@{active.host}</span>
-                      {active.environment && <EnvBadge env={active.environment} />}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{active.name} · {active.database}@{active.host}:{active.port}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </>
-          )}
         </header>
 
         {/* Page content */}

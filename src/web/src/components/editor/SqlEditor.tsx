@@ -19,7 +19,7 @@ import {
   historyKeymap,
   indentWithTab,
 } from '@codemirror/commands'
-import { autocompletion, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
+import { autocompletion, closeBrackets, closeBracketsKeymap, type CompletionContext, type Completion } from '@codemirror/autocomplete'
 import {
   foldGutter,
   indentOnInput,
@@ -34,7 +34,7 @@ import { sql, PostgreSQL, MySQL, type SQLNamespace } from '@codemirror/lang-sql'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
-import { connectionsApi, type Connection, type SchemaTable } from '@/api/connections'
+import { connectionsApi, type Connection, type SchemaTable, type SchemaFunction } from '@/api/connections'
 import { cn } from '@/lib/utils'
 
 type Props = { onSave?: () => void }
@@ -186,6 +186,34 @@ function buildSqlSchema(tables: SchemaTable[]): SQLNamespace {
   return ns
 }
 
+/** Build custom completions for functions/procedures with parameter snippets */
+function buildFunctionCompletions(functions: SchemaFunction[]): (ctx: CompletionContext) => { from: number; options: Completion[] } | null {
+  const completions: Completion[] = functions.map((fn) => {
+    const args = fn.arguments
+      ? fn.arguments.split(',').map((a) => a.trim().split(/\s+/)[0] ?? '').filter(Boolean)
+      : []
+    const paramsStr = args.length > 0 ? args.join(', ') : ''
+    const insertText = `${fn.name}(${paramsStr})`
+    const isProc = fn.kind === 'procedure'
+
+    return {
+      label: fn.name,
+      type: isProc ? 'keyword' : 'function',
+      detail: isProc
+        ? `procedure(${fn.arguments || ''})`
+        : `(${fn.arguments || ''}) → ${fn.return_type || 'void'}`,
+      apply: insertText,
+      boost: -1, // slightly lower priority than tables/columns
+    }
+  })
+
+  return (ctx: CompletionContext) => {
+    const word = ctx.matchBefore(/\w+/)
+    if (!word) return null
+    return { from: word.from, options: completions }
+  }
+}
+
 /** Pick the right CodeMirror dialect */
 function getDialect(driver: string | undefined) {
   if (driver === 'mysql') return MySQL
@@ -265,6 +293,7 @@ export function SqlEditor({ onSave }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const sqlCompartment = useRef(new Compartment())
+  const fnCompartment = useRef(new Compartment())
   const phrasesCompartment = useRef(new Compartment())
   const { locale } = useI18n()
 
@@ -292,6 +321,11 @@ export function SqlEditor({ onSave }: Props) {
     const schema = schemaData?.tables ? buildSqlSchema(schemaData.tables) : undefined
     return sql({ dialect, schema, upperCaseKeywords: true })
   }, [activeConnection?.driver, schemaData?.tables])
+
+  const fnCompletionSource = useMemo(() => {
+    if (!schemaData?.functions?.length) return null
+    return buildFunctionCompletions(schemaData.functions)
+  }, [schemaData?.functions])
 
   // Create editor once
   useEffect(() => {
@@ -326,6 +360,7 @@ export function SqlEditor({ onSave }: Props) {
 
           // SQL language + schema
           sqlCompartment.current.of(sqlExtension),
+          fnCompartment.current.of(fnCompletionSource ? EditorState.languageData.of(() => [{ autocomplete: fnCompletionSource }]) : []),
 
           // Autocomplete
           autocompletion({ activateOnTyping: true, icons: true }),
@@ -388,9 +423,12 @@ export function SqlEditor({ onSave }: Props) {
     const view = viewRef.current
     if (!view) return
     view.dispatch({
-      effects: sqlCompartment.current.reconfigure(sqlExtension),
+      effects: [
+        sqlCompartment.current.reconfigure(sqlExtension),
+        fnCompartment.current.reconfigure(fnCompletionSource ? EditorState.languageData.of(() => [{ autocomplete: fnCompletionSource }]) : []),
+      ],
     })
-  }, [sqlExtension])
+  }, [sqlExtension, fnCompletionSource])
 
   // Reconfigure phrases when locale changes
   useEffect(() => {

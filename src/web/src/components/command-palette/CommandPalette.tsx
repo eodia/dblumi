@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -33,8 +33,12 @@ export function CommandPalette({ connections, onSaveNew, onSaveAs, onNewConnecti
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const { activeConnectionId, setActiveConnection, addTab, tabs, activeTabId, executeQuery, executeSelection, selection, reloadTab } = useEditorStore()
-  const { logout } = useAuthStore()
   const qc = useQueryClient()
+  const { logout: rawLogout } = useAuthStore()
+  const logout = useCallback(async () => {
+    await rawLogout()
+    qc.clear()
+  }, [rawLogout, qc])
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
 

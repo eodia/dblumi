@@ -1,7 +1,10 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import { eq } from 'drizzle-orm'
 import { authMiddleware } from '../middleware/auth.js'
+import { db } from '../db/index.js'
+import { queryGroups, queryUsers, groups, users } from '../db/schema.js'
 import {
   listSavedQueries,
   getSavedQuery,
@@ -100,6 +103,59 @@ savedQueriesRouter.patch('/reorder', zValidator('json', ReorderSchema), async (c
   const { items } = c.req.valid('json')
   await reorderSavedQueries(items, userId)
   return c.body(null, 204)
+})
+
+const SharesSchema = z.object({
+  groupIds: z.array(z.string().uuid()),
+  userIds: z.array(z.string().uuid()),
+})
+
+savedQueriesRouter.get('/:id/shares', async (c) => {
+  const userId = c.get('userId')
+  const id = c.req.param('id')
+  try {
+    await getSavedQuery(id, userId)
+  } catch (e) {
+    if (e instanceof SavedQueryError) return c.json(problem(404, e.message), 404)
+    throw e
+  }
+  const groupRows = await db
+    .select({ id: groups.id, name: groups.name, color: groups.color })
+    .from(queryGroups)
+    .innerJoin(groups, eq(queryGroups.groupId, groups.id))
+    .where(eq(queryGroups.queryId, id))
+  const userRows = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(queryUsers)
+    .innerJoin(users, eq(queryUsers.userId, users.id))
+    .where(eq(queryUsers.queryId, id))
+  return c.json({ groups: groupRows, users: userRows })
+})
+
+savedQueriesRouter.put('/:id/shares', zValidator('json', SharesSchema), async (c) => {
+  const userId = c.get('userId')
+  const id = c.req.param('id')
+  try {
+    await getSavedQuery(id, userId)
+  } catch (e) {
+    if (e instanceof SavedQueryError) return c.json(problem(404, e.message), 404)
+    throw e
+  }
+  const { groupIds, userIds } = c.req.valid('json')
+
+  // Replace query groups
+  await db.delete(queryGroups).where(eq(queryGroups.queryId, id))
+  if (groupIds.length > 0) {
+    await db.insert(queryGroups).values(groupIds.map((groupId) => ({ queryId: id, groupId })))
+  }
+
+  // Replace query users
+  await db.delete(queryUsers).where(eq(queryUsers.queryId, id))
+  if (userIds.length > 0) {
+    await db.insert(queryUsers).values(userIds.map((uid) => ({ queryId: id, userId: uid })))
+  }
+
+  return c.json({ groupIds, userIds })
 })
 
 export { savedQueriesRouter }

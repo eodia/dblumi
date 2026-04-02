@@ -43,6 +43,7 @@ export type QueryTab = {
   result: TabResult
   savedQueryId: string | null
   functionParams: FunctionParam[]
+  connectionId: string | null
 }
 
 const DEFAULT_PAGE_SIZE = 100
@@ -87,23 +88,26 @@ type EditorState = {
   closeToRight: (id: string) => void
   closeAll: () => void
 
+  pendingCsvImport: string | null
+  setPendingCsvImport: (table: string | null) => void
+
   executeQuery: (force?: boolean) => Promise<void>
   executeSelection: () => Promise<void>
   executeSql: (sql: string) => Promise<void>
   reloadTab: () => Promise<void>
   goToPage: (page: number) => Promise<void>
   setResultPageSize: (size: number) => Promise<void>
-  sortByColumn: (column: string) => Promise<void>
+  sortByColumn: (column: string, additive?: boolean) => Promise<void>
   sortByMulti: (sorts: SortEntry[]) => Promise<void>
   clearGuardrail: () => void
   clearResults: () => void
 }
 
-function makeQueryTab(n: number): QueryTab {
-  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [] }
+function makeQueryTab(n: number, connectionId: string | null = null): QueryTab {
+  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId }
 }
 
-function makeTableTab(tableName: string): QueryTab {
+function makeTableTab(tableName: string, connectionId: string | null = null): QueryTab {
   return {
     id: crypto.randomUUID(),
     name: tableName,
@@ -111,6 +115,7 @@ function makeTableTab(tableName: string): QueryTab {
     sql: `SELECT * FROM ${tableName}`,
     savedQueryId: null,
     functionParams: [],
+    connectionId,
     result: emptyResult(),
   }
 }
@@ -268,9 +273,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeTabId: initialTab.id,
   activeConnectionId: null,
   selection: '',
+  pendingCsvImport: null,
+  setPendingCsvImport: (table) => set({ pendingCsvImport: table }),
 
   setActiveConnection: (id) => set({ activeConnectionId: id }),
-  setActiveTab: (id) => set({ activeTabId: id }),
+  setActiveTab: (id) => {
+    const tab = get().tabs.find((t) => t.id === id)
+    const updates: Partial<{ activeTabId: string; activeConnectionId: string | null }> = { activeTabId: id }
+    // Auto-switch connection if the tab has a different one
+    if (tab?.connectionId && tab.connectionId !== get().activeConnectionId) {
+      updates.activeConnectionId = tab.connectionId
+    }
+    set(updates)
+  },
   setSelection: (text) => set({ selection: text }),
   setSavedQueryId: (id) => {
     const { tabs, activeTabId } = get()
@@ -278,8 +293,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   addTab: () => {
-    const { tabs } = get()
-    const tab = makeQueryTab(tabs.filter((t) => t.kind === 'query').length + 1)
+    const { tabs, activeConnectionId } = get()
+    const tab = makeQueryTab(tabs.filter((t) => t.kind === 'query').length + 1, activeConnectionId)
     set({ tabs: [...tabs, tab], activeTabId: tab.id })
   },
 
@@ -314,7 +329,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   openQuery: (sql, name, savedQueryId) => {
-    const { tabs } = get()
+    const { tabs, activeConnectionId } = get()
     const displayName = name.length > 20 ? name.slice(0, 20) + '…' : name
     const existing = tabs.find((t) => t.kind === 'query' && t.name === displayName)
     if (existing) {
@@ -322,7 +337,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return
     }
     const tab: QueryTab = {
-      ...makeQueryTab(tabs.filter((t) => t.kind === 'query').length + 1),
+      ...makeQueryTab(tabs.filter((t) => t.kind === 'query').length + 1, activeConnectionId),
       sql,
       name: displayName,
       savedQueryId: savedQueryId ?? null,
@@ -332,12 +347,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   openTable: async (tableName) => {
     const { tabs, activeConnectionId } = get()
-    const existing = tabs.find((t) => t.kind === 'table' && t.name === tableName)
+    const existing = tabs.find((t) => t.kind === 'table' && t.name === tableName && t.connectionId === activeConnectionId)
     if (existing) {
       set({ activeTabId: existing.id })
       return
     }
-    const tab = makeTableTab(tableName)
+    const tab = makeTableTab(tableName, activeConnectionId)
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
     if (activeConnectionId) {
       const ps = tab.result.pageSize
@@ -349,8 +364,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   openFunction: (name, source, params) => {
-    const { tabs } = get()
-    const existing = tabs.find((t) => t.kind === 'function' && t.name === name)
+    const { tabs, activeConnectionId } = get()
+    const existing = tabs.find((t) => t.kind === 'function' && t.name === name && t.connectionId === activeConnectionId)
     if (existing) {
       set({ activeTabId: existing.id })
       return
@@ -363,6 +378,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       result: emptyResult(),
       savedQueryId: null,
       functionParams: params.map((p) => ({ ...p, value: '' })),
+      connectionId: activeConnectionId,
     }
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
   },
@@ -490,21 +506,40 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     await fetchPageSse(activeConnectionId, effectiveSql, activeTabId, size, 0, () => get().tabs, (tabs) => set({ tabs }))
   },
 
-  sortByColumn: async (column: string) => {
+  sortByColumn: async (column: string, additive = false) => {
     const { activeConnectionId, tabs, activeTabId } = get()
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !tab?.sql.trim()) return
-    const { sortBy, pageSize, executedSql } = tab.result
+    const { sortMulti, pageSize, executedSql } = tab.result
     const baseSql = executedSql ?? tab.sql
 
-    let newSort: SortBy
-    if (sortBy?.column !== column) newSort = { column, direction: 'asc' }
-    else if (sortBy.direction === 'asc') newSort = { column, direction: 'desc' }
-    else newSort = null
+    let sorts: SortEntry[]
 
-    const sorts = newSort ? [newSort] : []
+    if (additive) {
+      // Shift+click: add/toggle column in multi-sort
+      const existing = sortMulti.find((s) => s.column === column)
+      if (!existing) {
+        sorts = [...sortMulti, { column, direction: 'asc' }]
+      } else if (existing.direction === 'asc') {
+        sorts = sortMulti.map((s) => s.column === column ? { ...s, direction: 'desc' as const } : s)
+      } else {
+        sorts = sortMulti.filter((s) => s.column !== column)
+      }
+    } else {
+      // Normal click: single sort (replaces all)
+      const current = sortMulti.length === 1 ? sortMulti[0] : null
+      if (current?.column !== column) {
+        sorts = [{ column, direction: 'asc' }]
+      } else if (current.direction === 'asc') {
+        sorts = [{ column, direction: 'desc' }]
+      } else {
+        sorts = []
+      }
+    }
+
+    const sortBy = sorts[0] ?? null
     const effectiveSql = buildSortedSql(baseSql, sorts)
-    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, sortBy: newSort, sortMulti: sorts, totalCount: null }) })
+    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, sortBy, sortMulti: sorts, totalCount: null }) })
     await Promise.all([
       runSse(activeConnectionId, effectiveSql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
       fetchTotalCount(activeConnectionId, baseSql, activeTabId, get, set),

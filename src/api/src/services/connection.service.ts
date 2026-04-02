@@ -1,6 +1,6 @@
-import { eq, and } from 'drizzle-orm'
+import { eq, and, or, inArray } from 'drizzle-orm'
 import { db } from '../db/index.js'
-import { connections } from '../db/schema.js'
+import { connections, userGroups, connectionGroups, connectionUsers } from '../db/schema.js'
 import { encrypt, decrypt } from '../lib/crypto.js'
 import { connectionManager } from '../lib/connection-manager.js'
 import type { DbDriver } from '@dblumi/shared'
@@ -20,11 +20,12 @@ export type ConnectionView = {
   ssl: boolean
   color: string | null
   environment: string | null
+  createdBy: string
   createdAt: string
   updatedAt: string
 }
 
-export type CreateConnectionInput = Omit<ConnectionView, 'id' | 'createdAt' | 'updatedAt'> & {
+export type CreateConnectionInput = Omit<ConnectionView, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'> & {
   password: string
 }
 
@@ -46,6 +47,7 @@ function toView(row: typeof connections.$inferSelect): ConnectionView {
     ssl: row.ssl,
     color: row.color,
     environment: row.environment,
+    createdBy: row.createdBy,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -56,10 +58,43 @@ function toView(row: typeof connections.$inferSelect): ConnectionView {
 // ──────────────────────────────────────────────
 
 export async function listConnections(userId: string): Promise<ConnectionView[]> {
+  // Get user's group IDs
+  const userGroupRows = await db
+    .select({ groupId: userGroups.groupId })
+    .from(userGroups)
+    .where(eq(userGroups.userId, userId))
+  const groupIds = userGroupRows.map((r) => r.groupId)
+
+  // Get connection IDs accessible via groups
+  let groupConnIds: string[] = []
+  if (groupIds.length > 0) {
+    const groupConnRows = await db
+      .select({ connectionId: connectionGroups.connectionId })
+      .from(connectionGroups)
+      .where(inArray(connectionGroups.groupId, groupIds))
+    groupConnIds = groupConnRows.map((r) => r.connectionId)
+  }
+
+  // Get connection IDs shared directly with the user
+  const userShareRows = await db
+    .select({ connectionId: connectionUsers.connectionId })
+    .from(connectionUsers)
+    .where(eq(connectionUsers.userId, userId))
+  const userShareConnIds = userShareRows.map((r) => r.connectionId)
+
+  // Get all accessible connections: own + group-assigned + user-shared
+  const conditions = [eq(connections.createdBy, userId)]
+  if (groupConnIds.length > 0) {
+    conditions.push(inArray(connections.id, groupConnIds))
+  }
+  if (userShareConnIds.length > 0) {
+    conditions.push(inArray(connections.id, userShareConnIds))
+  }
+
   const rows = await db
     .select()
     .from(connections)
-    .where(eq(connections.createdBy, userId))
+    .where(or(...conditions))
   return rows.map(toView)
 }
 
@@ -71,11 +106,37 @@ export async function getConnection(
   id: string,
   userId: string
 ): Promise<ConnectionView> {
-  const row = await db
+  // Check direct access (own connection)
+  let row = await db
     .select()
     .from(connections)
     .where(and(eq(connections.id, id), eq(connections.createdBy, userId)))
     .get()
+
+  // Check user-sharing access
+  if (!row) {
+    const userShare = await db
+      .select({ connectionId: connectionUsers.connectionId })
+      .from(connectionUsers)
+      .where(and(eq(connectionUsers.connectionId, id), eq(connectionUsers.userId, userId)))
+      .get()
+    if (userShare) {
+      row = await db.select().from(connections).where(eq(connections.id, id)).get()
+    }
+  }
+
+  // Check group-based access
+  if (!row) {
+    const groupAccess = await db
+      .select({ connectionId: connectionGroups.connectionId })
+      .from(connectionGroups)
+      .innerJoin(userGroups, eq(connectionGroups.groupId, userGroups.groupId))
+      .where(and(eq(connectionGroups.connectionId, id), eq(userGroups.userId, userId)))
+      .get()
+    if (groupAccess) {
+      row = await db.select().from(connections).where(eq(connections.id, id)).get()
+    }
+  }
 
   if (!row) throw new ConnectionError('NOT_FOUND', 'Connexion introuvable.')
   return toView(row)
@@ -142,7 +203,7 @@ export async function updateConnection(
   if (input.ssl !== undefined) updates.ssl = input.ssl
   if (input.color !== undefined) updates.color = input.color
   if (input.environment !== undefined) updates.environment = input.environment
-  if (input.password !== undefined) {
+  if (input.password !== undefined && input.password !== '') {
     updates.passwordEncrypted = encrypt(input.password)
   }
 
@@ -234,21 +295,21 @@ export async function getPoolOptions(
   id: string,
   userId: string
 ) {
-  const row = await db
-    .select()
-    .from(connections)
-    .where(and(eq(connections.id, id), eq(connections.createdBy, userId)))
-    .get()
+  // Verify access using the same logic as getConnection (own + user-shared + group)
+  await getConnection(id, userId)
 
+  // Now get the full row with encrypted password
+  const row = await db.select().from(connections).where(eq(connections.id, id)).get()
   if (!row) throw new ConnectionError('NOT_FOUND', 'Connexion introuvable.')
 
+  const password = decrypt(row.passwordEncrypted as Buffer)
   return {
     driver: row.driver,
     host: row.host,
     port: row.port,
     database: row.database,
     username: row.username,
-    password: decrypt(row.passwordEncrypted as Buffer),
+    password,
     ssl: row.ssl,
   }
 }

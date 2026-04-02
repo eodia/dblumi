@@ -19,9 +19,10 @@ export function SlideToConfirm({ onConfirm, label, confirmLabel, variant = 'dest
   const THUMB_W = 44
   const THRESHOLD = 0.85
 
+  const PAD = 4 // px padding on each side
   const getMaxTravel = () => {
     if (!trackRef.current) return 200
-    return trackRef.current.offsetWidth - THUMB_W
+    return trackRef.current.offsetWidth - THUMB_W - PAD * 2
   }
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -91,7 +92,7 @@ export function SlideToConfirm({ onConfirm, label, confirmLabel, variant = 'dest
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         className={cn(
-          'absolute top-1 bottom-1 rounded-md flex items-center justify-center cursor-grab active:cursor-grabbing touch-none',
+          'absolute top-1 bottom-1 rounded-md flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ml-1',
           thumbColor,
           'text-white shadow-lg',
         )}

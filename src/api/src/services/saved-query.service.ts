@@ -1,7 +1,7 @@
-import { eq, and, asc, sql } from 'drizzle-orm'
+import { eq, and, asc, sql, inArray, or } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { db } from '../db/index.js'
-import { savedQueries } from '../db/schema.js'
+import { savedQueries, queryGroups, queryUsers, userGroups, users } from '../db/schema.js'
 import type { SavedQuery } from '@dblumi/shared'
 
 export class SavedQueryError extends Error {
@@ -25,7 +25,7 @@ type CreateSavedQuery = {
 
 type UpdateSavedQuery = Partial<CreateSavedQuery>
 
-function toView(row: typeof savedQueries.$inferSelect): SavedQuery {
+function toView(row: typeof savedQueries.$inferSelect, shared?: boolean, createdByName?: string): SavedQuery {
   return {
     id: row.id,
     name: row.name,
@@ -34,19 +34,69 @@ function toView(row: typeof savedQueries.$inferSelect): SavedQuery {
     connectionId: row.connectionId ?? undefined,
     folder: row.folder ?? undefined,
     sortOrder: row.sortOrder ?? undefined,
+    shared: shared ?? undefined,
     createdBy: row.createdBy,
+    createdByName: createdByName ?? undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
 }
 
 export async function listSavedQueries(userId: string): Promise<SavedQuery[]> {
-  const rows = await db
+  // Own queries
+  const ownRows = await db
     .select()
     .from(savedQueries)
     .where(eq(savedQueries.createdBy, userId))
     .orderBy(asc(savedQueries.sortOrder), asc(savedQueries.updatedAt))
-  return rows.map(toView)
+
+  // Queries shared directly with user
+  const directSharedRows = await db
+    .select({ query: savedQueries })
+    .from(queryUsers)
+    .innerJoin(savedQueries, eq(queryUsers.queryId, savedQueries.id))
+    .where(eq(queryUsers.userId, userId))
+
+  // Queries shared via groups the user belongs to
+  const groupRows = await db
+    .select({ groupId: userGroups.groupId })
+    .from(userGroups)
+    .where(eq(userGroups.userId, userId))
+  const groupIds = groupRows.map((r) => r.groupId)
+
+  let groupSharedRows: { query: typeof savedQueries.$inferSelect }[] = []
+  if (groupIds.length > 0) {
+    groupSharedRows = await db
+      .select({ query: savedQueries })
+      .from(queryGroups)
+      .innerJoin(savedQueries, eq(queryGroups.queryId, savedQueries.id))
+      .where(inArray(queryGroups.groupId, groupIds))
+  }
+
+  // Deduplicate: own queries take precedence (not marked shared)
+  const ownIds = new Set(ownRows.map((r) => r.id))
+  const sharedMap = new Map<string, typeof savedQueries.$inferSelect>()
+  for (const r of [...directSharedRows, ...groupSharedRows]) {
+    if (!ownIds.has(r.query.id) && !sharedMap.has(r.query.id)) {
+      sharedMap.set(r.query.id, r.query)
+    }
+  }
+
+  // Fetch creator names for shared queries
+  const sharedRows = Array.from(sharedMap.values())
+  const creatorIds = [...new Set(sharedRows.map((r) => r.createdBy))]
+  const creatorNames = new Map<string, string>()
+  if (creatorIds.length > 0) {
+    const creators = await db
+      .select({ id: users.id, name: users.name })
+      .from(users)
+      .where(inArray(users.id, creatorIds))
+    for (const c of creators) creatorNames.set(c.id, c.name)
+  }
+
+  const own = ownRows.map((r) => toView(r))
+  const shared = sharedRows.map((r) => toView(r, true, creatorNames.get(r.createdBy)))
+  return [...own, ...shared]
 }
 
 export async function getSavedQuery(id: string, userId: string): Promise<SavedQuery> {
@@ -105,7 +155,8 @@ export async function updateSavedQuery(
 }
 
 export async function deleteSavedQuery(id: string, userId: string): Promise<void> {
-  await getSavedQuery(id, userId)
+  const sq = await getSavedQuery(id, userId)
+  if (sq.createdBy !== userId) throw new SavedQueryError('Vous ne pouvez pas supprimer une requête partagée.', 'FORBIDDEN')
   await db
     .delete(savedQueries)
     .where(and(eq(savedQueries.id, id), eq(savedQueries.createdBy, userId)))

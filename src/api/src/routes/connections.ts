@@ -1,7 +1,11 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
+import { eq } from 'drizzle-orm'
+import { authMiddleware } from '../middleware/auth.js'
+import { db } from '../db/index.js'
+import { logger } from '../logger.js'
+import { groups, users, connectionGroups, connectionUsers } from '../db/schema.js'
 import {
   listConnections,
   getConnection,
@@ -89,7 +93,6 @@ connectionsRouter.get('/:id', async (c) => {
 
 connectionsRouter.post(
   '/',
-  adminMiddleware,
   zValidator('json', CreateSchema),
   async (c) => {
     const userId = c.get('userId')
@@ -105,12 +108,10 @@ connectionsRouter.post(
 
 connectionsRouter.put(
   '/:id',
-  adminMiddleware,
   zValidator('json', UpdateSchema),
   async (c) => {
     const userId = c.get('userId')
     const raw = c.req.valid('json')
-    // Strip undefined keys so exactOptionalPropertyTypes is satisfied
     const body = Object.fromEntries(
       Object.entries(raw).filter(([, v]) => v !== undefined)
     ) as Parameters<typeof updateConnection>[1]
@@ -129,7 +130,7 @@ connectionsRouter.put(
 // DELETE /connections/:id
 // ──────────────────────────────────────────────
 
-connectionsRouter.delete('/:id', adminMiddleware, async (c) => {
+connectionsRouter.delete('/:id', async (c) => {
   const userId = c.get('userId')
   try {
     await deleteConnection(c.req.param('id'), userId)
@@ -217,20 +218,30 @@ type SchemaRow = {
   is_nullable: string
   is_primary_key: boolean
   table_type: string
+  table_comment: string | null
 }
+
+type SchemaIndex = { name: string; columns: string[]; unique: boolean }
+type SchemaFK = { name: string; fields: string[]; referencedDatabase: string; referencedTable: string; referencedFields: string[]; onDelete: string; onUpdate: string }
 
 type SchemaItem = {
   name: string
   type: 'table' | 'view'
+  comment: string
   columns: Array<{ name: string; dataType: string; nullable: boolean; primaryKey: boolean }>
+  indexes: SchemaIndex[]
+  foreignKeys: SchemaFK[]
 }
+
+type IndexRow = { table_name: string; index_name: string; is_unique: boolean; column_name: string }
+type FKRow = { table_name: string; constraint_name: string; column_name: string; referenced_schema: string; referenced_table: string; referenced_column: string; on_delete: string; on_update: string }
 
 function groupByTable(rows: SchemaRow[]) {
   const map = new Map<string, SchemaItem>()
   for (const row of rows) {
     if (!map.has(row.table_name)) {
       const isView = row.table_type === 'VIEW'
-      map.set(row.table_name, { name: row.table_name, type: isView ? 'view' : 'table', columns: [] })
+      map.set(row.table_name, { name: row.table_name, type: isView ? 'view' : 'table', comment: row.table_comment ?? '', columns: [], indexes: [], foreignKeys: [] })
     }
     map.get(row.table_name)!.columns.push({
       name: row.column_name,
@@ -239,6 +250,34 @@ function groupByTable(rows: SchemaRow[]) {
       primaryKey:
         row.is_primary_key === true || (row.is_primary_key as unknown) === 1,
     })
+  }
+  return map
+}
+
+function mergeIndexes(map: Map<string, SchemaItem>, indexRows: IndexRow[]) {
+  for (const row of indexRows) {
+    const table = map.get(row.table_name)
+    if (!table) continue
+    let idx = table.indexes.find((i) => i.name === row.index_name)
+    if (!idx) {
+      idx = { name: row.index_name, columns: [], unique: row.is_unique }
+      table.indexes.push(idx)
+    }
+    idx.columns.push(row.column_name)
+  }
+}
+
+function mergeForeignKeys(map: Map<string, SchemaItem>, fkRows: FKRow[]) {
+  for (const row of fkRows) {
+    const table = map.get(row.table_name)
+    if (!table) continue
+    let fk = table.foreignKeys.find((f) => f.name === row.constraint_name)
+    if (!fk) {
+      fk = { name: row.constraint_name, fields: [], referencedDatabase: row.referenced_schema, referencedTable: row.referenced_table, referencedFields: [], onDelete: row.on_delete, onUpdate: row.on_update }
+      table.foreignKeys.push(fk)
+    }
+    fk.fields.push(row.column_name)
+    fk.referencedFields.push(row.referenced_column)
   }
   return { tables: Array.from(map.values()) }
 }
@@ -261,7 +300,8 @@ async function getPgSchema(pool: PgPool) {
         c.data_type,
         c.is_nullable,
         t.table_type,
-        CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_primary_key
+        CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_primary_key,
+        obj_description(('public.' || c.table_name)::regclass, 'pg_class') AS table_comment
       FROM information_schema.columns c
       JOIN information_schema.tables t
         ON t.table_name = c.table_name AND t.table_schema = c.table_schema
@@ -291,7 +331,45 @@ async function getPgSchema(pool: PgPool) {
       ORDER BY p.prokind, p.proname
     `)
 
-    const result = groupByTable(rows)
+    const { rows: idxRows } = await client.query<IndexRow>(`
+      SELECT
+        t.relname AS table_name,
+        i.relname AS index_name,
+        ix.indisunique AS is_unique,
+        a.attname AS column_name
+      FROM pg_class t
+      JOIN pg_index ix ON ix.indrelid = t.oid
+      JOIN pg_class i ON i.oid = ix.indexrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+      JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+      WHERE n.nspname = 'public' AND t.relkind = 'r' AND NOT ix.indisprimary
+      ORDER BY t.relname, i.relname, array_position(ix.indkey, a.attnum)
+    `)
+
+    const { rows: fkRows } = await client.query<FKRow>(`
+      SELECT
+        tc.table_name,
+        tc.constraint_name,
+        kcu.column_name,
+        ccu.table_schema  AS referenced_schema,
+        ccu.table_name    AS referenced_table,
+        ccu.column_name   AS referenced_column,
+        rc.delete_rule    AS on_delete,
+        rc.update_rule    AS on_update
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.referential_constraints rc
+        ON tc.constraint_name = rc.constraint_name AND tc.table_schema = rc.constraint_schema
+      JOIN information_schema.constraint_column_usage ccu
+        ON rc.unique_constraint_name = ccu.constraint_name AND rc.unique_constraint_schema = ccu.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'
+      ORDER BY tc.table_name, tc.constraint_name, kcu.ordinal_position
+    `)
+
+    const tableMap = groupByTable(rows)
+    mergeIndexes(tableMap, idxRows)
+    const result = mergeForeignKeys(tableMap, fkRows)
     return { ...result, functions: funcRows }
   } finally {
     client.release()
@@ -303,12 +381,13 @@ async function getMySQLSchema(pool: MySQLPool) {
   try {
     const [rows] = await conn.query(`
       SELECT
-        c.TABLE_NAME   AS table_name,
-        c.COLUMN_NAME  AS column_name,
-        c.DATA_TYPE    AS data_type,
-        c.IS_NULLABLE  AS is_nullable,
-        t.TABLE_TYPE   AS table_type,
-        CASE WHEN c.COLUMN_KEY = 'PRI' THEN true ELSE false END AS is_primary_key
+        c.TABLE_NAME    AS table_name,
+        c.COLUMN_NAME   AS column_name,
+        c.DATA_TYPE     AS data_type,
+        c.IS_NULLABLE   AS is_nullable,
+        t.TABLE_TYPE    AS table_type,
+        CASE WHEN c.COLUMN_KEY = 'PRI' THEN true ELSE false END AS is_primary_key,
+        t.TABLE_COMMENT AS table_comment
       FROM information_schema.COLUMNS c
       JOIN information_schema.TABLES t
         ON t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_SCHEMA = c.TABLE_SCHEMA
@@ -328,7 +407,37 @@ async function getMySQLSchema(pool: MySQLPool) {
       ORDER BY ROUTINE_TYPE, ROUTINE_NAME
     `)
 
-    const result = groupByTable(rows as SchemaRow[])
+    const [idxRows] = await conn.query(`
+      SELECT
+        TABLE_NAME  AS table_name,
+        INDEX_NAME  AS index_name,
+        NOT NON_UNIQUE AS is_unique,
+        COLUMN_NAME AS column_name
+      FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND INDEX_NAME != 'PRIMARY'
+      ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX
+    `)
+
+    const [fkRows] = await conn.query(`
+      SELECT
+        kcu.TABLE_NAME        AS table_name,
+        kcu.CONSTRAINT_NAME   AS constraint_name,
+        kcu.COLUMN_NAME       AS column_name,
+        kcu.REFERENCED_TABLE_SCHEMA  AS referenced_schema,
+        kcu.REFERENCED_TABLE_NAME    AS referenced_table,
+        kcu.REFERENCED_COLUMN_NAME   AS referenced_column,
+        rc.DELETE_RULE        AS on_delete,
+        rc.UPDATE_RULE        AS on_update
+      FROM information_schema.KEY_COLUMN_USAGE kcu
+      JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
+        ON rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME AND rc.CONSTRAINT_SCHEMA = kcu.TABLE_SCHEMA
+      WHERE kcu.TABLE_SCHEMA = DATABASE() AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
+      ORDER BY kcu.TABLE_NAME, kcu.CONSTRAINT_NAME, kcu.ORDINAL_POSITION
+    `)
+
+    const tableMap = groupByTable(rows as SchemaRow[])
+    mergeIndexes(tableMap, idxRows as IndexRow[])
+    const result = mergeForeignKeys(tableMap, fkRows as FKRow[])
     return { ...result, functions: funcRows as FunctionRow[] }
   } finally {
     conn.release()
@@ -361,6 +470,7 @@ connectionsRouter.get('/:id/schema', async (c) => {
     const raw = err instanceof Error ? err.message : String(err)
     const code = err instanceof Error && 'code' in err ? (err as Record<string, unknown>).code : undefined
     const message = raw || (code ? `Database error (${code})` : 'Connection failed')
+    logger.warn({ connectionId, err: raw, code }, 'Schema fetch failed')
     return c.json({ type: 'error', message }, 502)
   }
 })
@@ -577,6 +687,55 @@ connectionsRouter.post(
 
     return c.json({ database })
   }
+)
+
+// ──────────────────────────────────────────────
+// GET /connections/:id/shares
+// ──────────────────────────────────────────────
+
+connectionsRouter.get('/:id/shares', async (c) => {
+  const connectionId = c.req.param('id')
+
+  const groupRows = await db
+    .select({ id: groups.id, name: groups.name, color: groups.color })
+    .from(connectionGroups)
+    .innerJoin(groups, eq(connectionGroups.groupId, groups.id))
+    .where(eq(connectionGroups.connectionId, connectionId))
+
+  const userRows = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(connectionUsers)
+    .innerJoin(users, eq(connectionUsers.userId, users.id))
+    .where(eq(connectionUsers.connectionId, connectionId))
+
+  return c.json({ groups: groupRows, users: userRows })
+})
+
+// ──────────────────────────────────────────────
+// PUT /connections/:id/shares
+// ──────────────────────────────────────────────
+
+connectionsRouter.put(
+  '/:id/shares',
+  zValidator('json', z.object({ groupIds: z.array(z.string()), userIds: z.array(z.string()) })),
+  async (c) => {
+    const connectionId = c.req.param('id')
+    const { groupIds, userIds } = c.req.valid('json')
+
+    // Replace all groups
+    await db.delete(connectionGroups).where(eq(connectionGroups.connectionId, connectionId))
+    for (const groupId of groupIds) {
+      await db.insert(connectionGroups).values({ connectionId, groupId }).onConflictDoNothing()
+    }
+
+    // Replace all shared users
+    await db.delete(connectionUsers).where(eq(connectionUsers.connectionId, connectionId))
+    for (const userId of userIds) {
+      await db.insert(connectionUsers).values({ connectionId, userId }).onConflictDoNothing()
+    }
+
+    return c.json({ groupIds, userIds })
+  },
 )
 
 export { connectionsRouter }

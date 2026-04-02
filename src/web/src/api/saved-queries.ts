@@ -8,7 +8,9 @@ export type SavedQuery = {
   connectionId?: string
   folder?: string
   sortOrder?: number
+  shared?: boolean
   createdBy: string
+  createdByName?: string
   createdAt: string
   updatedAt: string
 }
@@ -22,4 +24,8 @@ export const savedQueriesApi = {
   delete: (id: string) => api.del<void>(`/saved-queries/${id}`),
   reorder: (items: { id: string; sortOrder: number }[]) =>
     api.patch<void>('/saved-queries/reorder', { items }),
+  getShares: (id: string) =>
+    api.get<{ groups: Array<{ id: string; name: string; color: string | null }>; users: Array<{ id: string; name: string; email: string }> }>(`/saved-queries/${id}/shares`),
+  setShares: (id: string, groupIds: string[], userIds: string[]) =>
+    api.put<{ groupIds: string[]; userIds: string[] }>(`/saved-queries/${id}/shares`, { groupIds, userIds }),
 }

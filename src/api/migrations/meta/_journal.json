@@ -30,5 +30,26 @@
       "tag": "0003_user_language",
       "breakpoints": true
     }
+    ,{
+      "idx": 4,
+      "version": "6",
+      "when": 1774738000000,
+      "tag": "0004_connection_visibility",
+      "breakpoints": true
+    }
+    ,{
+      "idx": 5,
+      "version": "6",
+      "when": 1774738100000,
+      "tag": "0005_groups",
+      "breakpoints": true
+    }
+    ,{
+      "idx": 6,
+      "version": "6",
+      "when": 1774738200000,
+      "tag": "0006_sharing",
+      "breakpoints": true
+    }
   ]
 }

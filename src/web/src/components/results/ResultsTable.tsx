@@ -20,7 +20,8 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   RefreshCw, ArrowUp, ArrowDown, ArrowUpDown, GripVertical,
   Filter, ArrowDownUp, Plus, Trash2, Copy, Download, X,
-  ChevronDown, Pencil, ClipboardCopy, CalendarIcon,
+  ChevronDown, Pencil, ClipboardCopy, CalendarIcon, ListPlus, 
+  Upload,
 } from 'lucide-react'
 import {
   ContextMenu,
@@ -40,6 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { readSSE } from '@/api/client'
 import { useEditorStore, type QueryColumn, type SortBy, type SortEntry } from '@/stores/editor.store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -79,6 +81,7 @@ const FILTER_OPERATORS = [
 ] as const
 
 type FilterRow = { column: string; operator: string; value: string }
+type CellRef = { rowIdx: number; colName: string }
 
 // ── Per-tab state that persists across tab switches ─
 type TabLocalState = {
@@ -196,8 +199,8 @@ function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
 }
 
 // ── Sortable column header ───────────────────────
-function SortableColumnHeader({ col, width, sortBy, onSort, onResize }: {
-  col: QueryColumn; width: number; sortBy: SortBy; onSort: () => void; onResize: (delta: number) => void
+function SortableColumnHeader({ col, width, sortBy, sortMulti, onSort, onResize }: {
+  col: QueryColumn; width: number; sortBy: SortBy; sortMulti: SortEntry[]; onSort: (e: React.MouseEvent) => void; onResize: (delta: number) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.name })
   return (
@@ -212,11 +215,19 @@ function SortableColumnHeader({ col, width, sortBy, onSort, onResize }: {
       <button type="button" onClick={onSort} className="flex items-center gap-1 min-w-0 flex-1 pr-2 hover:text-foreground transition-colors">
         <span className="text-[11px] font-semibold text-muted-foreground flex-shrink-0">{col.name}</span>
         <span className="text-[10px] text-text-muted/50 font-mono truncate">{col.dataType}</span>
-        {sortBy?.column === col.name ? (
-          sortBy.direction === 'asc' ? <ArrowUp className="h-3 w-3 text-primary flex-shrink-0" /> : <ArrowDown className="h-3 w-3 text-primary flex-shrink-0" />
-        ) : (
-          <ArrowUpDown className="h-3 w-3 text-text-muted/20 flex-shrink-0" />
-        )}
+        {(() => {
+          const sortIdx = sortMulti.findIndex((s) => s.column === col.name)
+          if (sortIdx >= 0) {
+            const dir = sortMulti[sortIdx]!.direction
+            return (
+              <span className="flex items-center gap-0.5 flex-shrink-0">
+                {dir === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />}
+                {sortMulti.length > 1 && <span className="text-[9px] text-primary font-bold tabular-nums">{sortIdx + 1}</span>}
+              </span>
+            )
+          }
+          return <ArrowUpDown className="h-3 w-3 text-text-muted/20 flex-shrink-0" />
+        })()}
       </button>
       <ResizeHandle onResize={onResize} />
     </div>
@@ -308,8 +319,8 @@ function SortableRow({ id, children }: { id: string; children: (handle: React.Re
 }
 
 // ── Sort Panel (multi-sort with reorder) ─────────
-function SortPanel({ columns, sorts, setSorts, onApply }: {
-  columns: QueryColumn[]; sorts: SortEntry[]; setSorts: (s: SortEntry[]) => void; onApply: () => void
+function SortPanel({ columns, sorts, setSorts, onApply, onClear }: {
+  columns: QueryColumn[]; sorts: SortEntry[]; setSorts: (s: SortEntry[]) => void; onApply: () => void; onClear: () => void
 }) {
   const { t } = useI18n()
   useEffect(() => {
@@ -364,7 +375,7 @@ function SortPanel({ columns, sorts, setSorts, onApply }: {
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <div className="flex-1" />
-                  <span className="text-text-muted flex-shrink-0">{t('table.ascending')} :</span>
+                  <span className="text-text-muted flex-shrink-0">{t('table.ascending')}</span>
                   <Switch checked={s.direction === 'asc'} onCheckedChange={(asc) => updateSort(i, { direction: asc ? 'asc' : 'desc' })} className="scale-75" />
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeSort(i)}>
                     <X className="h-3 w-3" />
@@ -394,6 +405,9 @@ function SortPanel({ columns, sorts, setSorts, onApply }: {
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex-1" />
+        {sorts.length > 0 && (
+          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={onClear}>{t('table.removeSorts')}</Button>
+        )}
         <Button size="sm" className="h-7 text-xs" onClick={onApply} disabled={sorts.length === 0} title="Ctrl+Enter">{t('table.applySort')}</Button>
       </div>
     </div>
@@ -648,7 +662,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
 // ── Main component ───────────────────────────────
 export function ResultsTable() {
   const { t } = useI18n()
-  const { tabs, activeTabId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery } = useEditorStore()
+  const { tabs, activeTabId, activeConnectionId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, pendingCsvImport, setPendingCsvImport } = useEditorStore()
   const tab = tabs.find((t) => t.id === activeTabId)
   const result = tab?.result
   const isTableMode = tab?.kind === 'table'
@@ -675,6 +689,14 @@ export function ResultsTable() {
 
   const ts = getTabState()
   const { showFilter, showSort, filters, sorts, selected, colWidths, colOrder } = ts
+
+  // Sync store sortMulti → local sorts (when header clicks change sortMulti)
+  const storeSortMulti = result?.sortMulti ?? []
+  const prevSortMultiRef = useRef(storeSortMulti)
+  if (storeSortMulti !== prevSortMultiRef.current && JSON.stringify(storeSortMulti) !== JSON.stringify(sorts)) {
+    prevSortMultiRef.current = storeSortMulti
+    setTabState({ sorts: storeSortMulti })
+  }
 
   const getColWidth = (name: string) => colWidths[name] ?? DEFAULT_COL_W
   const handleResize = useCallback((colName: string, delta: number) => {
@@ -718,10 +740,121 @@ export function ResultsTable() {
   if (rows !== rowsRef.current) { rowsRef.current = rows; if (selected.size > 0) setTabState({ selected: new Set() }) }
 
   const [sheetState, setSheetState] = useState<{ mode: 'row' | 'column' | 'csv' | 'edit'; editRow?: Record<string, unknown> } | null>(null)
+
+  useEffect(() => {
+    if (pendingCsvImport && pendingCsvImport === tableName) {
+      setSheetState({ mode: 'csv' })
+      setPendingCsvImport(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCsvImport, tableName])
+
+  // ── Inline cell editing ─────────────────
+  const [editingCell, setEditingCell] = useState<CellRef | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set()) // "rowIdx:colName"
+  const cellKey = (r: number, c: string) => `${r}:${c}`
   const [deleteConfirmRow, setDeleteConfirmRow] = useState<Record<string, unknown> | null>(null)
   const [ctxCell, setCtxCell] = useState<{ row: Record<string, unknown>; colName: string } | null>(null)
 
   // ── Apply filter → build WHERE ──────────
+  const startEditing = useCallback((rowIdx: number, colName: string) => {
+    if (!isTableMode) return
+    const val = rows[rowIdx]?.[colName]
+    setEditingCell({ rowIdx, colName })
+    setEditValue(val === null ? '' : val === undefined ? '' : String(val))
+  }, [isTableMode, rows])
+
+  const commitEdit = useCallback(async () => {
+    if (!editingCell || !tableName || !activeConnectionId) return
+    const { rowIdx, colName } = editingCell
+    const row = rows[rowIdx]
+    if (!row) return
+
+    // Check if value actually changed
+    const oldVal = row[colName]
+    const oldStr = oldVal === null ? '' : oldVal === undefined ? '' : String(oldVal)
+    if (editValue === oldStr) {
+      setEditingCell(null)
+      return
+    }
+
+    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
+    if (!pkCol) return
+    const newVal = editValue === '' ? 'NULL' : `'${editValue.replace(/'/g, "''")}'`
+
+    // Collect all rows to update: the edited cell + all selected cells
+    const rowIndicesToUpdate = new Set([rowIdx])
+    for (const key of selectedCells) {
+      const [ri] = key.split(':')
+      rowIndicesToUpdate.add(parseInt(ri!, 10))
+    }
+
+    for (const ri of rowIndicesToUpdate) {
+      const r = rows[ri]
+      if (!r) continue
+      // For the edited cell's column, apply new value; for other columns in selected cells, also apply
+      const colsForRow = ri === rowIdx
+        ? [colName]
+        : Array.from(selectedCells).filter((k) => k.startsWith(`${ri}:`)).map((k) => k.split(':')[1]!)
+      for (const cn of colsForRow) {
+        const pk = r[pkCol.name]
+        const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
+        const sql = `UPDATE ${tableName} SET ${cn} = ${newVal} WHERE ${pkCol.name} = ${pl}`
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const _ of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) { /* drain */ }
+      }
+    }
+
+    setEditingCell(null)
+    setSelectedCells(new Set())
+    await reloadTab()
+  }, [editingCell, editValue, tableName, activeConnectionId, rows, columns, selectedCells, reloadTab])
+
+  const cancelEdit = useCallback(() => {
+    setEditingCell(null)
+  }, [])
+
+  const anchorCellRef = useRef<CellRef | null>(null)
+
+  const handleCellClick = useCallback((rowIdx: number, colName: string, e: React.MouseEvent) => {
+    if (!isTableMode) return
+    e.preventDefault()
+    const key = cellKey(rowIdx, colName)
+
+    if (e.shiftKey && anchorCellRef.current) {
+      // Shift+click: select rectangle from anchor to current (Excel-style)
+      const anchor = anchorCellRef.current
+      const colNames = orderedColumns.map((c) => c.name)
+      const colIdx1 = colNames.indexOf(anchor.colName)
+      const colIdx2 = colNames.indexOf(colName)
+      const minRow = Math.min(anchor.rowIdx, rowIdx)
+      const maxRow = Math.max(anchor.rowIdx, rowIdx)
+      const minCol = Math.min(colIdx1, colIdx2)
+      const maxCol = Math.max(colIdx1, colIdx2)
+
+      const next = new Set<string>()
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          next.add(cellKey(r, colNames[c]!))
+        }
+      }
+      setSelectedCells(next)
+    } else if (e.ctrlKey || e.metaKey) {
+      // Ctrl+click: toggle cell
+      anchorCellRef.current = { rowIdx, colName }
+      setSelectedCells((prev) => {
+        const next = new Set(prev)
+        next.has(key) ? next.delete(key) : next.add(key)
+        return next
+      })
+    } else {
+      // Normal click: single select + set anchor
+      anchorCellRef.current = { rowIdx, colName }
+      setSelectedCells(new Set([key]))
+    }
+  }, [isTableMode, orderedColumns])
+
   const handleApplyFilter = useCallback(() => {
     if (!tableName) return
     const valid = filters.filter((f) => f.column && f.operator)
@@ -837,32 +970,34 @@ export function ResultsTable() {
             <CheckCircle2 className="h-3 w-3 text-success flex-shrink-0" />
             <span className="text-[11px] text-muted-foreground tabular-nums">{(totalCount ?? rowCount).toLocaleString('fr-FR')} {(totalCount ?? rowCount) !== 1 ? t('results.lines_plural') : t('results.lines')}</span>
             <span className="text-[11px] text-text-muted tabular-nums">{durationMs} ms</span>
-            {sortBy && <span className="text-[11px] text-primary tabular-nums">ORDER BY {sortBy.column} {sortBy.direction.toUpperCase()}</span>}
           </>)}
           {status === 'running' && (<div className="flex items-center gap-2 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /><span className="tabular-nums">{rows.length} {t('editor.rowsReceived')}</span></div>)}
-          {isTableMode && status === 'done' && (
+          {status === 'done' && (
             <div className="ml-auto flex items-center gap-1">
-              <Button variant={showFilter ? 'default' : 'ghost'} size="sm" className="h-6 text-xs gap-1"
-                onClick={() => setTabState({ showFilter: !showFilter, showSort: false })}>
-                <Filter className="h-3 w-3" />{t('table.filter')}
-                {filters.length > 0 && <span className="ml-0.5 bg-primary/20 text-primary rounded px-1 text-[10px]">{filters.length}</span>}
-              </Button>
+              {isTableMode && (
+                <Button variant={showFilter ? 'default' : 'ghost'} size="sm" className="h-6 text-xs gap-1"
+                  onClick={() => setTabState({ showFilter: !showFilter, showSort: false })}>
+                  <Filter className="h-3 w-3" />{t('table.filter')}
+                  {filters.length > 0 && <span className="ml-0.5 bg-primary/20 text-primary rounded px-1 text-[10px]">{filters.length}</span>}
+                </Button>
+              )}
               <Button variant={showSort ? 'default' : 'ghost'} size="sm" className="h-6 text-xs gap-1"
                 onClick={() => setTabState({ showSort: !showSort, showFilter: false })}>
                 <ArrowDownUp className="h-3 w-3" />{t('table.sort')}
                 {sorts.length > 0 && <span className="ml-0.5 bg-primary/20 text-primary rounded px-1 text-[10px]">{sorts.length}</span>}
               </Button>
-              <div className="w-px h-4 bg-border-subtle mx-1" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Plus className="h-3 w-3" />{t('table.insert')}<ChevronDown className="h-3 w-3 opacity-50" /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'row' })}>{t('table.insertRow')}</DropdownMenuItem>
-                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'column' })}>{t('table.insertColumn')}</DropdownMenuItem>
-                  <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'csv' })}>{t('table.importCsv')}</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isTableMode && (<>
+                <div className="w-px h-4 bg-border-subtle mx-1" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs gap-1"><Plus className="h-3 w-3" />{t('table.insert')}<ChevronDown className="h-3 w-3 opacity-50" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'row' })}><ListPlus className="h-3.5 w-3.5" />{t('table.insertRow')}</DropdownMenuItem>
+                    <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'csv' })}><Upload className="h-3.5 w-3.5" />{t('table.importCsv')}</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>)}
             </div>
           )}
         </>)}
@@ -881,14 +1016,18 @@ export function ResultsTable() {
       )}
 
       {/* Sort panel */}
-      {isTableMode && showSort && (
+      {showSort && (
         <SortPanel columns={columns} sorts={sorts}
-          setSorts={(s) => setTabState({ sorts: s })} onApply={handleApplySort} />
+          setSorts={(s) => setTabState({ sorts: s })} onApply={handleApplySort}
+          onClear={() => {
+            setTabState({ sorts: [], showSort: false })
+            void sortByMulti([])
+          }} />
       )}
 
       {/* Table */}
       {orderedColumns.length > 0 && (
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="flex-1 min-h-0 overflow-auto select-none">
           <div style={{ minWidth: totalWidth }}>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={orderedColumns.map((c) => c.name)} strategy={horizontalListSortingStrategy}>
@@ -898,7 +1037,8 @@ export function ResultsTable() {
                   </div>
                   {orderedColumns.map((col) => (
                     <SortableColumnHeader key={col.name} col={col} width={getColWidth(col.name)} sortBy={sortBy ?? null}
-                      onSort={() => sortByColumn(col.name)} onResize={(delta) => handleResize(col.name, delta)} />
+                      sortMulti={result?.sortMulti ?? []}
+                      onSort={(e) => sortByColumn(col.name, e.shiftKey)} onResize={(delta) => handleResize(col.name, delta)} />
                   ))}
                 </div>
               </SortableContext>
@@ -914,22 +1054,70 @@ export function ResultsTable() {
                   </div>
                   {orderedColumns.map((col) => {
                     const val = row?.[col.name]
+                    const isEditing = isTableMode && editingCell?.rowIdx === i && editingCell?.colName === col.name
+                    const isCellSelected = isTableMode && selectedCells.has(cellKey(i, col.name))
                     return (
-                      <div key={col.name} className="flex items-center px-3 border-r border-border-subtle flex-shrink-0 overflow-hidden" style={{ width: getColWidth(col.name) }}
+                      <div key={col.name}
+                        className={cn(
+                          'flex items-center px-3 border flex-shrink-0 overflow-hidden transition-colors',
+                          isEditing ? 'border-primary p-0' :
+                          isCellSelected ? 'border-primary/50 bg-primary/5' :
+                          'border-transparent hover:border-primary/30',
+                        )}
+                        style={{ width: getColWidth(col.name) }}
+                        onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
+                        onClick={(e) => handleCellClick(i, col.name, e)}
+                        onDoubleClick={() => startEditing(i, col.name)}
                         onContextMenu={() => setCtxCell({ row, colName: col.name })}>
-                        <span className="text-[12px] font-mono truncate">
-                          {val === null ? <span className="text-text-muted italic">NULL</span>
-                            : val === undefined ? <span className="text-text-muted/40">—</span>
-                            : typeof val === 'object' ? <span className="text-muted-foreground">{JSON.stringify(val)}</span>
-                            : <span className="text-foreground">{String(val)}</span>}
-                        </span>
+                        {isEditing ? (
+                          <input
+                            autoFocus
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') { e.preventDefault(); void commitEdit() }
+                              if (e.key === 'Escape') cancelEdit()
+                              if (e.key === 'Tab') { e.preventDefault(); void commitEdit() }
+                            }}
+                            onBlur={() => void commitEdit()}
+                            className="w-full h-full text-[12px] font-mono bg-background px-3 py-1 outline-none border-none"
+                          />
+                        ) : (
+                          <span className="text-[12px] font-mono truncate">
+                            {val === null ? <span className="text-text-muted italic">NULL</span>
+                              : val === undefined ? <span className="text-text-muted/40">—</span>
+                              : typeof val === 'object' ? <span className="text-muted-foreground">{JSON.stringify(val)}</span>
+                              : <span className="text-foreground">{String(val)}</span>}
+                          </span>
+                        )}
                       </div>
                     )
                   })}
                 </div>
               )
 
-              if (!isTableMode) return <div key={page * pageSize + i}>{rowContent}</div>
+              if (!isTableMode) return (
+                <ContextMenu key={page * pageSize + i}>
+                  <ContextMenuTrigger asChild>{rowContent}</ContextMenuTrigger>
+                  <ContextMenuContent className="w-48">
+                    <ContextMenuItem className="gap-2 text-xs" onClick={() => {
+                      const val = ctxCell?.row === row ? row[ctxCell.colName] : undefined
+                      const text = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+                      navigator.clipboard.writeText(text)
+                    }}>
+                      <ClipboardCopy className="h-3.5 w-3.5" />
+                      {t('ctx.copyCell')}
+                    </ContextMenuItem>
+                    <ContextMenuItem className="gap-2 text-xs" onClick={() => {
+                      const text = orderedColumns.map((c) => { const v = row[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')
+                      navigator.clipboard.writeText(text)
+                    }}>
+                      <Copy className="h-3.5 w-3.5" />
+                      {t('ctx.copyRow')}
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              )
 
               return (
                 <ContextMenu key={page * pageSize + i}>
@@ -974,10 +1162,17 @@ export function ResultsTable() {
                       {t('ctx.editRecord')}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive" onClick={() => setDeleteConfirmRow(row)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {t('ctx.deleteRecord')}
-                    </ContextMenuItem>
+                    {selected.has(page * pageSize + i) && selected.size > 1 ? (
+                      <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive" onClick={() => void handleDeleteSelected()}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t('ctx.deleteRecords', { count: selected.size })}
+                      </ContextMenuItem>
+                    ) : (
+                      <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive" onClick={() => setDeleteConfirmRow(row)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t('ctx.deleteRecord')}
+                      </ContextMenuItem>
+                    )}
                   </ContextMenuContent>
                 </ContextMenu>
               )

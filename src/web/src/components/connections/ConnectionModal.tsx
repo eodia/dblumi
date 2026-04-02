@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,11 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { CheckCircle, XCircle, Loader2, Link2, FormInput } from 'lucide-react'
 import { DriverIcon } from '@/components/ui/driver-icon'
+import { ComboboxChips } from '@/components/ui/combobox-chips'
 import { connectionsApi, type Connection, type CreateConnectionInput, type DbDriver } from '@/api/connections'
+import { sharingApi } from '@/api/sharing'
+import { useAuthStore } from '@/stores/auth.store'
+import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -73,6 +77,10 @@ function parseConnectionString(raw: string): Partial<CreateConnectionInput> | nu
 
 export function ConnectionModal({ open, onClose, editing }: Props) {
   const qc = useQueryClient()
+  const { t } = useI18n()
+
+  const { user } = useAuthStore()
+  const isAdmin = user?.role === 'admin'
 
   const [form, setForm] = useState<CreateConnectionInput>({
     name: editing?.name ?? '',
@@ -86,6 +94,39 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
     color: editing?.color ?? COLORS[0] ?? '#41cd2a',
     environment: editing?.environment ?? '',
   })
+
+  const [shareGroupIds, setShareGroupIds] = useState<string[]>([])
+  const [shareUserIds, setShareUserIds] = useState<string[]>([])
+
+  // Fetch available groups + users for sharing
+  const { data: groupsData } = useQuery({
+    queryKey: ['sharing', 'groups'],
+    queryFn: sharingApi.groups,
+    enabled: isAdmin,
+    staleTime: 60_000,
+  })
+  const availableGroups = groupsData?.groups ?? []
+
+  const { data: usersData } = useQuery({
+    queryKey: ['sharing', 'users'],
+    queryFn: sharingApi.users,
+    enabled: isAdmin,
+    staleTime: 60_000,
+  })
+  const availableUsers = usersData?.users ?? []
+
+  // Load existing group assignments when editing
+  const { data: connSharesData } = useQuery({
+    queryKey: ['connection-shares', editing?.id],
+    queryFn: () => connectionsApi.getConnectionShares(editing!.id),
+    enabled: !!editing?.id && isAdmin,
+  })
+  const [sharesSynced, setSharesSynced] = useState(false)
+  if (connSharesData && !sharesSynced) {
+    setShareGroupIds((connSharesData.groups ?? []).map((g) => g.id))
+    setShareUserIds((connSharesData.users ?? []).map((u) => u.id))
+    setSharesSynced(true)
+  }
 
   const [mode, setMode] = useState<'string' | 'manual'>('string')
   const [connString, setConnString] = useState('')
@@ -120,10 +161,20 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
   }
 
   const mutation = useMutation({
-    mutationFn: () =>
-      editing ? connectionsApi.update(editing.id, form) : connectionsApi.create(form),
+    mutationFn: async () => {
+      const result = editing
+        ? await connectionsApi.update(editing.id, form)
+        : await connectionsApi.create(form)
+      // Save share assignments if admin
+      if (isAdmin) {
+        const connId = editing?.id ?? result.connection.id
+        await connectionsApi.setConnectionShares(connId, shareGroupIds, shareUserIds)
+      }
+      return result
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['connections'] })
+      qc.invalidateQueries({ queryKey: ['connection-shares'] })
       onClose()
     },
   })
@@ -280,20 +331,26 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
                 maxLength={12}
               />
             </div>
-            {form.environment && (
-              <div className="flex items-center gap-1.5 pt-0.5">
-                <span className="text-[10px] text-text-muted">Aperçu :</span>
-                <span
-                  className={cn(
-                    'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border',
-                    envBadgeStyle(form.environment),
-                  )}
-                >
-                  {form.environment}
-                </span>
-              </div>
-            )}
           </div>
+
+          {/* Visibility */}
+          {isAdmin && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('admin.connGroups')}</Label>
+              <ComboboxChips
+                options={[
+                  ...availableGroups.map((g) => ({ id: `g:${g.id}`, label: `${g.name}`, color: g.color ?? undefined })),
+                  ...availableUsers.map((u) => ({ id: `u:${u.id}`, label: `${u.name} (${u.email})`, minQuery: 3 })),
+                ]}
+                selected={[...shareGroupIds.map((id) => `g:${id}`), ...shareUserIds.map((id) => `u:${id}`)]}
+                onChange={(ids) => {
+                  setShareGroupIds(ids.filter((id) => id.startsWith('g:')).map((id) => id.slice(2)))
+                  setShareUserIds(ids.filter((id) => id.startsWith('u:')).map((id) => id.slice(2)))
+                }}
+                placeholder={t('admin.addMembers')}
+              />
+            </div>
+          )}
 
           {/* SSL + Color dots */}
           <div className="flex items-center justify-between">

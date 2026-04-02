@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useI18n } from '@/i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { sharingApi } from '@/api/sharing'
 import {
   DndContext,
   PointerSensor,
@@ -35,10 +36,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy } from 'lucide-react'
+import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy, Share2 } from 'lucide-react'
 import { savedQueriesApi, type SavedQuery } from '@/api/saved-queries'
 import { useEditorStore } from '@/stores/editor.store'
 import { useSidebar } from '@/components/ui/sidebar'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
+import { ComboboxChips } from '@/components/ui/combobox-chips'
 
 // ── Inline rename input ─────────────────────────
 function RenameInput({
@@ -75,6 +78,7 @@ function QueryItem({
   onLoad,
   onRename,
   onDuplicate,
+  onShare,
   onDelete,
   onMoveToFolder,
   onRequestNewFolder,
@@ -84,6 +88,7 @@ function QueryItem({
   onLoad: () => void
   onRename: (name: string) => void
   onDuplicate: () => void
+  onShare: () => void
   onDelete: () => void
   onMoveToFolder: (folder: string | null) => void
   onRequestNewFolder: () => void
@@ -120,9 +125,10 @@ function QueryItem({
                 onCommit={(name) => { onRename(name); setRenaming(false) }}
                 onCancel={() => setRenaming(false)}
               />
-            ) : (
+            ) : (<>
               <span className="truncate flex-1">{query.name}</span>
-            )}
+              {query.shared && <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />}
+            </>)}
           </div>
         </ContextMenuTrigger>
 
@@ -171,6 +177,13 @@ function QueryItem({
             <Copy className="h-3.5 w-3.5" />
             {t('sq.duplicate')}
           </ContextMenuItem>
+          {!query.shared && (<>
+            <ContextMenuSeparator />
+            <ContextMenuItem className="gap-2 text-xs" onClick={onShare}>
+              <Share2 className="h-3.5 w-3.5" />
+              {t('sq.share')}
+            </ContextMenuItem>
+          </>)}
           <ContextMenuSeparator />
           <ContextMenuItem
             className="gap-2 text-xs text-destructive focus:text-destructive"
@@ -197,6 +210,29 @@ export function SavedQueriesPanel() {
 
   // New folder dialog state — managed here so it survives re-renders
   const [newFolderTarget, setNewFolderTarget] = useState<string | null>(null) // query id
+  const [shareQueryId, setShareQueryId] = useState<string | null>(null)
+  const [shareIds, setShareIds] = useState<string[]>([])
+
+  // Load groups + users for sharing (available to all authenticated users)
+  const { data: groupsData } = useQuery({ queryKey: ['sharing', 'groups'], queryFn: sharingApi.groups, staleTime: 60_000 })
+  const { data: usersData } = useQuery({ queryKey: ['sharing', 'users'], queryFn: sharingApi.users, staleTime: 60_000 })
+  const shareGroups = groupsData?.groups ?? []
+  const shareUsers = usersData?.users ?? []
+
+  // Load current shares when opening share dialog
+  const { data: querySharesData } = useQuery({
+    queryKey: ['query-shares', shareQueryId],
+    queryFn: () => savedQueriesApi.getShares(shareQueryId!),
+    enabled: !!shareQueryId,
+  })
+  const [sharesSynced, setSharesSynced] = useState<string | null>(null)
+  if (querySharesData && shareQueryId && sharesSynced !== shareQueryId) {
+    setShareIds([
+      ...(querySharesData.groups ?? []).map((g) => `g:${g.id}`),
+      ...(querySharesData.users ?? []).map((u) => `u:${u.id}`),
+    ])
+    setSharesSynced(shareQueryId)
+  }
   const [newFolderName, setNewFolderName] = useState('')
 
   const { data } = useQuery({
@@ -204,19 +240,21 @@ export function SavedQueriesPanel() {
     queryFn: savedQueriesApi.list,
   })
 
-  const allQueries = (data?.savedQueries ?? []).filter(
-    (q) => q.connectionId === activeConnectionId,
+  const ownQueries = (data?.savedQueries ?? []).filter(
+    (q) => q.connectionId === activeConnectionId && !q.shared,
+  )
+  const sharedQueries = (data?.savedQueries ?? []).filter(
+    (q) => q.connectionId === activeConnectionId && q.shared,
   )
 
   const lc = search.toLowerCase()
-  const queries = lc
-    ? allQueries.filter(
-        (q) =>
-          q.name.toLowerCase().includes(lc) ||
-          q.sql.toLowerCase().includes(lc) ||
-          q.folder?.toLowerCase().includes(lc),
-      )
-    : allQueries
+  const filterFn = (q: SavedQuery) =>
+    q.name.toLowerCase().includes(lc) ||
+    q.sql.toLowerCase().includes(lc) ||
+    q.folder?.toLowerCase().includes(lc)
+  const queries = lc ? ownQueries.filter(filterFn) : ownQueries
+  const filteredShared = (lc ? sharedQueries.filter(filterFn) : sharedQueries)
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof savedQueriesApi.update>[1] }) =>
@@ -281,7 +319,7 @@ export function SavedQueriesPanel() {
       return n
     })
 
-  if (allQueries.length === 0) {
+  if (ownQueries.length === 0 && sharedQueries.length === 0) {
     return (
       <p className="group-data-[collapsible=icon]:hidden px-2 py-2 text-xs text-text-muted">
         {t('sq.none')}
@@ -306,6 +344,7 @@ export function SavedQueriesPanel() {
         if (q.folder) payload.folder = q.folder
         savedQueriesApi.create(payload).then(() => qc.invalidateQueries({ queryKey: ['saved-queries'] }))
       }}
+      onShare={() => setShareQueryId(q.id)}
       onDelete={() => deleteMutation.mutate(q.id)}
       onMoveToFolder={(folder) =>
         updateMutation.mutate({ id: q.id, data: { folder: folder ?? null } })
@@ -372,7 +411,7 @@ export function SavedQueriesPanel() {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={queries.map((q) => q.id)} strategy={verticalListSortingStrategy}>
           <div className="group-data-[collapsible=icon]:hidden flex-1 overflow-y-auto px-1 pb-2 space-y-0.5">
-            {queries.length === 0 && (
+            {queries.length === 0 && filteredShared.length === 0 && (
               <p className="px-2 py-2 text-xs text-text-muted">{t('sq.none')}</p>
             )}
             {ungrouped.map(renderItem)}
@@ -400,9 +439,72 @@ export function SavedQueriesPanel() {
                 </div>
               )
             })}
+
+            {/* Shared queries — inside the scrollable area, after own queries */}
+            {filteredShared.length > 0 && (
+              <div className="pt-1 space-y-0.5">
+                <div className="flex items-center gap-1.5 px-1 pt-1 pb-1">
+                  <Share2 className="h-3 w-3 text-text-muted/40" />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">{t('sq.shared')}</span>
+                  <span className="text-[10px] text-text-muted/50 tabular-nums">{filteredShared.length}</span>
+                </div>
+                <TooltipProvider delayDuration={400}>
+                  {filteredShared.map((q) => (
+                    <Tooltip key={q.id}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="group flex items-center gap-1.5 px-1 py-1 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+                          onClick={() => { openQuery(q.sql, q.name); if (isMobile) setOpenMobile(false) }}
+                        >
+                          <FileCode2 className="h-3 w-3 flex-shrink-0 text-primary/60" />
+                          <span className="truncate flex-1">{q.name}</span>
+                          <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p className="text-xs">{q.createdByName ?? '?'}</p>
+                        <p className="text-[10px] text-text-muted">{new Date(q.createdAt).toLocaleString()}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              </div>
+            )}
           </div>
         </SortableContext>
       </DndContext>
+
+      {/* Share query dialog */}
+      <Dialog open={shareQueryId !== null} onOpenChange={(o) => { if (!o) { setShareQueryId(null); setSharesSynced(null) } }}>
+        <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
+          <DialogHeader><DialogTitle className="text-base">{t('sq.shareTitle')}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <ComboboxChips
+              options={[
+                ...shareGroups.map((g) => ({ id: `g:${g.id}`, label: g.name, color: g.color ?? undefined })),
+                ...shareUsers.map((u) => ({ id: `u:${u.id}`, label: `${u.name} (${u.email})`, minQuery: 3 })),
+              ]}
+              selected={shareIds}
+              onChange={setShareIds}
+              placeholder={t('admin.addMembers')}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => { setShareQueryId(null); setSharesSynced(null) }}>{t('common.cancel')}</Button>
+            <Button size="sm" onClick={() => {
+              if (!shareQueryId) return
+              const groupIds = shareIds.filter((id) => id.startsWith('g:')).map((id) => id.slice(2))
+              const userIds = shareIds.filter((id) => id.startsWith('u:')).map((id) => id.slice(2))
+              savedQueriesApi.setShares(shareQueryId, groupIds, userIds).then(() => {
+                qc.invalidateQueries({ queryKey: ['saved-queries'] })
+                qc.invalidateQueries({ queryKey: ['query-shares'] })
+                setShareQueryId(null)
+                setSharesSynced(null)
+              })
+            }}>{t('sheet.save')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

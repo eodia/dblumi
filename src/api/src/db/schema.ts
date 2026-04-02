@@ -39,6 +39,7 @@ export const connections = sqliteTable('connections', {
   ssl: integer('ssl', { mode: 'boolean' }).notNull().default(false),
   color: text('color'),
   environment: text('environment'),
+  visibility: text('visibility', { enum: ['private', 'public'] }).notNull().default('private'),
   createdBy: text('created_by')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
@@ -74,4 +75,62 @@ export const savedQueries = sqliteTable('saved_queries', {
 export const revokedTokens = sqliteTable('revoked_tokens', {
   jti: text('jti').primaryKey(),
   expiresAt: text('expires_at').notNull(),
+})
+
+export const groups = sqliteTable('groups', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  color: text('color'),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
+
+export const userGroups = sqliteTable('user_groups', {
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  groupId: text('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+})
+
+export const connectionGroups = sqliteTable('connection_groups', {
+  connectionId: text('connection_id')
+    .notNull()
+    .references(() => connections.id, { onDelete: 'cascade' }),
+  groupId: text('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+})
+
+export const connectionUsers = sqliteTable('connection_users', {
+  connectionId: text('connection_id')
+    .notNull()
+    .references(() => connections.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+})
+
+export const queryGroups = sqliteTable('query_groups', {
+  queryId: text('query_id')
+    .notNull()
+    .references(() => savedQueries.id, { onDelete: 'cascade' }),
+  groupId: text('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+})
+
+export const queryUsers = sqliteTable('query_users', {
+  queryId: text('query_id')
+    .notNull()
+    .references(() => savedQueries.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
 })
