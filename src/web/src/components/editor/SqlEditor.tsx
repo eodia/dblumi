@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   EditorView,
@@ -310,6 +310,7 @@ export function SqlEditor({ onSave }: Props) {
   const fnCompartment = useRef(new Compartment())
   const phrasesCompartment = useRef(new Compartment())
   const collabRef = useRef<CollabInstance | null>(null)
+  const [collabReady, setCollabReady] = useState(false)
   const collabCompartment = useRef(new Compartment())
   const historyCompartment = useRef(new Compartment())
   const { locale, t } = useI18n()
@@ -493,6 +494,7 @@ export function SqlEditor({ onSave }: Props) {
         )
         collabRef.current = instance
         setActiveCollabInstance(instance)
+        setCollabReady(true)
 
         if (!instance.provider.awareness) return
 
@@ -537,6 +539,7 @@ export function SqlEditor({ onSave }: Props) {
     return () => {
       cancelled = true
       cleanupInstance?.()
+      setCollabReady(false)
     }
   }, [activeTabId, isCollaborative, activeTab?.savedQueryId, user])
 
@@ -596,10 +599,10 @@ export function SqlEditor({ onSave }: Props) {
 
   return (
     <>
-      {isCollaborative && (
+      {isCollaborative && collabReady && (
         <div className="flex items-center justify-end px-2 py-1 border-b border-border-subtle">
           <CollabAvatars
-            awareness={collabRef.current?.provider.awareness ?? null}
+            awareness={collabRef.current?.provider?.awareness ?? null}
             currentUserId={user?.id ?? ''}
             editorView={viewRef.current}
             unreadCount={activeTab?.unreadChat ?? 0}
