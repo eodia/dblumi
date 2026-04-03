@@ -181,6 +181,7 @@ function QueryItem({
             <Copy className="h-3.5 w-3.5" />
             {t('sq.duplicate')}
           </ContextMenuItem>
+          <ContextMenuSeparator />
           <ContextMenuItem className="gap-2 text-xs" onClick={onTimeline}>
             <History className="h-3.5 w-3.5" />
             {t('sq.timeline')}
