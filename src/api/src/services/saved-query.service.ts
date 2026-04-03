@@ -134,21 +134,25 @@ export async function listSavedQueries(userId: string): Promise<SavedQuery[]> {
     for (const c of creators) creatorNames.set(c.id, c.name)
   }
 
-  // Compute collaborative flags for own queries
+  // Compute shared + collaborative flags for own queries
   const ownQueryIds = ownRows.map((r) => r.id)
-  const collabGroupRows = ownQueryIds.length > 0 ? await db
-    .select({ queryId: queryGroups.queryId })
+  const allSharedGroupRows = ownQueryIds.length > 0 ? await db
+    .select({ queryId: queryGroups.queryId, collaborative: queryGroups.collaborative })
     .from(queryGroups)
-    .where(and(inArray(queryGroups.queryId, ownQueryIds), eq(queryGroups.collaborative, true)))
+    .where(inArray(queryGroups.queryId, ownQueryIds))
     : []
-  const collabUserRows = ownQueryIds.length > 0 ? await db
-    .select({ queryId: queryUsers.queryId })
+  const allSharedUserRows = ownQueryIds.length > 0 ? await db
+    .select({ queryId: queryUsers.queryId, collaborative: queryUsers.collaborative })
     .from(queryUsers)
-    .where(and(inArray(queryUsers.queryId, ownQueryIds), eq(queryUsers.collaborative, true)))
+    .where(inArray(queryUsers.queryId, ownQueryIds))
     : []
+  const sharedOwnQueryIds = new Set([
+    ...allSharedGroupRows.map((r) => r.queryId),
+    ...allSharedUserRows.map((r) => r.queryId),
+  ])
   const collabQueryIds = new Set([
-    ...collabGroupRows.map((r) => r.queryId),
-    ...collabUserRows.map((r) => r.queryId),
+    ...allSharedGroupRows.filter((r) => r.collaborative).map((r) => r.queryId),
+    ...allSharedUserRows.filter((r) => r.collaborative).map((r) => r.queryId),
   ])
 
   // Compute isCollaborator flags for shared queries
@@ -178,7 +182,9 @@ export async function listSavedQueries(userId: string): Promise<SavedQuery[]> {
     ...userCollabViaGroup.map((r) => r.queryId),
   ])
 
-  const own = ownRows.map((r) => toView(r, undefined, undefined, collabQueryIds.has(r.id)))
+  const own = ownRows.map((r) => toView(
+    r, sharedOwnQueryIds.has(r.id) || undefined, undefined, collabQueryIds.has(r.id),
+  ))
   const shared = sharedRows.map((r) => toView(
     r, true, creatorNames.get(r.createdBy), undefined, userCollabQueryIds.has(r.id),
   ))
