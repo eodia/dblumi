@@ -14,6 +14,7 @@ import {
   reorderSavedQueries,
   SavedQueryError,
 } from '../services/saved-query.service.js'
+import { listVersions, updateVersionLabel } from '../services/saved-query-version.service.js'
 import type { AuthVariables } from '../middleware/auth.js'
 
 const savedQueriesRouter = new Hono<AuthVariables>()
@@ -157,5 +158,42 @@ savedQueriesRouter.put('/:id/shares', zValidator('json', SharesSchema), async (c
 
   return c.json({ groupIds, userIds })
 })
+
+savedQueriesRouter.get('/:id/versions', async (c) => {
+  const userId = c.get('userId')
+  const id = c.req.param('id')
+  try {
+    await getSavedQuery(id, userId)
+  } catch (e) {
+    if (e instanceof SavedQueryError) return c.json(problem(404, e.message), 404)
+    throw e
+  }
+  const cursor = c.req.query('cursor')
+  const limit = Number(c.req.query('limit') ?? '50')
+  const result = await listVersions(id, cursor || undefined, Math.min(limit, 100))
+  return c.json(result)
+})
+
+const UpdateLabelSchema = z.object({
+  label: z.string().max(200).nullable(),
+})
+
+savedQueriesRouter.patch(
+  '/:id/versions/:versionId',
+  zValidator('json', UpdateLabelSchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const id = c.req.param('id')
+    try {
+      await getSavedQuery(id, userId)
+    } catch (e) {
+      if (e instanceof SavedQueryError) return c.json(problem(404, e.message), 404)
+      throw e
+    }
+    const { label } = c.req.valid('json')
+    await updateVersionLabel(c.req.param('versionId'), id, label)
+    return c.body(null, 204)
+  },
+)
 
 export { savedQueriesRouter }
