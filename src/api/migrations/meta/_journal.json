@@ -65,5 +65,12 @@
       "tag": "0008_collaborative_sharing",
       "breakpoints": true
     }
+    ,{
+      "idx": 9,
+      "version": "6",
+      "when": 1774738500000,
+      "tag": "0009_collab_messages",
+      "breakpoints": true
+    }
   ]
 }

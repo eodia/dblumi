@@ -87,6 +87,20 @@ export const savedQueryVersions = sqliteTable('saved_query_versions', {
     .default(sql`(datetime('now'))`),
 })
 
+export const collabMessages = sqliteTable('collab_messages', {
+  id: text('id').primaryKey(),
+  queryId: text('query_id')
+    .notNull()
+    .references(() => savedQueries.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  content: text('content').notNull(),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
+
 export const revokedTokens = sqliteTable('revoked_tokens', {
   jti: text('jti').primaryKey(),
   expiresAt: text('expires_at').notNull(),
