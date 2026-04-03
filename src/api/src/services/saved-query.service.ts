@@ -51,6 +51,37 @@ function toView(
   }
 }
 
+async function checkCollaborator(queryId: string, userId: string): Promise<boolean> {
+  const direct = await db
+    .select({ queryId: queryUsers.queryId })
+    .from(queryUsers)
+    .where(and(
+      eq(queryUsers.queryId, queryId),
+      eq(queryUsers.userId, userId),
+      eq(queryUsers.collaborative, true),
+    ))
+    .limit(1)
+  if (direct.length > 0) return true
+
+  const userGroupRows = await db
+    .select({ groupId: userGroups.groupId })
+    .from(userGroups)
+    .where(eq(userGroups.userId, userId))
+  const gIds = userGroupRows.map((r) => r.groupId)
+  if (gIds.length === 0) return false
+
+  const viaGroup = await db
+    .select({ queryId: queryGroups.queryId })
+    .from(queryGroups)
+    .where(and(
+      eq(queryGroups.queryId, queryId),
+      inArray(queryGroups.groupId, gIds),
+      eq(queryGroups.collaborative, true),
+    ))
+    .limit(1)
+  return viaGroup.length > 0
+}
+
 export async function listSavedQueries(userId: string): Promise<SavedQuery[]> {
   // Own queries
   const ownRows = await db
@@ -191,9 +222,22 @@ export async function updateSavedQuery(
   data: UpdateSavedQuery,
   userId: string
 ): Promise<SavedQuery> {
-  const existing = await getSavedQuery(id, userId)
+  const rows = await db
+    .select()
+    .from(savedQueries)
+    .where(eq(savedQueries.id, id))
+    .limit(1)
+  const row = rows[0]
+  if (!row) throw new SavedQueryError('Requête sauvegardée introuvable.', 'NOT_FOUND')
 
-  // Snapshot the old SQL before overwriting if it changed
+  const isOwner = row.createdBy === userId
+  if (!isOwner) {
+    const isCollab = await checkCollaborator(id, userId)
+    if (!isCollab) throw new SavedQueryError('Requête sauvegardée introuvable.', 'NOT_FOUND')
+  }
+
+  const existing: SavedQuery = toView(row)
+
   if (data.sql !== undefined && data.sql !== existing.sql) {
     await createVersion(id, existing.sql, userId)
   }
@@ -209,9 +253,11 @@ export async function updateSavedQuery(
   await db
     .update(savedQueries)
     .set(updates)
-    .where(and(eq(savedQueries.id, id), eq(savedQueries.createdBy, userId)))
+    .where(eq(savedQueries.id, id))
 
-  return getSavedQuery(id, userId)
+  if (isOwner) return getSavedQuery(id, userId)
+  const refreshed = await db.select().from(savedQueries).where(eq(savedQueries.id, id)).limit(1)
+  return toView(refreshed[0]!, true)
 }
 
 export async function deleteSavedQuery(id: string, userId: string): Promise<void> {
