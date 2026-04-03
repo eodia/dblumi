@@ -835,7 +835,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
       }} copilotOpen={copilotOpen} />
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" autoSaveId="dblumi-h">
+        <ResizablePanelGroup direction="horizontal" autoSaveId={(copilotOpen || chatOpen) ? 'dblumi-h-split' : 'dblumi-h'}>
           <ResizablePanel defaultSize={(copilotOpen || chatOpen) ? 70 : 100} minSize={40} id="main-area">
             {activeTab?.kind === 'query' && (
               <ResizablePanelGroup direction="vertical" autoSaveId="dblumi-v">
