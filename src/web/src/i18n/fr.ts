@@ -201,6 +201,8 @@ export const fr = {
   'sq.timeline.sequential': 'vs version précédente',
   'sq.timeline.vsCurrent': 'vs actuel',
   'sq.timeline.labelSaved': 'Label enregistré',
+  'sq.collaborative': 'Collaboratif',
+  'sq.collaborativeHint': 'Peut modifier et sauvegarder cette requête',
 
   // ── Copilot ──
   'copilot.title': 'Copilot',
