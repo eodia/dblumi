@@ -203,6 +203,10 @@ export const fr = {
   'sq.timeline.labelSaved': 'Label enregistré',
   'sq.collaborative': 'Collaboratif',
   'sq.collaborativeHint': 'Peut modifier et sauvegarder cette requête',
+  'collab.connected': 'Connecté',
+  'collab.disconnected': 'Déconnecté',
+  'collab.reconnecting': 'Reconnexion...',
+  'collab.participants': '{count} participant(s)',
 
   // ── Copilot ──
   'copilot.title': 'Copilot',
