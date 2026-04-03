@@ -475,57 +475,66 @@ export function SqlEditor({ onSave }: Props) {
   useEffect(() => {
     const view = viewRef.current
     if (!view || !activeTab) return
+    if (!isCollaborative || !activeTab.savedQueryId || !user) return
 
-    if (isCollaborative && activeTab.savedQueryId && user) {
-      const tokenMatch = document.cookie.match(/dblumi_token=([^;]+)/)
-      const token = tokenMatch?.[1]
-      if (!token) return
+    let cancelled = false
+    let cleanupInstance: (() => void) | null = null
 
-      const instance = createCollabInstance(
-        activeTab.savedQueryId,
-        token,
-        { userId: user.id, name: user.name, avatarUrl: (user as any).avatarUrl ?? null },
-      )
-      collabRef.current = instance
-      setActiveCollabInstance(instance)
+    // Fetch WS token from API (cookie is HttpOnly)
+    fetch('/api/v1/auth/ws-token', { credentials: 'include' })
+      .then((r) => r.json())
+      .then(({ token }) => {
+        if (cancelled || !token) return
 
-      // Enable collab extensions, disable history
-      view.dispatch({
-        effects: [
-          collabCompartment.current.reconfigure(
-            collabExtensions(instance.ytext, instance.provider.awareness),
-          ),
-          historyCompartment.current.reconfigure([]),
-        ],
-      })
+        const instance = createCollabInstance(
+          activeTab.savedQueryId!,
+          token,
+          { userId: user.id, name: user.name, avatarUrl: (user as any).avatarUrl ?? null },
+        )
+        collabRef.current = instance
+        setActiveCollabInstance(instance)
 
-      // Sync Yjs text changes back to store
-      const observer = () => {
-        const text = instance.ytext.toString()
-        setSql(text)
-      }
-      instance.ytext.observe(observer)
+        // Enable collab extensions, disable history
+        view.dispatch({
+          effects: [
+            collabCompartment.current.reconfigure(
+              collabExtensions(instance.ytext, instance.provider.awareness),
+            ),
+            historyCompartment.current.reconfigure([]),
+          ],
+        })
 
-      const unsubChat = instance.onChatMessage(() => {
-        const store = useEditorStore.getState()
-        if (!store.chatOpen) {
-          store.incrementUnread(activeTabId)
+        // Sync Yjs text changes back to store
+        const observer = () => {
+          setSql(instance.ytext.toString())
+        }
+        instance.ytext.observe(observer)
+
+        const unsubChat = instance.onChatMessage(() => {
+          const store = useEditorStore.getState()
+          if (!store.chatOpen) {
+            store.incrementUnread(activeTabId)
+          }
+        })
+
+        cleanupInstance = () => {
+          instance.ytext.unobserve(observer)
+          unsubChat()
+          view.dispatch({
+            effects: [
+              collabCompartment.current.reconfigure([]),
+              historyCompartment.current.reconfigure(history()),
+            ],
+          })
+          setActiveCollabInstance(null)
+          instance.destroy()
+          collabRef.current = null
         }
       })
 
-      return () => {
-        instance.ytext.unobserve(observer)
-        unsubChat()
-        view.dispatch({
-          effects: [
-            collabCompartment.current.reconfigure([]),
-            historyCompartment.current.reconfigure(history()),
-          ],
-        })
-        setActiveCollabInstance(null)
-        instance.destroy()
-        collabRef.current = null
-      }
+    return () => {
+      cancelled = true
+      cleanupInstance?.()
     }
   }, [activeTabId, isCollaborative, activeTab?.savedQueryId, user])
 

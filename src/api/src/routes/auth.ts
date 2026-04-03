@@ -146,4 +146,14 @@ auth.patch(
   }
 )
 
+// ── GET /ws-token ────────────────────────────
+// Returns the current JWT for WebSocket authentication.
+// The cookie is HttpOnly so JS can't read it directly.
+
+auth.get('/ws-token', authMiddleware, async (c) => {
+  const token = extractToken(c.req.raw)
+  if (!token) return c.json(problem(401, 'No token'), 401)
+  return c.json({ token })
+})
+
 export { auth }
