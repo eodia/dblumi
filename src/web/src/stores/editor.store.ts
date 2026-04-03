@@ -45,6 +45,7 @@ export type QueryTab = {
   functionParams: FunctionParam[]
   connectionId: string | null
   collaborative: boolean
+  unreadChat: number
 }
 
 const DEFAULT_PAGE_SIZE = 100
@@ -102,10 +103,15 @@ type EditorState = {
   sortByMulti: (sorts: SortEntry[]) => Promise<void>
   clearGuardrail: () => void
   clearResults: () => void
+
+  chatOpen: boolean
+  setChatOpen: (open: boolean) => void
+  incrementUnread: (tabId: string) => void
+  resetUnread: (tabId: string) => void
 }
 
 function makeQueryTab(n: number, connectionId: string | null = null): QueryTab {
-  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId, collaborative: false }
+  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId, collaborative: false, unreadChat: 0 }
 }
 
 function makeTableTab(tableName: string, connectionId: string | null = null): QueryTab {
@@ -118,6 +124,7 @@ function makeTableTab(tableName: string, connectionId: string | null = null): Qu
     functionParams: [],
     connectionId,
     collaborative: false,
+    unreadChat: 0,
     result: emptyResult(),
   }
 }
@@ -618,4 +625,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { tabs, activeTabId } = get()
     set({ tabs: patchResult(tabs, activeTabId, emptyResult()) })
   },
+
+  chatOpen: false,
+  setChatOpen: (open) => set({ chatOpen: open }),
+  incrementUnread: (tabId) => set((s) => ({
+    tabs: s.tabs.map((t) => t.id === tabId ? { ...t, unreadChat: t.unreadChat + 1 } : t),
+  })),
+  resetUnread: (tabId) => set((s) => ({
+    tabs: s.tabs.map((t) => t.id === tabId ? { ...t, unreadChat: 0 } : t),
+  })),
 }))
