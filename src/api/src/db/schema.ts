@@ -72,6 +72,21 @@ export const savedQueries = sqliteTable('saved_queries', {
     .default(sql`(datetime('now'))`),
 })
 
+export const savedQueryVersions = sqliteTable('saved_query_versions', {
+  id: text('id').primaryKey(),
+  queryId: text('query_id')
+    .notNull()
+    .references(() => savedQueries.id, { onDelete: 'cascade' }),
+  sql: text('sql').notNull(),
+  label: text('label'),
+  editedBy: text('edited_by')
+    .notNull()
+    .references(() => users.id),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+})
+
 export const revokedTokens = sqliteTable('revoked_tokens', {
   jti: text('jti').primaryKey(),
   expiresAt: text('expires_at').notNull(),
