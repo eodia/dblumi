@@ -36,13 +36,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy, Share2 } from 'lucide-react'
+import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy, Share2, History } from 'lucide-react'
 import { savedQueriesApi, type SavedQuery } from '@/api/saved-queries'
 import { useEditorStore } from '@/stores/editor.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { ComboboxChips } from '@/components/ui/combobox-chips'
+import { TimelineModal } from './TimelineModal'
 
 // ── Inline rename input ─────────────────────────
 function RenameInput({
@@ -79,6 +80,7 @@ function QueryItem({
   onLoad,
   onRename,
   onDuplicate,
+  onTimeline,
   onShare,
   onDelete,
   onMoveToFolder,
@@ -89,6 +91,7 @@ function QueryItem({
   onLoad: () => void
   onRename: (name: string) => void
   onDuplicate: () => void
+  onTimeline: () => void
   onShare: () => void
   onDelete: () => void
   onMoveToFolder: (folder: string | null) => void
@@ -178,6 +181,10 @@ function QueryItem({
             <Copy className="h-3.5 w-3.5" />
             {t('sq.duplicate')}
           </ContextMenuItem>
+          <ContextMenuItem className="gap-2 text-xs" onClick={onTimeline}>
+            <History className="h-3.5 w-3.5" />
+            {t('sq.timeline')}
+          </ContextMenuItem>
           {!query.shared && (<>
             <ContextMenuSeparator />
             <ContextMenuItem className="gap-2 text-xs" onClick={onShare}>
@@ -214,6 +221,7 @@ export function SavedQueriesPanel() {
   const [newFolderTarget, setNewFolderTarget] = useState<string | null>(null) // query id
   const [shareQueryId, setShareQueryId] = useState<string | null>(null)
   const [shareIds, setShareIds] = useState<string[]>([])
+  const [timelineQueryId, setTimelineQueryId] = useState<string | null>(null)
 
   // Load groups + users for sharing (available to all authenticated users)
   const { data: groupsData } = useQuery({ queryKey: ['sharing', 'groups'], queryFn: sharingApi.groups, staleTime: 60_000 })
@@ -241,6 +249,10 @@ export function SavedQueriesPanel() {
     queryKey: ['saved-queries'],
     queryFn: savedQueriesApi.list,
   })
+
+  const timelineQuery = (data?.savedQueries ?? []).find((q) => q.id === timelineQueryId)
+  const timelineTab = useEditorStore.getState().tabs.find((t) => t.savedQueryId === timelineQueryId)
+  const timelineCurrentSql = timelineTab?.sql ?? timelineQuery?.sql ?? ''
 
   const ownQueries = (data?.savedQueries ?? []).filter(
     (q) => q.connectionId === activeConnectionId && q.createdBy === userId,
@@ -346,6 +358,7 @@ export function SavedQueriesPanel() {
         if (q.folder) payload.folder = q.folder
         savedQueriesApi.create(payload).then(() => qc.invalidateQueries({ queryKey: ['saved-queries'] }))
       }}
+      onTimeline={() => setTimelineQueryId(q.id)}
       onShare={() => setShareQueryId(q.id)}
       onDelete={() => deleteMutation.mutate(q.id)}
       onMoveToFolder={(folder) =>
@@ -507,6 +520,16 @@ export function SavedQueriesPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {timelineQueryId && timelineQuery && (
+        <TimelineModal
+          queryId={timelineQueryId}
+          queryName={timelineQuery.name}
+          currentSql={timelineCurrentSql}
+          open={timelineQueryId !== null}
+          onOpenChange={(o) => { if (!o) setTimelineQueryId(null) }}
+        />
+      )}
     </>
   )
 }
