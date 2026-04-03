@@ -50,6 +50,20 @@ async function getOrCreateDoc(queryId: string): Promise<CollabDoc> {
   const collabDoc: CollabDoc = { doc, awareness, connections: new Map() }
   docs.set(queryId, collabDoc)
 
+  // Broadcast doc updates to all clients
+  doc.on('update', (update: Uint8Array, origin: any) => {
+    const encoder = encoding.createEncoder()
+    encoding.writeVarUint(encoder, MSG_SYNC)
+    syncProtocol.writeUpdate(encoder, update)
+    const msg = encoding.toUint8Array(encoder)
+    for (const [ws] of collabDoc.connections) {
+      // Don't send back to the origin (the client that made the change)
+      if (ws !== origin && ws.readyState === 1) {
+        ws.send(msg)
+      }
+    }
+  })
+
   awareness.on('update', ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }) => {
     const changedClients = added.concat(updated, removed)
     const encoder = encoding.createEncoder()
@@ -114,7 +128,7 @@ export async function handleCollabConnection(
     if (msgType === MSG_SYNC) {
       const responseEncoder = encoding.createEncoder()
       encoding.writeVarUint(responseEncoder, MSG_SYNC)
-      syncProtocol.readSyncMessage(decoder, responseEncoder, collabDoc.doc, null)
+      syncProtocol.readSyncMessage(decoder, responseEncoder, collabDoc.doc, ws)
       if (encoding.length(responseEncoder) > 1) {
         ws.send(encoding.toUint8Array(responseEncoder))
       }
