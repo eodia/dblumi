@@ -484,7 +484,7 @@ export function SqlEditor({ onSave }: Props) {
     fetch('/api/v1/auth/ws-token', { credentials: 'include' })
       .then((r) => r.json())
       .then(({ token }) => {
-        if (cancelled || !token) return
+        if (cancelled || !token || !viewRef.current) return
 
         const instance = createCollabInstance(
           activeTab.savedQueryId!,
@@ -494,8 +494,10 @@ export function SqlEditor({ onSave }: Props) {
         collabRef.current = instance
         setActiveCollabInstance(instance)
 
+        if (!instance.provider.awareness) return
+
         // Enable collab extensions, disable history
-        view.dispatch({
+        viewRef.current.dispatch({
           effects: [
             collabCompartment.current.reconfigure(
               collabExtensions(instance.ytext, instance.provider.awareness),
@@ -520,7 +522,7 @@ export function SqlEditor({ onSave }: Props) {
         cleanupInstance = () => {
           instance.ytext.unobserve(observer)
           unsubChat()
-          view.dispatch({
+          viewRef.current?.dispatch({
             effects: [
               collabCompartment.current.reconfigure([]),
               historyCompartment.current.reconfigure(history()),
