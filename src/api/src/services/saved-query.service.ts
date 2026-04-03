@@ -51,7 +51,7 @@ function toView(
   }
 }
 
-async function checkCollaborator(queryId: string, userId: string): Promise<boolean> {
+export async function checkCollaborator(queryId: string, userId: string): Promise<boolean> {
   const direct = await db
     .select({ queryId: queryUsers.queryId })
     .from(queryUsers)
