@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { EditorView } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
-import { MergeView } from '@codemirror/merge'
+import { unifiedMergeView } from '@codemirror/merge'
 import { sql } from '@codemirror/lang-sql'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
@@ -20,23 +20,13 @@ const readOnlyTheme = EditorView.theme({
     color: '#52525B',
     minWidth: '36px',
   },
-  '.cm-mergeView .cm-changedLine': { backgroundColor: 'transparent' },
   '.cm-deletedChunk': {
     backgroundColor: 'rgba(239, 68, 68, 0.10)',
   },
-  '.cm-insertedLine': {
+  '.cm-insertedChunk': {
     backgroundColor: 'rgba(34, 197, 94, 0.10)',
   },
 })
-
-const extensions = [
-  sql(),
-  oneDark,
-  syntaxHighlighting(defaultHighlightStyle),
-  readOnlyTheme,
-  EditorView.editable.of(false),
-  EditorState.readOnly.of(true),
-]
 
 type Props = {
   original: string
@@ -45,22 +35,32 @@ type Props = {
 
 export function TimelineDiffView({ original, modified }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<MergeView | null>(null)
+  const viewRef = useRef<EditorView | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    // Destroy previous instance
     if (viewRef.current) {
       viewRef.current.destroy()
       viewRef.current = null
     }
 
-    const view = new MergeView({
-      a: { doc: original, extensions },
-      b: { doc: modified, extensions },
+    const view = new EditorView({
+      doc: modified,
+      extensions: [
+        sql(),
+        oneDark,
+        syntaxHighlighting(defaultHighlightStyle),
+        readOnlyTheme,
+        EditorView.editable.of(false),
+        EditorState.readOnly.of(true),
+        unifiedMergeView({
+          original,
+          mergeControls: false,
+          syntaxHighlightDeletions: true,
+        }),
+      ],
       parent: containerRef.current,
-      collapseUnchanged: {},
     })
 
     viewRef.current = view

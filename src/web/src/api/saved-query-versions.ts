@@ -1,14 +1,7 @@
 import { api } from './client'
-import type { VersionsResponse } from '@dblumi/shared'
+import type { VersionsResponse, SavedQueryVersion } from '@dblumi/shared'
 
-export type SavedQueryVersion = {
-  id: string
-  queryId: string
-  sql: string
-  label: string | null
-  editedBy: { id: string; name: string }
-  createdAt: string
-}
+export type { SavedQueryVersion }
 
 export const savedQueryVersionsApi = {
   list: (queryId: string, cursor?: string, limit = 50) =>

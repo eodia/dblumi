@@ -8,3 +8,5 @@ CREATE TABLE `saved_query_versions` (
 	FOREIGN KEY (`query_id`) REFERENCES `saved_queries`(`id`) ON DELETE CASCADE,
 	FOREIGN KEY (`edited_by`) REFERENCES `users`(`id`)
 );
+--> statement-breakpoint
+CREATE INDEX `idx_sqv_query_created` ON `saved_query_versions` (`query_id`, `created_at` DESC);
