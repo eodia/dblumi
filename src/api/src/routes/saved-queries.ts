@@ -109,6 +109,8 @@ savedQueriesRouter.patch('/reorder', zValidator('json', ReorderSchema), async (c
 const SharesSchema = z.object({
   groupIds: z.array(z.string().uuid()),
   userIds: z.array(z.string().uuid()),
+  collabGroupIds: z.array(z.string().uuid()).default([]),
+  collabUserIds: z.array(z.string().uuid()).default([]),
 })
 
 savedQueriesRouter.get('/:id/shares', async (c) => {
@@ -121,12 +123,12 @@ savedQueriesRouter.get('/:id/shares', async (c) => {
     throw e
   }
   const groupRows = await db
-    .select({ id: groups.id, name: groups.name, color: groups.color })
+    .select({ id: groups.id, name: groups.name, color: groups.color, collaborative: queryGroups.collaborative })
     .from(queryGroups)
     .innerJoin(groups, eq(queryGroups.groupId, groups.id))
     .where(eq(queryGroups.queryId, id))
   const userRows = await db
-    .select({ id: users.id, name: users.name, email: users.email })
+    .select({ id: users.id, name: users.name, email: users.email, collaborative: queryUsers.collaborative })
     .from(queryUsers)
     .innerJoin(users, eq(queryUsers.userId, users.id))
     .where(eq(queryUsers.queryId, id))
@@ -142,21 +144,30 @@ savedQueriesRouter.put('/:id/shares', zValidator('json', SharesSchema), async (c
     if (e instanceof SavedQueryError) return c.json(problem(404, e.message), 404)
     throw e
   }
-  const { groupIds, userIds } = c.req.valid('json')
+  const { groupIds, userIds, collabGroupIds, collabUserIds } = c.req.valid('json')
 
-  // Replace query groups
+  const readOnlyGroups = groupIds.filter((gid) => !collabGroupIds.includes(gid))
+  const readOnlyUsers = userIds.filter((uid) => !collabUserIds.includes(uid))
+
   await db.delete(queryGroups).where(eq(queryGroups.queryId, id))
-  if (groupIds.length > 0) {
-    await db.insert(queryGroups).values(groupIds.map((groupId) => ({ queryId: id, groupId })))
+  const groupValues = [
+    ...readOnlyGroups.map((groupId) => ({ queryId: id, groupId, collaborative: false })),
+    ...collabGroupIds.map((groupId) => ({ queryId: id, groupId, collaborative: true })),
+  ]
+  if (groupValues.length > 0) {
+    await db.insert(queryGroups).values(groupValues)
   }
 
-  // Replace query users
   await db.delete(queryUsers).where(eq(queryUsers.queryId, id))
-  if (userIds.length > 0) {
-    await db.insert(queryUsers).values(userIds.map((uid) => ({ queryId: id, userId: uid })))
+  const userValues = [
+    ...readOnlyUsers.map((uid) => ({ queryId: id, userId: uid, collaborative: false })),
+    ...collabUserIds.map((uid) => ({ queryId: id, userId: uid, collaborative: true })),
+  ]
+  if (userValues.length > 0) {
+    await db.insert(queryUsers).values(userValues)
   }
 
-  return c.json({ groupIds, userIds })
+  return c.json({ groupIds: readOnlyGroups, userIds: readOnlyUsers, collabGroupIds, collabUserIds })
 })
 
 savedQueriesRouter.get('/:id/versions', async (c) => {
