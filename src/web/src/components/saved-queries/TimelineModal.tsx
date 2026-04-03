@@ -1,0 +1,281 @@
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useI18n } from '@/i18n'
+import { useEditorStore } from '@/stores/editor.store'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { savedQueryVersionsApi, type SavedQueryVersion } from '@/api/saved-query-versions'
+import { TimelineDiffView } from './TimelineDiffView'
+import { Check, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+
+type Props = {
+  queryId: string
+  queryName: string
+  currentSql: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+type DiffState =
+  | { mode: 'current' }
+  | { mode: 'sequential'; versionId: string }
+  | { mode: 'vsCurrent'; versionId: string }
+  | { mode: 'compare'; versionA: string; versionB: string }
+
+export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChange }: Props) {
+  const { t } = useI18n()
+  const qc = useQueryClient()
+  const [diff, setDiff] = useState<DiffState>({ mode: 'current' })
+  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [editingLabel, setEditingLabel] = useState<string | null>(null)
+  const [labelValue, setLabelValue] = useState('')
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['saved-query-versions', queryId],
+    queryFn: ({ pageParam }) => savedQueryVersionsApi.list(queryId, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    enabled: open,
+  })
+
+  const versions = data?.pages.flatMap((p) => p.versions) ?? []
+
+  const labelMutation = useMutation({
+    mutationFn: ({ versionId, label }: { versionId: string; label: string | null }) =>
+      savedQueryVersionsApi.updateLabel(queryId, versionId, label),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['saved-query-versions', queryId] })
+      toast.success(t('sq.timeline.labelSaved'))
+    },
+  })
+
+  // Infinite scroll
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el || !hasNextPage || isFetchingNextPage) return
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+      fetchNextPage()
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  // Checkbox logic
+  const toggleCheck = (id: string) => {
+    setChecked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        if (next.size >= 2) return prev
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // Update diff based on checked state
+  useEffect(() => {
+    const ids = Array.from(checked)
+    if (ids.length === 2) {
+      setDiff({ mode: 'compare', versionA: ids[0]!, versionB: ids[1]! })
+    } else if (ids.length === 1) {
+      setDiff({ mode: 'vsCurrent', versionId: ids[0]! })
+    }
+  }, [checked])
+
+  // Click on version row (not checkbox)
+  const selectVersion = (versionId: string) => {
+    if (checked.size > 0) return
+    setDiff({ mode: 'sequential', versionId })
+  }
+
+  // Resolve SQL strings for diff
+  const getSqlById = (id: string) => versions.find((v) => v.id === id)?.sql ?? ''
+
+  let original = ''
+  let modified = ''
+  let diffLabel = ''
+
+  if (diff.mode === 'current') {
+    modified = currentSql
+    diffLabel = t('sq.timeline.current')
+  } else if (diff.mode === 'sequential') {
+    const idx = versions.findIndex((v) => v.id === diff.versionId)
+    const version = versions[idx]
+    const prev = versions[idx + 1]
+    original = prev?.sql ?? ''
+    modified = version?.sql ?? ''
+    diffLabel = t('sq.timeline.sequential')
+  } else if (diff.mode === 'vsCurrent') {
+    original = getSqlById(diff.versionId)
+    modified = currentSql
+    diffLabel = t('sq.timeline.vsCurrent')
+  } else if (diff.mode === 'compare') {
+    // Order: older first (original) → newer (modified)
+    const idxA = versions.findIndex((v) => v.id === diff.versionA)
+    const idxB = versions.findIndex((v) => v.id === diff.versionB)
+    if (idxA > idxB) {
+      original = getSqlById(diff.versionA)
+      modified = getSqlById(diff.versionB)
+    } else {
+      original = getSqlById(diff.versionB)
+      modified = getSqlById(diff.versionA)
+    }
+    diffLabel = t('sq.timeline.comparing')
+  }
+
+  const startEditLabel = (v: SavedQueryVersion) => {
+    setEditingLabel(v.id)
+    setLabelValue(v.label ?? '')
+  }
+
+  const commitLabel = () => {
+    if (editingLabel) {
+      labelMutation.mutate({ versionId: editingLabel, label: labelValue.trim() || null })
+      setEditingLabel(null)
+    }
+  }
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso)
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) +
+      ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-4xl p-0 gap-0 bg-card border-border-subtle overflow-hidden">
+        <DialogHeader className="px-4 py-3 border-b border-border-subtle">
+          <DialogTitle className="text-base">{t('sq.timeline')} — {queryName}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex" style={{ height: '500px' }}>
+          {/* Left panel: version list */}
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="w-[280px] flex-shrink-0 border-r border-border-subtle overflow-y-auto"
+          >
+            {/* Current (editor) entry */}
+            <div
+              className={cn(
+                'px-3 py-2.5 border-b border-border-subtle cursor-pointer transition-colors',
+                diff.mode === 'current' && 'bg-accent',
+              )}
+              onClick={() => { setChecked(new Set()); setDiff({ mode: 'current' }) }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                <span className="text-xs font-semibold text-primary">{t('sq.timeline.current')}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1 ml-4">{t('sq.timeline.editing')}</p>
+            </div>
+
+            {versions.length === 0 && (
+              <p className="px-3 py-6 text-xs text-muted-foreground text-center">{t('sq.timeline.noVersions')}</p>
+            )}
+
+            {versions.map((v) => {
+              const isSelected = diff.mode === 'sequential' && diff.versionId === v.id
+              const isChecked = checked.has(v.id)
+              return (
+                <div
+                  key={v.id}
+                  className={cn(
+                    'px-3 py-2.5 border-b border-border-subtle/50 cursor-pointer transition-colors hover:bg-accent/50',
+                    (isSelected || isChecked) && 'bg-accent',
+                  )}
+                  onClick={() => selectVersion(v.id)}
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => { e.stopPropagation(); toggleCheck(v.id) }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="accent-primary w-3.5 h-3.5 flex-shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs text-foreground">{v.editedBy.name}</div>
+                      <div className="text-[11px] text-muted-foreground">{formatDate(v.createdAt)}</div>
+                    </div>
+                  </div>
+
+                  {/* Label */}
+                  <div className="mt-1.5 ml-[22px]">
+                    {editingLabel === v.id ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          autoFocus
+                          value={labelValue}
+                          onChange={(e) => setLabelValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitLabel()
+                            if (e.key === 'Escape') setEditingLabel(null)
+                            e.stopPropagation()
+                          }}
+                          className="h-5 text-[11px] px-1.5 py-0 flex-1"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <button onClick={(e) => { e.stopPropagation(); commitLabel() }} className="text-primary">
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setEditingLabel(null) }} className="text-muted-foreground">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : v.label ? (
+                      <span
+                        className="inline-block bg-primary/10 text-primary text-[11px] px-2 py-0.5 rounded cursor-text"
+                        onClick={(e) => { e.stopPropagation(); startEditLabel(v) }}
+                      >
+                        {v.label}
+                      </span>
+                    ) : (
+                      <button
+                        className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                        onClick={(e) => { e.stopPropagation(); startEditLabel(v) }}
+                      >
+                        {t('sq.timeline.addLabel')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {isFetchingNextPage && (
+              <div className="px-3 py-3 text-xs text-muted-foreground text-center">{t('common.loading')}</div>
+            )}
+          </div>
+
+          {/* Right panel: diff view */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="px-4 py-2 border-b border-border-subtle flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{diffLabel}</span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {diff.mode === 'current' ? (
+                <pre className="p-4 text-xs text-foreground font-mono whitespace-pre-wrap overflow-auto h-full">{currentSql}</pre>
+              ) : (
+                <TimelineDiffView original={original} modified={modified} />
+              )}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
