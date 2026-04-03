@@ -31,6 +31,8 @@ export const SavedQuerySchema = z.object({
   folder: z.string().optional(),
   sortOrder: z.number().int().optional(),
   shared: z.boolean().optional(),
+  collaborative: z.boolean().optional(),
+  isCollaborator: z.boolean().optional(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
