@@ -34,7 +34,7 @@ import { lintGutter, linter, type Diagnostic } from '@codemirror/lint'
 import { sql, PostgreSQL, MySQL, type SQLNamespace } from '@codemirror/lang-sql'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { format as formatSql } from 'sql-formatter'
-import { createCollabInstance, type CollabInstance } from '@/collab/collab-provider'
+import { createCollabInstance, setActiveCollabInstance, type CollabInstance } from '@/collab/collab-provider'
 import { collabExtensions } from '@/collab/collab-extensions'
 import { CollabAvatars } from './CollabAvatars'
 import { useAuthStore } from '@/stores/auth.store'
@@ -487,6 +487,7 @@ export function SqlEditor({ onSave }: Props) {
         { userId: user.id, name: user.name, avatarUrl: (user as any).avatarUrl ?? null },
       )
       collabRef.current = instance
+      setActiveCollabInstance(instance)
 
       // Enable collab extensions, disable history
       view.dispatch({
@@ -505,14 +506,23 @@ export function SqlEditor({ onSave }: Props) {
       }
       instance.ytext.observe(observer)
 
+      const unsubChat = instance.onChatMessage(() => {
+        const store = useEditorStore.getState()
+        if (!store.chatOpen) {
+          store.incrementUnread(activeTabId)
+        }
+      })
+
       return () => {
         instance.ytext.unobserve(observer)
+        unsubChat()
         view.dispatch({
           effects: [
             collabCompartment.current.reconfigure([]),
             historyCompartment.current.reconfigure(history()),
           ],
         })
+        setActiveCollabInstance(null)
         instance.destroy()
         collabRef.current = null
       }
@@ -580,6 +590,14 @@ export function SqlEditor({ onSave }: Props) {
           <CollabAvatars
             awareness={collabRef.current?.provider.awareness ?? null}
             currentUserId={user?.id ?? ''}
+            editorView={viewRef.current}
+            unreadCount={activeTab?.unreadChat ?? 0}
+            onToggleChat={() => {
+              const store = useEditorStore.getState()
+              const opening = !store.chatOpen
+              store.setChatOpen(opening)
+              if (opening) store.resetUnread(activeTabId)
+            }}
           />
         </div>
       )}

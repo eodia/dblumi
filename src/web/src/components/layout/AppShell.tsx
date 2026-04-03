@@ -115,6 +115,7 @@ import { SaveQueryModal } from '@/components/saved-queries/SaveQueryModal'
 import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import { SavedQueriesPanel } from '@/components/saved-queries/SavedQueriesPanel'
 import { CopilotPanel } from '@/components/copilot/CopilotPanel'
+import { CollabChat } from '@/components/editor/CollabChat'
 import { AdminPage } from '@/components/admin/AdminPage'
 import { OverviewPage } from '@/components/overview/OverviewPage'
 import { TableStructureEditor } from '@/components/schema/TableStructureEditor'
@@ -814,14 +815,25 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
   }, [activeTab, activeTabId, activeConnectionId, handleSave, onSaveAs, reloadTab, closeTab, addTab])
 
   const [copilotOpen, setCopilotOpen] = useState(false)
+  const chatOpen = useEditorStore((s) => s.chatOpen)
+  const setChatOpen = useEditorStore((s) => s.setChatOpen)
+
+  useEffect(() => {
+    if (chatOpen) setCopilotOpen(false)
+  }, [chatOpen])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <UnifiedTabBar onSave={handleSave} onSaveAs={onSaveAs} onToggleCopilot={() => setCopilotOpen((o) => !o)} copilotOpen={copilotOpen} />
+      <UnifiedTabBar onSave={handleSave} onSaveAs={onSaveAs} onToggleCopilot={() => {
+        setCopilotOpen((o) => {
+          if (!o) setChatOpen(false)
+          return !o
+        })
+      }} copilotOpen={copilotOpen} />
 
       <div className="flex-1 min-h-0 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" autoSaveId="dblumi-h">
-          <ResizablePanel defaultSize={copilotOpen ? 70 : 100} minSize={40} id="main-area">
+          <ResizablePanel defaultSize={(copilotOpen || chatOpen) ? 70 : 100} minSize={40} id="main-area">
             {activeTab?.kind === 'query' && (
               <ResizablePanelGroup direction="vertical" autoSaveId="dblumi-v">
                 <ResizablePanel defaultSize={50} minSize={20} id="editor">
@@ -857,11 +869,18 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
             )}
           </ResizablePanel>
 
-          {copilotOpen && (
+          {(copilotOpen || chatOpen) && (
             <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={30} minSize={20} maxSize={50} id="copilot">
-                <CopilotPanel onClose={() => setCopilotOpen(false)} />
+              <ResizablePanel defaultSize={30} minSize={20} maxSize={50} id="right-panel">
+                {copilotOpen && <CopilotPanel onClose={() => setCopilotOpen(false)} />}
+                {chatOpen && !copilotOpen && (
+                  <CollabChat
+                    queryId={activeTab?.savedQueryId ?? ''}
+                    queryName={activeTab?.name ?? ''}
+                    onClose={() => setChatOpen(false)}
+                  />
+                )}
               </ResizablePanel>
             </>
           )}
