@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   EditorView,
@@ -18,6 +18,7 @@ import {
   history,
   historyKeymap,
   indentWithTab,
+  selectAll,
 } from '@codemirror/commands'
 import { autocompletion, closeBrackets, closeBracketsKeymap, type CompletionContext, type Completion } from '@codemirror/autocomplete'
 import {
@@ -32,10 +33,19 @@ import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/sea
 import { lintGutter, linter, type Diagnostic } from '@codemirror/lint'
 import { sql, PostgreSQL, MySQL, type SQLNamespace } from '@codemirror/lang-sql'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { format as formatSql } from 'sql-formatter'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
 import { connectionsApi, type Connection, type SchemaTable, type SchemaFunction } from '@/api/connections'
 import { cn } from '@/lib/utils'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 
 type Props = { onSave?: () => void }
 
@@ -295,7 +305,7 @@ export function SqlEditor({ onSave }: Props) {
   const sqlCompartment = useRef(new Compartment())
   const fnCompartment = useRef(new Compartment())
   const phrasesCompartment = useRef(new Compartment())
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
 
   const { tabs, activeTabId, activeConnectionId, setSql, setSelection, executeQuery, executeSelection } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
@@ -449,10 +459,94 @@ export function SqlEditor({ onSave }: Props) {
     }
   }, [activeTabId, sqlText])
 
+  const handleCut = useCallback(async () => {
+    const view = viewRef.current
+    if (!view) return
+    const { from, to } = view.state.selection.main
+    const text = view.state.sliceDoc(from, to)
+    if (!text) return
+    await navigator.clipboard.writeText(text)
+    view.dispatch({ changes: { from, to, insert: '' } })
+    view.focus()
+  }, [])
+
+  const handleCopy = useCallback(async () => {
+    const view = viewRef.current
+    if (!view) return
+    const { from, to } = view.state.selection.main
+    const text = from === to ? view.state.doc.toString() : view.state.sliceDoc(from, to)
+    await navigator.clipboard.writeText(text)
+    view.focus()
+  }, [])
+
+  const handlePaste = useCallback(async () => {
+    const view = viewRef.current
+    if (!view) return
+    const text = await navigator.clipboard.readText()
+    const { from, to } = view.state.selection.main
+    view.dispatch({ changes: { from, to, insert: text } })
+    view.focus()
+  }, [])
+
+  const handleSelectAll = useCallback(() => {
+    const view = viewRef.current
+    if (!view) return
+    selectAll(view)
+    view.focus()
+  }, [])
+
+  const handleBeautify = useCallback(() => {
+    const view = viewRef.current
+    if (!view) return
+    const { from, to } = view.state.selection.main
+    const hasSelection = from !== to
+    const targetFrom = hasSelection ? from : 0
+    const targetTo = hasSelection ? to : view.state.doc.length
+    const text = view.state.sliceDoc(targetFrom, targetTo)
+    try {
+      const language = activeConnection?.driver === 'mysql' ? 'mysql' : 'postgresql'
+      const formatted = formatSql(text, { language, tabWidth: 2, keywordCase: 'upper' })
+      view.dispatch({ changes: { from: targetFrom, to: targetTo, insert: formatted } })
+    } catch {
+      // invalid SQL fragment — leave as-is
+    }
+    view.focus()
+  }, [activeConnection?.driver])
+
   return (
-    <div
-      ref={containerRef}
-      className={cn('h-full overflow-hidden', isRunning && 'opacity-60 pointer-events-none')}
-    />
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="h-full">
+          <div
+            ref={containerRef}
+            className={cn('h-full overflow-hidden', isRunning && 'opacity-60 pointer-events-none')}
+          />
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-52">
+        <ContextMenuItem onSelect={handleCut}>
+          {t('editor.cut')}
+          <ContextMenuShortcut>⌘X</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={handleCopy}>
+          {t('editor.copy')}
+          <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={handlePaste}>
+          {t('editor.paste')}
+          <ContextMenuShortcut>⌘V</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onSelect={handleSelectAll}>
+          {t('editor.selectAll')}
+          <ContextMenuShortcut>⌘A</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onSelect={handleBeautify}>
+          {t('editor.beautify')}
+          <ContextMenuShortcut>⇧⌘F</ContextMenuShortcut>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

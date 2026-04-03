@@ -20,8 +20,8 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   RefreshCw, ArrowUp, ArrowDown, ArrowUpDown, GripVertical,
   Filter, ArrowDownUp, Plus, Trash2, Copy, Download, X,
-  ChevronDown, Pencil, ClipboardCopy, CalendarIcon, ListPlus, 
-  Upload,
+  ChevronDown, Pencil, ClipboardCopy, CalendarIcon, ListPlus,
+  Upload, ScanSearch, Pin, PinOff, EyeOff, Eye, ArrowLeftRight,
 } from 'lucide-react'
 import {
   ContextMenu,
@@ -92,13 +92,15 @@ type TabLocalState = {
   selected: Set<number>
   colWidths: Record<string, number>
   colOrder: string[] | null
+  pinnedCols: string[]
+  hiddenCols: string[]
 }
 
 // Module-level map so it survives component unmount/remount
 const _tabStates = new Map<string, TabLocalState>()
 
 function defaultTabState(): TabLocalState {
-  return { showFilter: false, showSort: false, filters: [], sorts: [], selected: new Set(), colWidths: {}, colOrder: null }
+  return { showFilter: false, showSort: false, filters: [], sorts: [], selected: new Set(), colWidths: {}, colOrder: null, pinnedCols: [], hiddenCols: [] }
 }
 
 // ── Pagination bar ───────────────────────────────
@@ -199,38 +201,71 @@ function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
 }
 
 // ── Sortable column header ───────────────────────
-function SortableColumnHeader({ col, width, sortBy, sortMulti, onSort, onResize }: {
-  col: QueryColumn; width: number; sortBy: SortBy; sortMulti: SortEntry[]; onSort: (e: React.MouseEvent) => void; onResize: (delta: number) => void
+function SortableColumnHeader({ col, width, sortBy, sortMulti, onSort, onResize, isPinned, hiddenCount, stickyLeft, onAddFilter, onPin, onHide, onFitWidth, onShowHidden }: {
+  col: QueryColumn; width: number; sortBy: SortBy; sortMulti: SortEntry[]
+  onSort: (e: React.MouseEvent) => void; onResize: (delta: number) => void
+  isPinned: boolean; hiddenCount: number; stickyLeft?: number
+  onAddFilter: () => void; onPin: () => void; onHide: () => void; onFitWidth: () => void; onShowHidden: () => void
 }) {
+  const { t } = useI18n()
+  const hasHidden = hiddenCount > 0
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.name })
+  const isSticky = stickyLeft !== undefined
   return (
-    <div ref={setNodeRef}
-      className="relative flex items-center gap-0.5 border-r border-border-subtle flex-shrink-0 select-none"
-      style={{ width, transform: CSS.Transform.toString(transform ? { ...transform, y: 0, scaleX: 1, scaleY: 1 } : null), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 30 : undefined }}>
-      <span {...attributes} {...listeners}
-        className="flex items-center justify-center w-5 flex-shrink-0 cursor-grab active:cursor-grabbing text-text-muted/30 hover:text-text-muted/70 transition-colors"
-        onClick={(e) => e.stopPropagation()}>
-        <GripVertical className="h-3 w-3" />
-      </span>
-      <button type="button" onClick={onSort} className="flex items-center gap-1 min-w-0 flex-1 pr-2 hover:text-foreground transition-colors">
-        <span className="text-[11px] font-semibold text-muted-foreground flex-shrink-0">{col.name}</span>
-        <span className="text-[10px] text-text-muted/50 font-mono truncate">{col.dataType}</span>
-        {(() => {
-          const sortIdx = sortMulti.findIndex((s) => s.column === col.name)
-          if (sortIdx >= 0) {
-            const dir = sortMulti[sortIdx]!.direction
-            return (
-              <span className="flex items-center gap-0.5 flex-shrink-0">
-                {dir === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />}
-                {sortMulti.length > 1 && <span className="text-[9px] text-primary font-bold tabular-nums">{sortIdx + 1}</span>}
-              </span>
-            )
-          }
-          return <ArrowUpDown className="h-3 w-3 text-text-muted/20 flex-shrink-0" />
-        })()}
-      </button>
-      <ResizeHandle onResize={onResize} />
-    </div>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div ref={setNodeRef}
+          className={cn('relative flex items-center gap-0.5 border-r border-border-subtle flex-shrink-0 select-none', isSticky && 'bg-surface-raised border-r-primary/20')}
+          style={{ width, transform: CSS.Transform.toString(transform ? { ...transform, y: 0, scaleX: 1, scaleY: 1 } : null), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 30 : isSticky ? 11 : undefined, position: isSticky ? 'sticky' : undefined, left: stickyLeft }}>
+          <span {...attributes} {...listeners}
+            className="flex items-center justify-center w-5 flex-shrink-0 cursor-grab active:cursor-grabbing text-text-muted/30 hover:text-text-muted/70 transition-colors"
+            onClick={(e) => e.stopPropagation()}>
+            <GripVertical className="h-3 w-3" />
+          </span>
+          <button type="button" onClick={onSort} className="flex items-center gap-1 min-w-0 flex-1 hover:text-foreground transition-colors">
+            {isPinned && <Pin className="h-2.5 w-2.5 text-primary/60 flex-shrink-0" />}
+            <span className="text-[11px] font-semibold text-muted-foreground flex-shrink-0">{col.name}</span>
+            <span className="text-[10px] text-text-muted/50 font-mono truncate">{col.dataType}</span>
+            {(() => {
+              const sortIdx = sortMulti.findIndex((s) => s.column === col.name)
+              if (sortIdx >= 0) {
+                const dir = sortMulti[sortIdx]!.direction
+                return (
+                  <span className="flex items-center gap-0.5 flex-shrink-0">
+                    {dir === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />}
+                    {sortMulti.length > 1 && <span className="text-[9px] text-primary font-bold tabular-nums">{sortIdx + 1}</span>}
+                  </span>
+                )
+              }
+              return <ArrowUpDown className="h-3 w-3 text-text-muted/20 flex-shrink-0" />
+            })()}
+          </button>
+          <ResizeHandle onResize={onResize} />
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-52">
+        <ContextMenuItem className="gap-2 text-xs" onClick={onAddFilter}>
+          <Filter className="h-3.5 w-3.5" />{t('table.addFilter')}
+        </ContextMenuItem>
+        <ContextMenuItem className="gap-2 text-xs" onClick={onPin}>
+          {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          {isPinned ? t('col.unpin') : t('col.pin')}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem className="gap-2 text-xs" onClick={onFitWidth}>
+          <ArrowLeftRight className="h-3.5 w-3.5" />{t('col.fitWidth')}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem className="gap-2 text-xs" onClick={onHide}>
+          <EyeOff className="h-3.5 w-3.5" />{t('col.hide')}
+        </ContextMenuItem>
+        {hasHidden && (
+          <ContextMenuItem className="gap-2 text-xs" onClick={onShowHidden}>
+            <Eye className="h-3.5 w-3.5" />{t('col.showHidden', { count: String(hiddenCount) })}
+          </ContextMenuItem>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
@@ -670,7 +705,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
 // ── Main component ───────────────────────────────
 export function ResultsTable() {
   const { t } = useI18n()
-  const { tabs, activeTabId, activeConnectionId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, pendingCsvImport, setPendingCsvImport } = useEditorStore()
+  const { tabs, activeTabId, activeConnectionId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, executeSql, pendingCsvImport, setPendingCsvImport } = useEditorStore()
   const tab = tabs.find((t) => t.id === activeTabId)
   const result = tab?.result
   const isTableMode = tab?.kind === 'table'
@@ -696,7 +731,7 @@ export function ResultsTable() {
   const [, setRenderKey] = useState(0)
 
   const ts = getTabState()
-  const { showFilter, showSort, filters, sorts, selected, colWidths, colOrder } = ts
+  const { showFilter, showSort, filters, sorts, selected, colWidths, colOrder, pinnedCols, hiddenCols } = ts
 
   // Sync store sortMulti → local sorts (when header clicks change sortMulti)
   const storeSortMulti = result?.sortMulti ?? []
@@ -712,9 +747,45 @@ export function ResultsTable() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTabId])
 
-  const orderedColumns = colOrder
+  const fitColWidth = useCallback((colName: string) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.font = '12px monospace'
+    const col = columns.find((c) => c.name === colName)
+    let maxW = ctx.measureText((col?.name ?? colName) + '  ' + (col?.dataType ?? '')).width + 56
+    for (const row of rows) {
+      const val = row[colName]
+      const str = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+      maxW = Math.max(maxW, ctx.measureText(str).width + 24)
+    }
+    setTabState({ colWidths: { ...getTabState().colWidths, [colName]: Math.max(MIN_COL_W, Math.min(600, Math.ceil(maxW))) } })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columns, rows, activeTabId])
+
+  const togglePin = useCallback((colName: string) => {
+    const ts = getTabState()
+    const next = ts.pinnedCols.includes(colName)
+      ? ts.pinnedCols.filter((c) => c !== colName)
+      : [...ts.pinnedCols, colName]
+    setTabState({ pinnedCols: next })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabId])
+
+  const hideCol = useCallback((colName: string) => {
+    const ts = getTabState()
+    setTabState({ hiddenCols: [...ts.hiddenCols, colName], pinnedCols: ts.pinnedCols.filter((c) => c !== colName) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabId])
+
+  const baseColumns = colOrder
     ? colOrder.map((name) => columns.find((c) => c.name === name)).filter(Boolean) as QueryColumn[]
     : columns
+  const visibleColumns = baseColumns.filter((c) => !hiddenCols.includes(c.name))
+  const orderedColumns = [
+    ...visibleColumns.filter((c) => pinnedCols.includes(c.name)),
+    ...visibleColumns.filter((c) => !pinnedCols.includes(c.name)),
+  ]
 
   // Reset colOrder when columns change
   const colKey = columns.map((c) => c.name).join(',')
@@ -844,18 +915,28 @@ export function ResultsTable() {
     await reloadTab()
   }, [isTableMode, tableName, activeConnectionId, selectedCells, editingCell, columns, rows, reloadTab])
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' && isTableMode && selectedCells.size > 0 && !editingCell) {
-        e.preventDefault()
-        void setNullSelectedCells()
-      }
+  const pasteToSelectedCells = useCallback(async (value: string) => {
+    if (!isTableMode || !tableName || !activeConnectionId || selectedCells.size === 0 || editingCell) return
+    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
+    if (!pkCol) return
+    const newVal = value === '' ? 'NULL' : `'${value.replace(/'/g, "''")}'`
+    for (const key of selectedCells) {
+      const [riStr, colName] = key.split(':')
+      if (!riStr || !colName) continue
+      const row = rows[parseInt(riStr, 10)]
+      if (!row) continue
+      const pk = row[pkCol.name]
+      const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
+      const sql = `UPDATE ${tableName} SET ${colName} = ${newVal} WHERE ${pkCol.name} = ${pl}`
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _ of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) { /* drain */ }
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [isTableMode, selectedCells, editingCell, setNullSelectedCells])
+    setSelectedCells(new Set())
+    await reloadTab()
+  }, [isTableMode, tableName, activeConnectionId, selectedCells, editingCell, columns, rows, reloadTab])
 
   const anchorCellRef = useRef<CellRef | null>(null)
+  const cursorCellRef = useRef<CellRef | null>(null)
   const isDraggingRef = useRef(false)
 
   const selectRect = useCallback((anchor: CellRef, rowIdx: number, colName: string) => {
@@ -875,16 +956,117 @@ export function ResultsTable() {
     return next
   }, [orderedColumns])
 
+  useEffect(() => {
+    const NAV_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown']
+    const handler = (e: KeyboardEvent) => {
+      if (editingCell) return
+
+      // Ctrl+A: select all cells
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        if (orderedColumns.length === 0 || rows.length === 0) return
+        e.preventDefault()
+        const firstCol = orderedColumns[0]!.name
+        const lastCol = orderedColumns[orderedColumns.length - 1]!.name
+        anchorCellRef.current = { rowIdx: 0, colName: firstCol }
+        cursorCellRef.current = { rowIdx: rows.length - 1, colName: lastCol }
+        setSelectedCells(selectRect({ rowIdx: 0, colName: firstCol }, rows.length - 1, lastCol))
+        return
+      }
+
+      if (isTableMode && e.key === 'Delete' && selectedCells.size > 0) {
+        e.preventDefault()
+        void setNullSelectedCells()
+        return
+      }
+
+      // Ctrl+C: copy selected cells as TSV grid
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.size > 0) {
+        e.preventDefault()
+        const colNames = orderedColumns.map((c) => c.name)
+        const cellEntries = [...selectedCells].map((key) => {
+          const sep = key.indexOf(':')
+          return { rowIdx: parseInt(key.slice(0, sep), 10), colName: key.slice(sep + 1) }
+        })
+        const rowIdxs = [...new Set(cellEntries.map((c) => c.rowIdx))].sort((a, b) => a - b)
+        const colSet = new Set(cellEntries.map((c) => c.colName))
+        const colIdxs = colNames.map((_, i) => i).filter((i) => colSet.has(colNames[i]!))
+        const text = rowIdxs.map((r) =>
+          colIdxs.map((ci) => {
+            const val = rows[r]?.[colNames[ci]!]
+            return val === null || val === undefined ? '' : String(val)
+          }).join('\t')
+        ).join('\n')
+        void navigator.clipboard.writeText(text)
+        return
+      }
+
+      // Ctrl+V: paste clipboard value to selected cells (table mode only)
+      if (isTableMode && (e.ctrlKey || e.metaKey) && e.key === 'v' && selectedCells.size > 0) {
+        e.preventDefault()
+        void navigator.clipboard.readText().then(pasteToSelectedCells)
+        return
+      }
+
+      if (selectedCells.size === 0 && !anchorCellRef.current) return
+
+      if (!NAV_KEYS.includes(e.key)) return
+
+      const anchor = anchorCellRef.current
+      if (!anchor) return
+
+      const colNames = orderedColumns.map((c) => c.name)
+      const maxRow = rows.length - 1
+      const maxCol = colNames.length - 1
+
+      // With Shift: move cursor from its current position, keep anchor fixed
+      // Without Shift: move both anchor and cursor together
+      const from = e.shiftKey ? (cursorCellRef.current ?? anchor) : anchor
+      const fromColIdx = colNames.indexOf(from.colName)
+      if (fromColIdx < 0) return
+
+      let newRow = from.rowIdx
+      let newColIdx = fromColIdx
+
+      e.preventDefault()
+      switch (e.key) {
+        case 'ArrowUp':    newRow = Math.max(0, newRow - 1); break
+        case 'ArrowDown':  newRow = Math.min(maxRow, newRow + 1); break
+        case 'ArrowLeft':  newColIdx = Math.max(0, newColIdx - 1); break
+        case 'ArrowRight': newColIdx = Math.min(maxCol, newColIdx + 1); break
+        case 'Home':  newColIdx = 0; if (e.ctrlKey) newRow = 0; break
+        case 'End':   newColIdx = maxCol; if (e.ctrlKey) newRow = maxRow; break
+        case 'PageUp':   newRow = Math.max(0, newRow - pageSize); break
+        case 'PageDown': newRow = Math.min(maxRow, newRow + pageSize); break
+      }
+
+      const newColName = colNames[newColIdx]!
+      cursorCellRef.current = { rowIdx: newRow, colName: newColName }
+
+      if (e.shiftKey) {
+        setSelectedCells(selectRect(anchor, newRow, newColName))
+      } else {
+        anchorCellRef.current = { rowIdx: newRow, colName: newColName }
+        setSelectedCells(new Set([cellKey(newRow, newColName)]))
+      }
+
+      requestAnimationFrame(() => {
+        document.querySelector(`[data-cell-key="${newRow}:${newColName}"]`)
+          ?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      })
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTableMode, editingCell, rows, orderedColumns, pageSize, selectedCells, setNullSelectedCells, pasteToSelectedCells])
+
   const handleCellMouseDown = useCallback((rowIdx: number, colName: string, e: React.MouseEvent) => {
-    if (!isTableMode || e.button !== 0) return
+    if (e.button !== 0) return
     e.preventDefault()
     isDraggingRef.current = true
 
     if (e.shiftKey && anchorCellRef.current) {
-      // Shift+mousedown: extend rectangle from anchor
       setSelectedCells(selectRect(anchorCellRef.current, rowIdx, colName))
     } else if (e.ctrlKey || e.metaKey) {
-      // Ctrl+mousedown: toggle cell, set new anchor
       anchorCellRef.current = { rowIdx, colName }
       const key = cellKey(rowIdx, colName)
       setSelectedCells((prev) => {
@@ -893,16 +1075,16 @@ export function ResultsTable() {
         return next
       })
     } else {
-      // Normal mousedown: single select + set anchor
       anchorCellRef.current = { rowIdx, colName }
+      cursorCellRef.current = { rowIdx, colName }
       setSelectedCells(new Set([cellKey(rowIdx, colName)]))
     }
-  }, [isTableMode, selectRect])
+  }, [selectRect])
 
   const handleCellMouseEnter = useCallback((rowIdx: number, colName: string) => {
-    if (!isDraggingRef.current || !isTableMode || !anchorCellRef.current) return
+    if (!isDraggingRef.current || !anchorCellRef.current) return
     setSelectedCells(selectRect(anchorCellRef.current, rowIdx, colName))
-  }, [isTableMode, selectRect])
+  }, [selectRect])
 
 
   const handleApplyFilter = useCallback(() => {
@@ -957,8 +1139,18 @@ export function ResultsTable() {
     else downloadBlob(rowsToSql(data, orderedColumns, name), `${name}.sql`, 'text/sql')
   }, [selectedRows, rows, orderedColumns, tableName])
 
-  const checkboxColW = 36
-  const totalWidth = (isTableMode ? checkboxColW : 48) + orderedColumns.reduce((sum, col) => sum + getColWidth(col.name), 0)
+  const checkboxColW = isTableMode ? 36 : 48
+  const totalWidth = checkboxColW + orderedColumns.reduce((sum, col) => sum + getColWidth(col.name), 0)
+
+  // Sticky left offsets for pinned columns (header + cells)
+  const pinnedLeftOffsets = (() => {
+    const offsets: Record<string, number> = {}
+    let left = checkboxColW
+    for (const col of orderedColumns) {
+      if (pinnedCols.includes(col.name)) { offsets[col.name] = left; left += getColWidth(col.name) }
+    }
+    return offsets
+  })()
 
   // ── Empty / loading / error states ──────
   if (status === 'idle' && rows.length === 0) {
@@ -1024,6 +1216,30 @@ export function ResultsTable() {
           {status === 'running' && (<div className="flex items-center gap-2 text-[11px] text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /><span className="tabular-nums">{rows.length} {t('editor.rowsReceived')}</span></div>)}
           {status === 'done' && (
             <div className="ml-auto flex items-center gap-1">
+              {hiddenCols.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 text-muted-foreground">
+                      <Eye className="h-3 w-3" />{t('col.showHidden', { count: String(hiddenCols.length) })}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {columns.filter((c) => hiddenCols.includes(c.name)).map((c) => (
+                      <DropdownMenuItem key={c.name} className="gap-2 text-xs"
+                        onClick={() => setTabState({ hiddenCols: getTabState().hiddenCols.filter((h) => h !== c.name) })}>
+                        <Eye className="h-3.5 w-3.5" />{c.name}
+                      </DropdownMenuItem>
+                    ))}
+                    {hiddenCols.length > 1 && (<>
+                      <div className="h-px bg-border mx-1 my-1" />
+                      <DropdownMenuItem className="gap-2 text-xs text-muted-foreground"
+                        onClick={() => setTabState({ hiddenCols: [] })}>
+                        <Eye className="h-3.5 w-3.5" />{t('col.showAll')}
+                      </DropdownMenuItem>
+                    </>)}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               {isTableMode && (
                 <Button variant={showFilter ? 'default' : 'ghost'} size="sm" className="h-6 text-xs gap-1"
                   onClick={() => setTabState({ showFilter: !showFilter, showSort: false })}>
@@ -1036,6 +1252,28 @@ export function ResultsTable() {
                 <ArrowDownUp className="h-3 w-3" />{t('table.sort')}
                 {sorts.length > 0 && <span className="ml-0.5 bg-primary/20 text-primary rounded px-1 text-[10px]">{sorts.length}</span>}
               </Button>
+              {(() => {
+                const isExplaining = /^EXPLAIN\s/i.test(result?.executedSql?.trim() ?? '')
+                return (
+                  <Button
+                    variant={isExplaining ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 text-xs gap-1"
+                    onClick={() => {
+                      if (isExplaining) {
+                        const original = result!.executedSql!.trim().replace(/^EXPLAIN\s+/i, '')
+                        if (original) void executeSql(original)
+                      } else {
+                        const raw = result?.executedSql ?? tab?.sql
+                        const sql = raw?.trim()
+                        if (sql) void executeSql(`EXPLAIN ${sql}`)
+                      }
+                    }}
+                  >
+                    <ScanSearch className="h-3 w-3" />{t('results.explain')}
+                  </Button>
+                )
+              })()}
               {isTableMode && (<>
                 <div className="w-px h-4 bg-border-subtle mx-1" />
                 <DropdownMenu>
@@ -1082,13 +1320,23 @@ export function ResultsTable() {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={orderedColumns.map((c) => c.name)} strategy={horizontalListSortingStrategy}>
                 <div className="sticky top-0 z-10 flex border-b border-border-strong bg-surface-raised" style={{ height: 32 }}>
-                  <div className={cn('flex-shrink-0 flex items-center justify-center border-r border-border-subtle', isTableMode ? 'w-9' : 'w-12')}>
+                  <div
+                    className={cn('flex-shrink-0 flex items-center justify-center border-r border-border-subtle bg-surface-raised', isTableMode ? 'w-9' : 'w-12')}
+                    style={pinnedCols.length > 0 ? { position: 'sticky', left: 0, zIndex: 12 } : undefined}>
                     {isTableMode ? <Checkbox checked={allSelected} onCheckedChange={toggleAll} className="h-3.5 w-3.5" /> : <span className="text-[10px] text-text-muted font-mono">#</span>}
                   </div>
                   {orderedColumns.map((col) => (
                     <SortableColumnHeader key={col.name} col={col} width={getColWidth(col.name)} sortBy={sortBy ?? null}
                       sortMulti={result?.sortMulti ?? []}
-                      onSort={(e) => sortByColumn(col.name, e.shiftKey)} onResize={(delta) => handleResize(col.name, delta)} />
+                      onSort={(e) => sortByColumn(col.name, e.shiftKey)} onResize={(delta) => handleResize(col.name, delta)}
+                      isPinned={pinnedCols.includes(col.name)}
+                      hiddenCount={hiddenCols.length}
+                      {...(pinnedLeftOffsets[col.name] !== undefined ? { stickyLeft: pinnedLeftOffsets[col.name] } : {})}
+                      onAddFilter={() => setTabState({ filters: [...getTabState().filters, { column: col.name, operator: '=', value: '' }], showFilter: true, showSort: false })}
+                      onPin={() => togglePin(col.name)}
+                      onHide={() => hideCol(col.name)}
+                      onFitWidth={() => fitColWidth(col.name)}
+                      onShowHidden={() => setTabState({ hiddenCols: [] })} />
                   ))}
                 </div>
               </SortableContext>
@@ -1098,23 +1346,27 @@ export function ResultsTable() {
                 <div
                   className={cn('flex border-b border-border-subtle hover:bg-surface-raised/60 transition-colors', i % 2 === 1 && 'bg-surface/30', selected.has(i) && 'bg-primary/5 hover:bg-primary/10')}
                   style={{ height: 30 }}>
-                  <div className={cn('flex-shrink-0 flex items-center justify-center border-r border-border-subtle', isTableMode ? 'w-9' : 'w-12')}>
+                  <div
+                    className={cn('flex-shrink-0 flex items-center justify-center border-r border-border-subtle', isTableMode ? 'w-9' : 'w-12', pinnedCols.length > 0 && 'bg-card')}
+                    style={pinnedCols.length > 0 ? { position: 'sticky', left: 0, zIndex: 3 } : undefined}>
                     {isTableMode ? <Checkbox checked={selected.has(i)} onCheckedChange={() => toggleRow(i)} className="h-3.5 w-3.5" />
                       : <span className="text-[10px] text-text-muted font-mono tabular-nums">{page * pageSize + i + 1}</span>}
                   </div>
                   {orderedColumns.map((col) => {
                     const val = row?.[col.name]
                     const isEditing = isTableMode && editingCell?.rowIdx === i && editingCell?.colName === col.name
-                    const isCellSelected = isTableMode && selectedCells.has(cellKey(i, col.name))
+                    const isCellSelected = selectedCells.has(cellKey(i, col.name))
                     return (
                       <div key={col.name}
+                        data-cell-key={cellKey(i, col.name)}
                         className={cn(
                           'flex items-center px-3 border flex-shrink-0 overflow-hidden transition-colors',
                           isEditing ? 'border-primary p-0' :
                           isCellSelected ? 'border-primary/50 bg-primary/5' :
                           'border-transparent hover:border-primary/30',
+                          pinnedLeftOffsets[col.name] !== undefined && !isCellSelected && !isEditing && 'bg-card',
                         )}
-                        style={{ width: getColWidth(col.name) }}
+                        style={{ width: getColWidth(col.name), ...(pinnedLeftOffsets[col.name] !== undefined ? { position: 'sticky', left: pinnedLeftOffsets[col.name], zIndex: 2 } : {}) }}
                         onMouseDown={(e) => handleCellMouseDown(i, col.name, e)}
                         onMouseEnter={() => handleCellMouseEnter(i, col.name)}
                         onMouseUp={() => { isDraggingRef.current = false }}
@@ -1150,81 +1402,161 @@ export function ResultsTable() {
               if (!isTableMode) return (
                 <ContextMenu key={page * pageSize + i}>
                   <ContextMenuTrigger asChild>{rowContent}</ContextMenuTrigger>
-                  <ContextMenuContent className="w-48">
-                    <ContextMenuItem className="gap-2 text-xs" onClick={() => {
-                      const val = ctxCell?.row === row ? row[ctxCell.colName] : undefined
-                      const text = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+                  {(() => {
+                    const ctxColName = ctxCell?.row === row ? ctxCell.colName : ''
+                    const isMultiCellSel = selectedCells.size > 1 && selectedCells.has(cellKey(i, ctxColName))
+                    const cellSelRowIdxs = isMultiCellSel
+                      ? [...new Set(Array.from(selectedCells).map((k) => parseInt(k.split(':')[0]!, 10)))].sort((a, b) => a - b)
+                      : []
+                    const cellSelRows = cellSelRowIdxs.map((r) => rows[r]).filter(Boolean) as Record<string, unknown>[]
+
+                    const copyCell = () => {
+                      if (isMultiCellSel) {
+                        const colNames = orderedColumns.map((c) => c.name)
+                        const selCols = colNames.filter((cn) => cellSelRowIdxs.some((r) => selectedCells.has(cellKey(r, cn))))
+                        const text = cellSelRowIdxs.map((r) => selCols.map((cn) => {
+                          if (!selectedCells.has(cellKey(r, cn))) return ''
+                          const v = rows[r]?.[cn]; return v === null ? 'NULL' : v === undefined ? '' : String(v)
+                        }).join('\t')).join('\n')
+                        navigator.clipboard.writeText(text)
+                      } else {
+                        const val = ctxCell?.row === row ? row[ctxCell.colName] : undefined
+                        const text = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+                        navigator.clipboard.writeText(text)
+                      }
+                    }
+                    const copyRow = () => {
+                      const rowsToCopy = isMultiCellSel ? cellSelRows : [row]
+                      const text = rowsToCopy.map((r) => orderedColumns.map((c) => { const v = r[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')).join('\n')
                       navigator.clipboard.writeText(text)
-                    }}>
-                      <ClipboardCopy className="h-3.5 w-3.5" />
-                      {t('ctx.copyCell')}
-                    </ContextMenuItem>
-                    <ContextMenuItem className="gap-2 text-xs" onClick={() => {
-                      const text = orderedColumns.map((c) => { const v = row[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')
-                      navigator.clipboard.writeText(text)
-                    }}>
-                      <Copy className="h-3.5 w-3.5" />
-                      {t('ctx.copyRow')}
-                    </ContextMenuItem>
-                  </ContextMenuContent>
+                    }
+                    return (
+                      <ContextMenuContent className="w-52">
+                        <ContextMenuItem className="gap-2 text-xs" onClick={copyCell}>
+                          <ClipboardCopy className="h-3.5 w-3.5" />
+                          {isMultiCellSel ? t('ctx.copyCells', { count: String(selectedCells.size) }) : t('ctx.copyCell')}
+                        </ContextMenuItem>
+                        <ContextMenuItem className="gap-2 text-xs" onClick={copyRow}>
+                          <Copy className="h-3.5 w-3.5" />
+                          {isMultiCellSel ? t('ctx.copyRows', { count: String(cellSelRows.length) }) : t('ctx.copyRow')}
+                        </ContextMenuItem>
+                        {ctxCell?.row === row && (<>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem disabled={isMultiCellSel} className="gap-2 text-xs" onClick={() => togglePin(ctxCell.colName)}>
+                            {pinnedCols.includes(ctxCell.colName) ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                            {pinnedCols.includes(ctxCell.colName) ? t('col.unpin') : t('col.pin')}
+                          </ContextMenuItem>
+                          <ContextMenuItem disabled={isMultiCellSel} className="gap-2 text-xs" onClick={() => fitColWidth(ctxCell.colName)}>
+                            <ArrowLeftRight className="h-3.5 w-3.5" />{t('col.fitWidth')}
+                          </ContextMenuItem>
+                          <ContextMenuItem disabled={isMultiCellSel} className="gap-2 text-xs" onClick={() => hideCol(ctxCell.colName)}>
+                            <EyeOff className="h-3.5 w-3.5" />{t('col.hide')}
+                          </ContextMenuItem>
+                          {hiddenCols.length > 0 && (
+                            <ContextMenuItem className="gap-2 text-xs" onClick={() => setTabState({ hiddenCols: [] })}>
+                              <Eye className="h-3.5 w-3.5" />{t('col.showHidden', { count: String(hiddenCols.length) })}
+                            </ContextMenuItem>
+                          )}
+                        </>)}
+                      </ContextMenuContent>
+                    )
+                  })()}
                 </ContextMenu>
               )
 
               return (
                 <ContextMenu key={page * pageSize + i}>
                   <ContextMenuTrigger asChild>{rowContent}</ContextMenuTrigger>
-                  <ContextMenuContent className="w-48">
-                    <ContextMenuItem className="gap-2 text-xs" onClick={() => {
-                      const val = ctxCell?.row === row ? row[ctxCell.colName] : undefined
-                      const text = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+                  {(() => {
+                    const isMultiRowSel = selected.has(i) && selected.size > 1
+                    const ctxColName = ctxCell?.row === row ? ctxCell.colName : ''
+                    const isMultiCellSel = selectedCells.size > 1 && selectedCells.has(cellKey(i, ctxColName))
+                    const isMulti = isMultiRowSel || isMultiCellSel
+
+                    // Rows implied by cell selection
+                    const cellSelRowIdxs = isMultiCellSel
+                      ? [...new Set(Array.from(selectedCells).map((k) => parseInt(k.split(':')[0]!, 10)))].sort((a, b) => a - b)
+                      : []
+                    const cellSelRows = cellSelRowIdxs.map((r) => rows[r]).filter(Boolean) as Record<string, unknown>[]
+
+                    const copyCell = () => {
+                      if (isMultiCellSel) {
+                        const colNames = orderedColumns.map((c) => c.name)
+                        const selCols = colNames.filter((cn) => cellSelRowIdxs.some((r) => selectedCells.has(cellKey(r, cn))))
+                        const text = cellSelRowIdxs.map((r) => selCols.map((cn) => {
+                          if (!selectedCells.has(cellKey(r, cn))) return ''
+                          const v = rows[r]?.[cn]
+                          return v === null ? 'NULL' : v === undefined ? '' : String(v)
+                        }).join('\t')).join('\n')
+                        navigator.clipboard.writeText(text)
+                      } else {
+                        const val = ctxCell?.row === row ? row[ctxCell.colName] : undefined
+                        const text = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+                        navigator.clipboard.writeText(text)
+                      }
+                    }
+
+                    const copyRows = () => {
+                      const rowsToCopy = isMultiRowSel ? selectedRows : isMultiCellSel ? cellSelRows : [row]
+                      const text = rowsToCopy.map((r) => orderedColumns.map((c) => { const v = r[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')).join('\n')
                       navigator.clipboard.writeText(text)
-                    }}>
-                      <ClipboardCopy className="h-3.5 w-3.5" />
-                      {t('ctx.copyCell')}
-                    </ContextMenuItem>
-                    <ContextMenuItem className="gap-2 text-xs" onClick={() => {
-                      const text = orderedColumns.map((c) => { const v = row[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')
-                      navigator.clipboard.writeText(text)
-                    }}>
-                      <Copy className="h-3.5 w-3.5" />
-                      {t('ctx.copyRow')}
-                    </ContextMenuItem>
-                    {isTableMode && ctxCell?.row === row && (<>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem className="gap-2 text-xs" onClick={() => {
-                        const colName = ctxCell.colName
-                        const val = row[colName]
-                        const op = val === null ? 'IS NULL' : '='
-                        const filterValue = val === null ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
-                        const ts = getTabState()
-                        setTabState({
-                          filters: [...ts.filters, { column: colName, operator: op, value: filterValue }],
-                          showFilter: true,
-                          showSort: false,
-                        })
-                      }}>
-                        <Filter className="h-3.5 w-3.5" />
-                        {t('ctx.addAsFilter')}
-                      </ContextMenuItem>
-                    </>)}
-                    <ContextMenuSeparator />
-                    <ContextMenuItem className="gap-2 text-xs" onClick={() => setSheetState({ mode: 'edit', editRow: row })}>
-                      <Pencil className="h-3.5 w-3.5" />
-                      {t('ctx.editRecord')}
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    {selected.has(page * pageSize + i) && selected.size > 1 ? (
-                      <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive" onClick={() => void handleDeleteSelected()}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {t('ctx.deleteRecords', { count: selected.size })}
-                      </ContextMenuItem>
-                    ) : (
-                      <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive" onClick={() => setDeleteConfirmRow(row)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {t('ctx.deleteRecord')}
-                      </ContextMenuItem>
-                    )}
-                  </ContextMenuContent>
+                    }
+
+                    const deleteRows = () => {
+                      if (isMultiRowSel) { void handleDeleteSelected(); return }
+                      if (isMultiCellSel) {
+                        const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]; if (!pkCol) return
+                        const ids = cellSelRows.map((r) => { const v = r[pkCol.name]; return typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''")}'` })
+                        useEditorStore.getState().setSql(`DELETE FROM ${tableName} WHERE ${pkCol.name} IN (${ids.join(', ')})`)
+                        void executeQuery(true).then(() => { useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`); return executeQuery(true) }).then(() => setTabState({ selected: new Set() }))
+                        return
+                      }
+                      setDeleteConfirmRow(row)
+                    }
+
+                    const deleteLabel = isMultiRowSel
+                      ? t('ctx.deleteRecords', { count: String(selected.size) })
+                      : isMultiCellSel
+                        ? t('ctx.deleteRecords', { count: String(cellSelRows.length) })
+                        : t('ctx.deleteRecord')
+
+                    return (
+                      <ContextMenuContent className="w-52">
+                        <ContextMenuItem className="gap-2 text-xs" onClick={copyCell}>
+                          <ClipboardCopy className="h-3.5 w-3.5" />
+                          {isMultiCellSel ? t('ctx.copyCells', { count: String(selectedCells.size) }) : t('ctx.copyCell')}
+                        </ContextMenuItem>
+                        <ContextMenuItem className="gap-2 text-xs" onClick={copyRows}>
+                          <Copy className="h-3.5 w-3.5" />
+                          {isMultiRowSel ? t('ctx.copyRows', { count: String(selected.size) }) : isMultiCellSel ? t('ctx.copyRows', { count: String(cellSelRows.length) }) : t('ctx.copyRow')}
+                        </ContextMenuItem>
+                        {ctxCell?.row === row && (<>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem disabled={isMulti} className="gap-2 text-xs" onClick={() => {
+                            const colName = ctxCell.colName
+                            const val = row[colName]
+                            const op = val === null ? 'IS NULL' : '='
+                            const filterValue = val === null ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+                            const ts = getTabState()
+                            setTabState({ filters: [...ts.filters, { column: colName, operator: op, value: filterValue }], showFilter: true, showSort: false })
+                          }}>
+                            <Filter className="h-3.5 w-3.5" />
+                            {t('ctx.addAsFilter')}
+                          </ContextMenuItem>
+                        </>)}
+                        <ContextMenuSeparator />
+                        <ContextMenuItem disabled={isMulti} className="gap-2 text-xs" onClick={() => setSheetState({ mode: 'edit', editRow: row })}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          {t('ctx.editRecord')}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive" onClick={deleteRows}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {deleteLabel}
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    )
+                  })()}
                 </ContextMenu>
               )
             })}

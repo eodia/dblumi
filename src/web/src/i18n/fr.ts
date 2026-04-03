@@ -53,6 +53,7 @@ export const fr = {
   'overview.pin': 'Épingler',
   'overview.unpin': 'Désépingler',
   'overview.showMore': '+ {count} de plus…',
+  'overview.erdShowMore': 'Voir les {count} autres tables',
   'overview.queryHistory': 'Historique des requêtes exécutées',
 
   // ── Connections ──
@@ -76,6 +77,11 @@ export const fr = {
   'tab.closeAll': 'Fermer tous',
 
   // ── Editor ──
+  'editor.cut': 'Couper',
+  'editor.copy': 'Copier',
+  'editor.paste': 'Coller',
+  'editor.selectAll': 'Sélectionner tout',
+  'editor.beautify': 'Formater le SQL',
   'editor.save': 'Sauvegarder',
   'editor.saveTooltip': 'Sauvegarder · Ctrl+S',
   'editor.saveAs': 'Enregistrer sous…',
@@ -97,6 +103,7 @@ export const fr = {
   'results.affected_plural': 'affectées',
   'results.success': 'Requête exécutée avec succès',
   'results.error': 'Erreur inconnue',
+  'results.explain': 'Expliquer',
   'results.perPage': 'Lignes par page',
   'results.all': 'Tout',
 
@@ -134,11 +141,13 @@ export const fr = {
 
   // ── Context menu ──
   'ctx.copyCell': 'Copier la cellule',
+  'ctx.copyCells': 'Copier {count} cellules',
   'ctx.copyRow': 'Copier la ligne',
+  'ctx.copyRows': 'Copier {count} lignes',
   'ctx.addAsFilter': 'Ajouter comme filtre',
   'ctx.editRecord': 'Modifier l\'enregistrement',
-  'ctx.deleteRecord': 'Supprimer l\'enregistrement',
-  'ctx.deleteRecords': 'Supprimer {count} enregistrement(s)',
+  'ctx.deleteRecord': 'Supprimer',
+  'ctx.deleteRecords': 'Supprimer {count} lignes',
   'ctx.deleteRecordTitle': 'Supprimer l\'enregistrement',
   'ctx.deleteRecordConfirm': 'Êtes-vous sûr de vouloir supprimer cet enregistrement ? Cette action est irréversible.',
 
@@ -264,6 +273,14 @@ export const fr = {
   'admin.removeMember': 'Retirer du groupe',
   'admin.connGroups': 'Groupes',
   'admin.connPublic': 'Connexion publique',
+
+  // ── Column header menu ──
+  'col.pin': 'Ancrer la colonne',
+  'col.unpin': 'Désancrer la colonne',
+  'col.hide': 'Cacher la colonne',
+  'col.fitWidth': 'Adapter la taille',
+  'col.showHidden': '{count} colonne(s) cachée(s)',
+  'col.showAll': 'Tout afficher',
 
   'fn.addParam': 'Ajouter un paramètre',
   'table.modifyStructure': 'Modifier la structure',

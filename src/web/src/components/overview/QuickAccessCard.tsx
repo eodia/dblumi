@@ -1,5 +1,5 @@
 // src/web/src/components/overview/QuickAccessCard.tsx
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { connectionsApi, type SchemaTable } from '@/api/connections'
 import { useEditorStore } from '@/stores/editor.store'
@@ -16,13 +16,12 @@ function useTableFavs(connectionId: string) {
     try { return JSON.parse(localStorage.getItem(storageKey) ?? '[]') }
     catch { return [] }
   })
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify(favs)) } catch { /* */ }
+  }, [storageKey, favs])
   const toggle = useCallback((name: string) => {
-    setFavs((prev) => {
-      const next = prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
-      try { localStorage.setItem(storageKey, JSON.stringify(next)) } catch { /* */ }
-      return next
-    })
-  }, [storageKey])
+    setFavs((prev) => prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name])
+  }, [])
   return { favs, toggle }
 }
 

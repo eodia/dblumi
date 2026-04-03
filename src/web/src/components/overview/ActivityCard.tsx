@@ -1,5 +1,5 @@
 // src/web/src/components/overview/ActivityCard.tsx
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { savedQueriesApi } from '@/api/saved-queries'
 import { useEditorStore } from '@/stores/editor.store'
@@ -16,13 +16,12 @@ function usePinnedIds(connectionId: string) {
     try { return JSON.parse(localStorage.getItem(storageKey) ?? '[]') }
     catch { return [] }
   })
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify(pinned)) } catch { /* */ }
+  }, [storageKey, pinned])
   const toggle = useCallback((id: string) => {
-    setPinned((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-      try { localStorage.setItem(storageKey, JSON.stringify(next)) } catch { /* */ }
-      return next
-    })
-  }, [storageKey])
+    setPinned((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+  }, [])
   return { pinned, toggle }
 }
 

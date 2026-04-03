@@ -14,18 +14,25 @@ const COL_H = 22
 const NODE_PAD = 8
 const COL_GAP = 60
 const ROW_GAP = 48
+const COL_LIMIT = 10
 
-type LayoutNode = SchemaTable & { x: number; y: number; width: number; height: number }
+type LayoutNode = SchemaTable & { x: number; y: number; width: number; height: number; visibleColCount: number }
 
-function layoutNodes(tables: SchemaTable[]): LayoutNode[] {
+function layoutNodes(tables: SchemaTable[], expandedNodes: Set<string>): LayoutNode[] {
   const COLS = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(tables.length))))
-  const nodes = tables.map((table, i) => ({
-    ...table,
-    col: i % COLS,
-    row: Math.floor(i / COLS),
-    width: NODE_W,
-    height: HEADER_H + table.columns.length * COL_H + NODE_PAD,
-  }))
+  const nodes = tables.map((table, i) => {
+    const isExpanded = expandedNodes.has(table.name)
+    const visibleColCount = isExpanded ? table.columns.length : Math.min(COL_LIMIT, table.columns.length)
+    const hasMore = !isExpanded && table.columns.length > COL_LIMIT
+    return {
+      ...table,
+      col: i % COLS,
+      row: Math.floor(i / COLS),
+      width: NODE_W,
+      height: HEADER_H + visibleColCount * COL_H + (hasMore ? COL_H : 0) + NODE_PAD,
+      visibleColCount,
+    }
+  })
   const rowCount = Math.ceil(tables.length / COLS)
   const rowHeights = Array.from({ length: rowCount }, (_, r) =>
     Math.max(...nodes.filter((n) => n.row === r).map((n) => n.height), 80),
@@ -84,6 +91,15 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
     retry: 1,
   })
 
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  const toggleExpand = useCallback((name: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }, [])
+
   const containerRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ x: 20, y: 20, scale: 1 })
   const isDragging = useRef(false)
@@ -117,12 +133,12 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
     return () => el.removeEventListener('wheel', onWheel)
   }, [onWheel, isLoading])
 
+  const allTables = schema?.tables ?? []
+
   if (isLoading) return <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Loading…</div>
+  if (allTables.length === 0) return <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">{t('overview.noSchema')}</div>
 
-  const tables = schema?.tables ?? []
-  if (tables.length === 0) return <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">{t('overview.noSchema')}</div>
-
-  const nodes = layoutNodes(tables)
+  const nodes = layoutNodes(allTables, expandedNodes)
   const edges = buildEdges(nodes)
   const totalW = Math.max(...nodes.map((n) => n.x + n.width)) + COL_GAP
   const totalH = Math.max(...nodes.map((n) => n.y + n.height)) + ROW_GAP
@@ -156,7 +172,7 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
           >
             <defs>
               <marker id="erd-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                <path d="M0,0 L0,6 L6,3 z" fill="rgb(var(--color-border-strong, 100 100 100))" />
+                <path d="M0,0 L0,6 L6,3 z" fill="currentColor" className="text-muted-foreground" />
               </marker>
             </defs>
             {edges.map((edge) => (
@@ -165,9 +181,9 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
                 d={edge.d}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={1}
-                strokeOpacity={0.4}
-                className="text-border-strong"
+                strokeWidth={1.5}
+                strokeOpacity={0.6}
+                className="text-muted-foreground"
                 markerEnd="url(#erd-arrow)"
               />
             ))}
@@ -191,7 +207,7 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
                   : <Table2 className="h-3 w-3 text-blue-400 flex-shrink-0" />}
                 <span className="text-[11px] font-semibold truncate">{node.name}</span>
               </div>
-              {node.columns.map((col) => (
+              {node.columns.slice(0, node.visibleColCount).map((col) => (
                 <div
                   key={col.name}
                   className="flex items-center gap-1.5 px-2.5 border-b border-border/20 last:border-0"
@@ -204,6 +220,18 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
                   <span className="text-[9px] text-muted-foreground/60 flex-shrink-0 truncate max-w-[60px]">{col.dataType}</span>
                 </div>
               ))}
+              {node.columns.length > COL_LIMIT && (
+                <button
+                  type="button"
+                  className="flex items-center justify-center w-full text-[9px] text-muted-foreground hover:text-foreground transition-colors border-t border-border/20"
+                  style={{ height: COL_H }}
+                  onClick={(e) => { e.stopPropagation(); toggleExpand(node.name) }}
+                >
+                  {expandedNodes.has(node.name)
+                    ? '▲ voir moins'
+                    : `+ ${node.columns.length - COL_LIMIT} colonnes`}
+                </button>
+              )}
             </div>
           ))}
         </div>

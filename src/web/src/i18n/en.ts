@@ -53,6 +53,7 @@ export const en = {
   'overview.pin': 'Pin',
   'overview.unpin': 'Unpin',
   'overview.showMore': '+ {count} more…',
+  'overview.erdShowMore': 'Show {count} more tables',
   'overview.queryHistory': 'Query execution history',
 
   // ── Connections ──
@@ -76,6 +77,11 @@ export const en = {
   'tab.closeAll': 'Close all',
 
   // ── Editor ──
+  'editor.cut': 'Cut',
+  'editor.copy': 'Copy',
+  'editor.paste': 'Paste',
+  'editor.selectAll': 'Select All',
+  'editor.beautify': 'Format SQL',
   'editor.save': 'Save',
   'editor.saveTooltip': 'Save · Ctrl+S',
   'editor.saveAs': 'Save as…',
@@ -97,6 +103,7 @@ export const en = {
   'results.affected_plural': 'affected',
   'results.success': 'Query executed successfully',
   'results.error': 'Unknown error',
+  'results.explain': 'Explain',
   'results.perPage': 'Rows per page',
   'results.all': 'All',
 
@@ -134,11 +141,13 @@ export const en = {
 
   // ── Context menu ──
   'ctx.copyCell': 'Copy cell',
+  'ctx.copyCells': 'Copy {count} cells',
   'ctx.copyRow': 'Copy row',
+  'ctx.copyRows': 'Copy {count} rows',
   'ctx.addAsFilter': 'Add as filter',
   'ctx.editRecord': 'Edit record',
-  'ctx.deleteRecord': 'Delete record',
-  'ctx.deleteRecords': 'Delete {count} record(s)',
+  'ctx.deleteRecord': 'Delete',
+  'ctx.deleteRecords': 'Delete {count} rows',
   'ctx.deleteRecordTitle': 'Delete record',
   'ctx.deleteRecordConfirm': 'Are you sure you want to delete this record? This action is irreversible.',
 
@@ -264,6 +273,14 @@ export const en = {
   'admin.removeMember': 'Remove from group',
   'admin.connGroups': 'Groups',
   'admin.connPublic': 'Public connection',
+
+  // ── Column header menu ──
+  'col.pin': 'Pin column',
+  'col.unpin': 'Unpin column',
+  'col.hide': 'Hide column',
+  'col.fitWidth': 'Fit width',
+  'col.showHidden': '{count} hidden column(s)',
+  'col.showAll': 'Show all',
 
   'fn.addParam': 'Add parameter',
   'table.modifyStructure': 'Modify structure',
