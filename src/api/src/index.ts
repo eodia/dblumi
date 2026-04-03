@@ -6,6 +6,9 @@ import { app } from './app.js'
 import { runMigrations } from './db/migrate.js'
 import { authenticateCollabUser } from './collab/collab-auth.js'
 import { handleCollabConnection } from './collab/collab-server.js'
+import { db } from './db/index.js'
+import { users } from './db/schema.js'
+import { eq } from 'drizzle-orm'
 
 async function main() {
   await runMigrations()
@@ -51,10 +54,20 @@ async function main() {
       return
     }
 
-    wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.handleUpgrade(request, socket, head, async (ws) => {
       const clientId = Math.floor(Math.random() * 2147483647)
+      const userRows = await db
+        .select({ name: users.name, avatarUrl: users.avatarUrl })
+        .from(users)
+        .where(eq(users.id, user.userId))
+        .limit(1)
+      const userRow = userRows[0]
       logger.info({ queryId, userId: user.userId }, 'Collab WebSocket connected')
-      handleCollabConnection(ws, queryId, clientId)
+      handleCollabConnection(ws, queryId, clientId, {
+        userId: user.userId,
+        userName: userRow?.name ?? user.name,
+        avatarUrl: userRow?.avatarUrl ?? null,
+      })
     })
   })
 }

@@ -8,14 +8,23 @@ import { db } from '../db/index.js'
 import { savedQueries } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
 import { logger } from '../logger.js'
+import { persistMessage } from '../services/collab-message.service.js'
 
 const MSG_SYNC = 0
 const MSG_AWARENESS = 1
+const MSG_CHAT = 2
+
+type CollabConnection = {
+  clientId: number
+  userId: string
+  userName: string
+  avatarUrl: string | null
+}
 
 type CollabDoc = {
   doc: Y.Doc
   awareness: awarenessProtocol.Awareness
-  connections: Map<WebSocket, number>
+  connections: Map<WebSocket, CollabConnection>
 }
 
 const docs = new Map<string, CollabDoc>()
@@ -78,9 +87,10 @@ export async function handleCollabConnection(
   ws: WebSocket,
   queryId: string,
   clientId: number,
+  userInfo: { userId: string; userName: string; avatarUrl: string | null },
 ) {
   const collabDoc = await getOrCreateDoc(queryId)
-  collabDoc.connections.set(ws, clientId)
+  collabDoc.connections.set(ws, { clientId, ...userInfo })
 
   const encoder = encoding.createEncoder()
   encoding.writeVarUint(encoder, MSG_SYNC)
@@ -111,12 +121,30 @@ export async function handleCollabConnection(
     } else if (msgType === MSG_AWARENESS) {
       const update = decoding.readVarUint8Array(decoder)
       awarenessProtocol.applyAwarenessUpdate(collabDoc.awareness, update, ws)
+    } else if (msgType === MSG_CHAT) {
+      const content = decoding.readVarString(decoder)
+      const connInfo = collabDoc.connections.get(ws)
+      if (!connInfo || !content.trim()) return
+
+      const msg = await persistMessage(queryId, connInfo.userId, content.trim())
+      const chatEncoder = encoding.createEncoder()
+      encoding.writeVarUint(chatEncoder, MSG_CHAT)
+      encoding.writeVarString(chatEncoder, JSON.stringify(msg))
+      const chatMsg = encoding.toUint8Array(chatEncoder)
+      for (const [client] of collabDoc.connections) {
+        if (client.readyState === 1) {
+          client.send(chatMsg)
+        }
+      }
     }
   })
 
   ws.on('close', () => {
+    const connInfo = collabDoc.connections.get(ws)
     collabDoc.connections.delete(ws)
-    awarenessProtocol.removeAwarenessStates(collabDoc.awareness, [clientId], null)
+    if (connInfo) {
+      awarenessProtocol.removeAwarenessStates(collabDoc.awareness, [connInfo.clientId], null)
+    }
     destroyDocIfEmpty(queryId)
   })
 }
