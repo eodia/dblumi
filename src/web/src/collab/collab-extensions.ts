@@ -1,7 +1,7 @@
 import { yCollab, yUndoManagerKeymap } from 'y-codemirror.next'
 import { keymap } from '@codemirror/view'
 import type { Extension } from '@codemirror/state'
-import type * as Y from 'yjs'
+import * as Y from 'yjs'
 import type { Awareness } from 'y-protocols/awareness'
 
 /**
@@ -12,8 +12,9 @@ export function collabExtensions(
   ytext: Y.Text,
   awareness: Awareness,
 ): Extension[] {
+  const undoManager = new Y.UndoManager(ytext)
   return [
-    yCollab(ytext, awareness, { undoManager: null }),
+    yCollab(ytext, awareness, { undoManager }),
     keymap.of(yUndoManagerKeymap),
   ]
 }

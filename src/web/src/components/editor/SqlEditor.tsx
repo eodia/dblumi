@@ -498,8 +498,15 @@ export function SqlEditor({ onSave }: Props) {
 
         if (!instance.provider.awareness) return
 
+        const v = viewRef.current
+        // Clear editor content before binding Yjs (Yjs will sync the content)
+        const docLen = v.state.doc.length
+        if (docLen > 0) {
+          v.dispatch({ changes: { from: 0, to: docLen, insert: '' } })
+        }
+
         // Enable collab extensions, disable history
-        viewRef.current.dispatch({
+        v.dispatch({
           effects: [
             collabCompartment.current.reconfigure(
               collabExtensions(instance.ytext, instance.provider.awareness),
