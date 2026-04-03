@@ -9,6 +9,8 @@ export type SavedQuery = {
   folder?: string
   sortOrder?: number
   shared?: boolean
+  collaborative?: boolean
+  isCollaborator?: boolean
   createdBy: string
   createdByName?: string
   createdAt: string
@@ -25,7 +27,12 @@ export const savedQueriesApi = {
   reorder: (items: { id: string; sortOrder: number }[]) =>
     api.patch<void>('/saved-queries/reorder', { items }),
   getShares: (id: string) =>
-    api.get<{ groups: Array<{ id: string; name: string; color: string | null }>; users: Array<{ id: string; name: string; email: string }> }>(`/saved-queries/${id}/shares`),
-  setShares: (id: string, groupIds: string[], userIds: string[]) =>
-    api.put<{ groupIds: string[]; userIds: string[] }>(`/saved-queries/${id}/shares`, { groupIds, userIds }),
+    api.get<{
+      groups: Array<{ id: string; name: string; color: string | null; collaborative: boolean }>
+      users: Array<{ id: string; name: string; email: string; collaborative: boolean }>
+    }>(`/saved-queries/${id}/shares`),
+  setShares: (id: string, groupIds: string[], userIds: string[], collabGroupIds: string[], collabUserIds: string[]) =>
+    api.put<{ groupIds: string[]; userIds: string[]; collabGroupIds: string[]; collabUserIds: string[] }>(
+      `/saved-queries/${id}/shares`, { groupIds, userIds, collabGroupIds, collabUserIds },
+    ),
 }
