@@ -15,6 +15,7 @@ import {
   SavedQueryError,
 } from '../services/saved-query.service.js'
 import { listVersions, updateVersionLabel } from '../services/saved-query-version.service.js'
+import { listMessages } from '../services/collab-message.service.js'
 import type { AuthVariables } from '../middleware/auth.js'
 
 const savedQueriesRouter = new Hono<AuthVariables>()
@@ -206,5 +207,20 @@ savedQueriesRouter.patch(
     return c.body(null, 204)
   },
 )
+
+savedQueriesRouter.get('/:id/messages', async (c) => {
+  const userId = c.get('userId')
+  const id = c.req.param('id')
+  try {
+    await getSavedQuery(id, userId)
+  } catch (e) {
+    if (e instanceof SavedQueryError) return c.json(problem(404, e.message), 404)
+    throw e
+  }
+  const before = c.req.query('before')
+  const limit = Number(c.req.query('limit') ?? '50')
+  const result = await listMessages(id, before || undefined, Math.min(limit, 100))
+  return c.json(result)
+})
 
 export { savedQueriesRouter }
