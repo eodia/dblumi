@@ -26,7 +26,13 @@ type CreateSavedQuery = {
 
 type UpdateSavedQuery = Partial<CreateSavedQuery>
 
-function toView(row: typeof savedQueries.$inferSelect, shared?: boolean, createdByName?: string): SavedQuery {
+function toView(
+  row: typeof savedQueries.$inferSelect,
+  shared?: boolean,
+  createdByName?: string,
+  collaborative?: boolean,
+  isCollaborator?: boolean,
+): SavedQuery {
   return {
     id: row.id,
     name: row.name,
@@ -36,6 +42,8 @@ function toView(row: typeof savedQueries.$inferSelect, shared?: boolean, created
     folder: row.folder ?? undefined,
     sortOrder: row.sortOrder ?? undefined,
     shared: shared ?? undefined,
+    collaborative: collaborative ?? undefined,
+    isCollaborator: isCollaborator ?? undefined,
     createdBy: row.createdBy,
     createdByName: createdByName ?? undefined,
     createdAt: row.createdAt,
@@ -95,8 +103,54 @@ export async function listSavedQueries(userId: string): Promise<SavedQuery[]> {
     for (const c of creators) creatorNames.set(c.id, c.name)
   }
 
-  const own = ownRows.map((r) => toView(r))
-  const shared = sharedRows.map((r) => toView(r, true, creatorNames.get(r.createdBy)))
+  // Compute collaborative flags for own queries
+  const ownQueryIds = ownRows.map((r) => r.id)
+  const collabGroupRows = ownQueryIds.length > 0 ? await db
+    .select({ queryId: queryGroups.queryId })
+    .from(queryGroups)
+    .where(and(inArray(queryGroups.queryId, ownQueryIds), eq(queryGroups.collaborative, true)))
+    : []
+  const collabUserRows = ownQueryIds.length > 0 ? await db
+    .select({ queryId: queryUsers.queryId })
+    .from(queryUsers)
+    .where(and(inArray(queryUsers.queryId, ownQueryIds), eq(queryUsers.collaborative, true)))
+    : []
+  const collabQueryIds = new Set([
+    ...collabGroupRows.map((r) => r.queryId),
+    ...collabUserRows.map((r) => r.queryId),
+  ])
+
+  // Compute isCollaborator flags for shared queries
+  const sharedQueryIds = sharedRows.map((r) => r.id)
+  const userCollabDirect = sharedQueryIds.length > 0 ? await db
+    .select({ queryId: queryUsers.queryId })
+    .from(queryUsers)
+    .where(and(
+      inArray(queryUsers.queryId, sharedQueryIds),
+      eq(queryUsers.userId, userId),
+      eq(queryUsers.collaborative, true),
+    ))
+    : []
+  let userCollabViaGroup: { queryId: string }[] = []
+  if (sharedQueryIds.length > 0 && groupIds.length > 0) {
+    userCollabViaGroup = await db
+      .select({ queryId: queryGroups.queryId })
+      .from(queryGroups)
+      .where(and(
+        inArray(queryGroups.queryId, sharedQueryIds),
+        inArray(queryGroups.groupId, groupIds),
+        eq(queryGroups.collaborative, true),
+      ))
+  }
+  const userCollabQueryIds = new Set([
+    ...userCollabDirect.map((r) => r.queryId),
+    ...userCollabViaGroup.map((r) => r.queryId),
+  ])
+
+  const own = ownRows.map((r) => toView(r, undefined, undefined, collabQueryIds.has(r.id)))
+  const shared = sharedRows.map((r) => toView(
+    r, true, creatorNames.get(r.createdBy), undefined, userCollabQueryIds.has(r.id),
+  ))
   return [...own, ...shared]
 }
 
