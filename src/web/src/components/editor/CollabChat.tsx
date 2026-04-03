@@ -23,7 +23,18 @@ export function CollabChat({ queryId, queryName, onClose }: Props) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
-  const collabInstance = getActiveCollabInstance()
+  // Re-check instance periodically since it may not be ready at first render
+  const [collabInstance, setCollabInstance] = useState(() => getActiveCollabInstance())
+  useEffect(() => {
+    const inst = getActiveCollabInstance()
+    if (inst) { setCollabInstance(inst); return }
+    // Poll until instance is available
+    const id = setInterval(() => {
+      const inst = getActiveCollabInstance()
+      if (inst) { setCollabInstance(inst); clearInterval(id) }
+    }, 200)
+    return () => clearInterval(id)
+  }, [queryId])
 
   const {
     data,
@@ -77,8 +88,9 @@ export function CollabChat({ queryId, queryName, onClose }: Props) {
 
   const sendMessage = () => {
     const content = input.trim()
-    if (!content || !collabInstance) return
-    collabInstance.sendChatMessage(content)
+    const inst = collabInstance ?? getActiveCollabInstance()
+    if (!content || !inst) return
+    inst.sendChatMessage(content)
     setInput('')
     setAutoScroll(true)
   }
