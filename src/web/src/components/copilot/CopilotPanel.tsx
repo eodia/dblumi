@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { settingsApi } from '@/api/settings'
 import { Bot, Send, Copy, Play, Loader2, X, Sparkles } from 'lucide-react'
@@ -9,7 +9,65 @@ import { streamCopilot, type CopilotMessage, type CopilotContext } from '@/api/c
 import { SqlHighlight } from './SqlHighlight'
 import { useI18n } from '@/i18n'
 
-// ── Markdown-ish renderer with SQL syntax highlighting ──
+// ── Markdown inline: **bold**, *italic*, `code` ──
+function parseInline(text: string): React.ReactNode[] {
+  const segments = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/g)
+  return segments.map((seg, i) => {
+    if (seg.startsWith('**') && seg.endsWith('**') && seg.length > 4)
+      return <strong key={i} className="font-semibold">{seg.slice(2, -2)}</strong>
+    if (seg.startsWith('*') && seg.endsWith('*') && seg.length > 2)
+      return <em key={i}>{seg.slice(1, -1)}</em>
+    if (seg.startsWith('`') && seg.endsWith('`') && seg.length > 2)
+      return <code key={i} className="px-1 py-0.5 rounded bg-surface-overlay text-xs font-mono text-primary">{seg.slice(1, -1)}</code>
+    return seg || null
+  })
+}
+
+// ── Markdown block renderer ──
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split('\n')
+  const result: React.ReactNode[] = []
+  let listItems: string[] = []
+  let listType: 'ul' | 'ol' | null = null
+
+  const flushList = () => {
+    if (!listItems.length) return
+    result.push(
+      listType === 'ul'
+        ? <ul key={result.length} className="list-disc list-inside space-y-0.5 my-1 ml-1">{listItems.map((item, i) => <li key={i}>{parseInline(item)}</li>)}</ul>
+        : <ol key={result.length} className="list-decimal list-inside space-y-0.5 my-1 ml-1">{listItems.map((item, i) => <li key={i}>{parseInline(item)}</li>)}</ol>
+    )
+    listItems = []
+    listType = null
+  }
+
+  for (const line of lines) {
+    const ul = line.match(/^[-*+]\s+(.+)/)
+    const ol = line.match(/^\d+\.\s+(.+)/)
+    if (ul) {
+      if (listType === 'ol') flushList()
+      listType = 'ul'; listItems.push(ul[1]!)
+      continue
+    }
+    if (ol) {
+      if (listType === 'ul') flushList()
+      listType = 'ol'; listItems.push(ol[1]!)
+      continue
+    }
+    flushList()
+    const h3 = line.match(/^###\s+(.+)/)
+    const h2 = line.match(/^##\s+(.+)/)
+    const h1 = line.match(/^#\s+(.+)/)
+    if (h3) result.push(<h3 key={result.length} className="text-[13px] font-semibold mt-2 mb-0.5">{parseInline(h3[1]!)}</h3>)
+    else if (h2) result.push(<h2 key={result.length} className="text-sm font-semibold mt-2 mb-0.5">{parseInline(h2[1]!)}</h2>)
+    else if (h1) result.push(<h1 key={result.length} className="text-sm font-bold mt-2 mb-1">{parseInline(h1[1]!)}</h1>)
+    else if (line.trim()) result.push(<p key={result.length}>{parseInline(line)}</p>)
+  }
+  flushList()
+  return <>{result}</>
+}
+
+// ── Full message renderer with SQL syntax highlighting ──
 function MessageContent({ content, onInsertSql, t }: { content: string; onInsertSql: (sql: string) => void; t: (key: string) => string }) {
   const parts = content.split(/(```sql[\s\S]*?```|```[\s\S]*?```)/g)
 
@@ -51,15 +109,7 @@ function MessageContent({ content, onInsertSql, t }: { content: string; onInsert
           )
         }
 
-        // Inline code
-        const inlined = part.split(/(`[^`]+`)/).map((seg, j) => {
-          if (seg.startsWith('`') && seg.endsWith('`')) {
-            return <code key={j} className="px-1 py-0.5 rounded bg-surface-overlay text-xs font-mono text-primary">{seg.slice(1, -1)}</code>
-          }
-          return seg
-        })
-
-        return part.trim() ? <p key={i}>{inlined}</p> : null
+        return part.trim() ? <div key={i}>{renderMarkdown(part)}</div> : null
       })}
     </div>
   )
@@ -153,11 +203,16 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
       <div className="flex items-center gap-2 h-8 px-3 border-b border-border-subtle bg-surface flex-shrink-0">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
         <span className="text-xs font-semibold">{t('copilot.title')}</span>
-        <span className="text-[10px] text-text-muted">{copilotInfo?.provider === 'openai'
-          ? t('copilot.subtitleOpenai')
-          : copilotInfo?.provider === 'azure-openai'
-          ? t('copilot.subtitleAzure')
-          : t('copilot.subtitle')}</span>
+        <span className="text-[10px] text-text-muted">
+          {copilotInfo?.provider === 'openai'
+            ? t('copilot.subtitleOpenai')
+            : copilotInfo?.provider === 'azure-openai'
+            ? t('copilot.subtitleAzure')
+            : t('copilot.subtitle')}
+          {copilotInfo?.model && (
+            <span className="ml-1 opacity-60">· {copilotInfo.model}</span>
+          )}
+        </span>
         <div className="flex-1" />
         <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={onClose}>
           <X className="h-3 w-3" />
