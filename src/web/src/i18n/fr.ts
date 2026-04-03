@@ -207,6 +207,11 @@ export const fr = {
   'collab.disconnected': 'Déconnecté',
   'collab.reconnecting': 'Reconnexion...',
   'collab.participants': '{count} participant(s)',
+  'chat.title': 'Chat',
+  'chat.placeholder': 'Écrire un message...',
+  'chat.send': 'Envoyer',
+  'chat.noMessages': 'Aucun message',
+  'chat.scrollToUser': 'Aller au curseur',
 
   // ── Copilot ──
   'copilot.title': 'Copilot',
