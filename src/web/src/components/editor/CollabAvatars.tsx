@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Awareness } from 'y-protocols/awareness'
+import { MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -7,6 +8,7 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from '@/components/ui/tooltip'
+import { useI18n } from '@/i18n'
 
 type Participant = {
   clientId: number
@@ -21,10 +23,17 @@ const MAX_VISIBLE = 5
 export function CollabAvatars({
   awareness,
   currentUserId,
+  editorView,
+  unreadCount,
+  onToggleChat,
 }: {
   awareness: Awareness | null
   currentUserId: string
+  editorView: any | null
+  unreadCount: number
+  onToggleChat: () => void
 }) {
+  const { t } = useI18n()
   const [participants, setParticipants] = useState<Participant[]>([])
 
   useEffect(() => {
@@ -47,7 +56,18 @@ export function CollabAvatars({
     return () => { awareness.off('change', update) }
   }, [awareness, currentUserId])
 
-  if (participants.length === 0) return null
+  const scrollToCursor = (clientId: number) => {
+    if (!awareness || !editorView) return
+    const state = awareness.getStates().get(clientId)
+    const cursor = state?.cursor
+    if (cursor?.anchor != null) {
+      editorView.dispatch({
+        selection: { anchor: cursor.anchor, head: cursor.head ?? cursor.anchor },
+        scrollIntoView: true,
+      })
+      editorView.focus()
+    }
+  }
 
   const visible = participants.slice(0, MAX_VISIBLE)
   const overflow = participants.length - MAX_VISIBLE
@@ -59,7 +79,8 @@ export function CollabAvatars({
           <Tooltip key={p.clientId}>
             <TooltipTrigger asChild>
               <div
-                className="relative flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold cursor-default"
+                className="relative flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold cursor-pointer"
+                onClick={() => scrollToCursor(p.clientId)}
                 style={{
                   border: `2px solid ${p.color}`,
                   backgroundColor: p.avatarUrl ? 'transparent' : p.color + '25',
@@ -79,6 +100,7 @@ export function CollabAvatars({
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p className="text-xs">{p.name}</p>
+              <p className="text-[10px] text-muted-foreground">{t('chat.scrollToUser')}</p>
             </TooltipContent>
           </Tooltip>
         ))}
@@ -87,6 +109,25 @@ export function CollabAvatars({
             +{overflow}
           </div>
         )}
+        {/* Chat button */}
+        <div className="ml-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onToggleChat}
+                className="relative flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-accent transition-colors"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-destructive text-[9px] font-bold text-white flex items-center justify-center px-0.5">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('chat.title')}</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </TooltipProvider>
   )
