@@ -36,7 +36,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy, Share2, History } from 'lucide-react'
+import { FileCode2, Folder, FolderOpen, GripVertical, Pencil, Trash2, FolderInput, FolderPlus, Search, Copy, Share2, History, UserPlus } from 'lucide-react'
 import { savedQueriesApi, type SavedQuery } from '@/api/saved-queries'
 import { useEditorStore } from '@/stores/editor.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -131,7 +131,11 @@ function QueryItem({
               />
             ) : (<>
               <span className="truncate flex-1">{query.name}</span>
-              {query.shared && <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />}
+              {query.collaborative ? (
+                <UserPlus className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />
+              ) : query.shared && (
+                <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />
+              )}
             </>)}
           </div>
         </ContextMenuTrigger>
@@ -222,6 +226,7 @@ export function SavedQueriesPanel() {
   const [newFolderTarget, setNewFolderTarget] = useState<string | null>(null) // query id
   const [shareQueryId, setShareQueryId] = useState<string | null>(null)
   const [shareIds, setShareIds] = useState<string[]>([])
+  const [collabIds, setCollabIds] = useState<string[]>([])
   const [timelineQueryId, setTimelineQueryId] = useState<string | null>(null)
 
   // Load groups + users for sharing (available to all authenticated users)
@@ -239,11 +244,25 @@ export function SavedQueriesPanel() {
   const [sharesSynced, setSharesSynced] = useState<string | null>(null)
   if (querySharesData && shareQueryId && sharesSynced !== shareQueryId) {
     setShareIds([
-      ...(querySharesData.groups ?? []).map((g) => `g:${g.id}`),
-      ...(querySharesData.users ?? []).map((u) => `u:${u.id}`),
+      ...(querySharesData.groups ?? []).filter((g) => !g.collaborative).map((g) => `g:${g.id}`),
+      ...(querySharesData.users ?? []).filter((u) => !u.collaborative).map((u) => `u:${u.id}`),
+    ])
+    setCollabIds([
+      ...(querySharesData.groups ?? []).filter((g) => g.collaborative).map((g) => `g:${g.id}`),
+      ...(querySharesData.users ?? []).filter((u) => u.collaborative).map((u) => `u:${u.id}`),
     ])
     setSharesSynced(shareQueryId)
   }
+
+  const handleShareChange = (ids: string[]) => {
+    setShareIds(ids)
+    setCollabIds((prev) => prev.filter((id) => !ids.includes(id)))
+  }
+  const handleCollabChange = (ids: string[]) => {
+    setCollabIds(ids)
+    setShareIds((prev) => prev.filter((id) => !ids.includes(id)))
+  }
+
   const [newFolderName, setNewFolderName] = useState('')
 
   const { data } = useQuery({
@@ -474,7 +493,11 @@ export function SavedQueriesPanel() {
                         >
                           <FileCode2 className="h-3 w-3 flex-shrink-0 text-primary/60" />
                           <span className="truncate flex-1">{q.name}</span>
-                          <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />
+                          {q.isCollaborator ? (
+                            <UserPlus className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />
+                          ) : (
+                            <Share2 className="h-2.5 w-2.5 flex-shrink-0 text-text-muted/40" />
+                          )}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="right">
@@ -491,27 +514,45 @@ export function SavedQueriesPanel() {
       </DndContext>
 
       {/* Share query dialog */}
-      <Dialog open={shareQueryId !== null} onOpenChange={(o) => { if (!o) { setShareQueryId(null); setSharesSynced(null) } }}>
+      <Dialog open={shareQueryId !== null} onOpenChange={(o) => { if (!o) { setShareQueryId(null); setSharesSynced(null); setCollabIds([]) } }}>
         <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
           <DialogHeader><DialogTitle className="text-base">{t('sq.shareTitle')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <ComboboxChips
-              options={[
-                ...shareGroups.map((g) => ({ id: `g:${g.id}`, label: g.name, color: g.color ?? undefined })),
-                ...shareUsers.map((u) => ({ id: `u:${u.id}`, label: `${u.name} (${u.email})`, minQuery: 3 })),
-              ]}
-              selected={shareIds}
-              onChange={setShareIds}
-              placeholder={t('admin.addMembers')}
-            />
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('sq.share')}</Label>
+              <ComboboxChips
+                options={[
+                  ...shareGroups.map((g) => ({ id: `g:${g.id}`, label: g.name, color: g.color ?? undefined })),
+                  ...shareUsers.map((u) => ({ id: `u:${u.id}`, label: `${u.name} (${u.email})`, minQuery: 3 })),
+                ]}
+                selected={shareIds}
+                onChange={handleShareChange}
+                placeholder={t('admin.addMembers')}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('sq.collaborative')}</Label>
+              <p className="text-[11px] text-muted-foreground">{t('sq.collaborativeHint')}</p>
+              <ComboboxChips
+                options={[
+                  ...shareGroups.map((g) => ({ id: `g:${g.id}`, label: g.name, color: g.color ?? undefined })),
+                  ...shareUsers.map((u) => ({ id: `u:${u.id}`, label: `${u.name} (${u.email})`, minQuery: 3 })),
+                ]}
+                selected={collabIds}
+                onChange={handleCollabChange}
+                placeholder={t('admin.addMembers')}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => { setShareQueryId(null); setSharesSynced(null) }}>{t('common.cancel')}</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShareQueryId(null); setSharesSynced(null); setCollabIds([]) }}>{t('common.cancel')}</Button>
             <Button size="sm" onClick={() => {
               if (!shareQueryId) return
               const groupIds = shareIds.filter((id) => id.startsWith('g:')).map((id) => id.slice(2))
               const userIds = shareIds.filter((id) => id.startsWith('u:')).map((id) => id.slice(2))
-              savedQueriesApi.setShares(shareQueryId, groupIds, userIds).then(() => {
+              const collabGroupIds = collabIds.filter((id) => id.startsWith('g:')).map((id) => id.slice(2))
+              const collabUserIds = collabIds.filter((id) => id.startsWith('u:')).map((id) => id.slice(2))
+              savedQueriesApi.setShares(shareQueryId, groupIds, userIds, collabGroupIds, collabUserIds).then(() => {
                 qc.invalidateQueries({ queryKey: ['saved-queries'] })
                 qc.invalidateQueries({ queryKey: ['query-shares'] })
                 setShareQueryId(null)
