@@ -106,7 +106,7 @@ export async function handleCollabConnection(
   encoding.writeVarUint8Array(awarenessEncoder, awarenessStates)
   ws.send(encoding.toUint8Array(awarenessEncoder))
 
-  ws.on('message', (rawData: ArrayBuffer | Buffer) => {
+  ws.on('message', async (rawData: ArrayBuffer | Buffer) => {
     const data = new Uint8Array(rawData instanceof ArrayBuffer ? rawData : rawData.buffer)
     const decoder = decoding.createDecoder(data)
     const msgType = decoding.readVarUint(decoder)
