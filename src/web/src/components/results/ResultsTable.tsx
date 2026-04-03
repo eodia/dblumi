@@ -459,6 +459,10 @@ function isNumericType(dt: string) {
   const l = dt.toLowerCase()
   return ['integer', 'int', 'int2', 'int4', 'int8', 'smallint', 'bigint', 'serial', 'float4', 'float8', 'numeric', 'decimal', 'real', 'double precision', 'double'].includes(l)
 }
+function isTextType(dt: string) {
+  const l = dt.toLowerCase()
+  return l === 'text' || l === 'clob' || l.startsWith('tinytext') || l.startsWith('mediumtext') || l.startsWith('longtext') || l.startsWith('varchar') || l.startsWith('character varying') || l.startsWith('nvarchar')
+}
 
 function TypedField({ col, value, onChange }: { col: QueryColumn; value: string; onChange: (v: string) => void }) {
   const { t } = useI18n()
@@ -532,6 +536,10 @@ function TypedField({ col, value, onChange }: { col: QueryColumn; value: string;
 
   if (isNumericType(dt)) {
     return <Input type="number" value={value} onChange={(e) => onChange(e.target.value)} placeholder="NULL" className="h-8 text-xs" />
+  }
+
+  if (isTextType(dt)) {
+    return <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder="NULL" rows={4} className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
   }
 
   return <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="NULL" className="h-8 text-xs" />

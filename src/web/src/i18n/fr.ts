@@ -35,6 +35,7 @@ export const fr = {
   'overview.connected': 'Connecté',
   'overview.disconnected': 'Déconnecté',
   'overview.latency': 'Latence',
+  'overview.latencyTooltip': 'Tester la connexion et mesurer la latence',
   'overview.version': 'Version serveur',
   'overview.encoding': 'Encodage',
   'overview.timezone': 'Fuseau horaire',
@@ -51,6 +52,8 @@ export const fr = {
   'overview.noSaved': 'Aucune requête sauvegardée',
   'overview.pin': 'Épingler',
   'overview.unpin': 'Désépingler',
+  'overview.showMore': '+ {count} de plus…',
+  'overview.queryHistory': 'Historique des requêtes exécutées',
 
   // ── Connections ──
   'conn.none': 'Aucune connexion',

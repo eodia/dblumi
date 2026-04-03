@@ -1271,7 +1271,7 @@ function AppShellInner({
           {page === 'admin' && user?.role === 'admin' ? (
             <AdminPage />
           ) : page === 'overview' ? (
-            <OverviewPage />
+            <OverviewPage onNavigate={setPage} />
           ) : (
             <TooltipProvider delayDuration={300}>
               <UnifiedEditorArea onSaveNew={() => setSaveOpen(true)} onSaveAs={() => setSaveOpen(true)} />

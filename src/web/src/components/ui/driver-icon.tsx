@@ -63,6 +63,24 @@ function envDotClass(env?: string | null): string {
   }
 }
 
+export function envIconClass(env?: string | null): string {
+  switch (env?.toLowerCase()) {
+    case 'prod':    return 'text-destructive'
+    case 'staging': return 'text-warning'
+    case 'dev':     return 'text-primary'
+    default:        return 'text-muted-foreground'
+  }
+}
+
+export function envBadgeClass(env?: string | null): string {
+  switch (env?.toLowerCase()) {
+    case 'prod':    return 'bg-destructive/15 text-destructive border-destructive/30'
+    case 'staging': return 'bg-warning/15 text-warning border-warning/30'
+    case 'dev':     return 'bg-primary/15 text-primary border-primary/30'
+    default:        return 'bg-muted text-muted-foreground border-border'
+  }
+}
+
 export function DriverIcon({ driver, className, environment }: { driver: string; className?: string; environment?: string | null }) {
   const iconProps = className ? { className } : {}
   let icon: React.ReactNode

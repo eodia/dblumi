@@ -35,6 +35,7 @@ export const en = {
   'overview.connected': 'Connected',
   'overview.disconnected': 'Disconnected',
   'overview.latency': 'Latency',
+  'overview.latencyTooltip': 'Test the connection and measure latency',
   'overview.version': 'Server version',
   'overview.encoding': 'Encoding',
   'overview.timezone': 'Timezone',
@@ -51,6 +52,8 @@ export const en = {
   'overview.noSaved': 'No saved queries',
   'overview.pin': 'Pin',
   'overview.unpin': 'Unpin',
+  'overview.showMore': '+ {count} more…',
+  'overview.queryHistory': 'Query execution history',
 
   // ── Connections ──
   'conn.none': 'No connection',

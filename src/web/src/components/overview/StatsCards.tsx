@@ -1,8 +1,8 @@
 // src/web/src/components/overview/StatsCards.tsx
 import { useQuery } from '@tanstack/react-query'
-import { connectionsApi, type SchemaTable, type DbStats } from '@/api/connections'
+import { connectionsApi, type SchemaTable } from '@/api/connections'
 import { useI18n } from '@/i18n'
-import { Table2, Eye, Zap, HardDrive } from 'lucide-react'
+import { Table2, Eye, Zap, HardDrive, Globe, Type } from 'lucide-react'
 
 type Props = { connectionId: string }
 
@@ -28,24 +28,55 @@ export function StatsCards({ connectionId }: Props) {
   const funcCount = schema?.functions?.length ?? '—'
   const dbSize = stats?.sizePretty ?? '—'
 
-  const items = [
-    { label: t('overview.tables'), value: tableCount, icon: Table2, color: 'text-blue-400' },
-    { label: t('overview.views'), value: viewCount, icon: Eye, color: 'text-violet-400' },
-    { label: t('overview.functions'), value: funcCount, icon: Zap, color: 'text-amber-400' },
-    { label: t('overview.dbSize'), value: dbSize, icon: HardDrive, color: 'text-emerald-400' },
-  ]
-
   return (
     <div className="grid grid-cols-4 gap-3">
-      {items.map(({ label, value, icon: Icon, color }) => (
-        <div key={label} className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
-          <Icon className={`h-8 w-8 ${color} flex-shrink-0 opacity-80`} />
-          <div>
-            <p className="text-2xl font-semibold tabular-nums">{value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+      {/* Tables */}
+      <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+        <Table2 className="h-8 w-8 text-blue-400 flex-shrink-0 opacity-80" />
+        <div>
+          <p className="text-2xl font-semibold tabular-nums">{tableCount}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t('overview.tables')}</p>
+        </div>
+      </div>
+
+      {/* Views + Functions merged */}
+      <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-4">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-violet-400 opacity-80 flex-shrink-0" />
+            <span className="text-sm font-semibold tabular-nums">{viewCount}</span>
+            <span className="text-xs text-muted-foreground">{t('overview.views')}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-amber-400 opacity-80 flex-shrink-0" />
+            <span className="text-sm font-semibold tabular-nums">{funcCount}</span>
+            <span className="text-xs text-muted-foreground">{t('overview.functions')}</span>
           </div>
         </div>
-      ))}
+      </div>
+
+      {/* DB Size */}
+      <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+        <HardDrive className="h-8 w-8 text-emerald-400 flex-shrink-0 opacity-80" />
+        <div>
+          <p className="text-2xl font-semibold tabular-nums">{dbSize}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t('overview.dbSize')}</p>
+        </div>
+      </div>
+
+      {/* Health — encoding · timezone */}
+      <div className="rounded-lg border border-border bg-card px-4 py-3 flex flex-col justify-center gap-1.5">
+        <div className="flex items-center gap-2">
+          <Type className="h-3.5 w-3.5 text-violet-400 opacity-80 flex-shrink-0" />
+          <span className="text-xs text-muted-foreground w-16 flex-shrink-0">{t('overview.encoding')}</span>
+          <span className="text-xs font-medium truncate">{stats?.encoding ?? '—'}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Globe className="h-3.5 w-3.5 text-emerald-400 opacity-80 flex-shrink-0" />
+          <span className="text-xs text-muted-foreground w-16 flex-shrink-0">{t('overview.timezone')}</span>
+          <span className="text-xs font-medium truncate">{stats?.timezone ?? '—'}</span>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,12 +1,12 @@
 // src/web/src/components/overview/ErdDiagram.tsx
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { connectionsApi, type SchemaTable } from '@/api/connections'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
 import { Table2, Eye } from 'lucide-react'
 
-type Props = { connectionId: string }
+type Props = { connectionId: string; onNavigate: (page: 'sql-editor' | 'tables') => void }
 
 const NODE_W = 240
 const HEADER_H = 32
@@ -73,7 +73,7 @@ function buildEdges(nodes: LayoutNode[]): EdgePath[] {
   return edges
 }
 
-export function ErdDiagram({ connectionId }: Props) {
+export function ErdDiagram({ connectionId, onNavigate }: Props) {
   const { t } = useI18n()
   const { openTable } = useEditorStore()
 
@@ -104,11 +104,18 @@ export function ErdDiagram({ connectionId }: Props) {
     setTransform((t) => ({ ...t, x: t.x + dx, y: t.y + dy }))
   }, [])
 
-  const onWheel = useCallback((e: React.WheelEvent) => {
+  const onWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
     const factor = e.deltaY > 0 ? 0.9 : 1.1
     setTransform((t) => ({ ...t, scale: Math.max(0.15, Math.min(3, t.scale * factor)) }))
   }, [])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [onWheel, isLoading])
 
   if (isLoading) return <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Loading…</div>
 
@@ -133,7 +140,6 @@ export function ErdDiagram({ connectionId }: Props) {
         onMouseMove={onMouseMove}
         onMouseUp={() => { isDragging.current = false }}
         onMouseLeave={() => { isDragging.current = false }}
-        onWheel={onWheel}
       >
         <div
           style={{
@@ -178,7 +184,7 @@ export function ErdDiagram({ connectionId }: Props) {
               <div
                 className="flex items-center gap-1.5 px-2.5 border-b border-border bg-surface-raised cursor-pointer hover:bg-surface-overlay transition-colors"
                 style={{ height: HEADER_H }}
-                onClick={() => openTable(node.name)}
+                onClick={() => { openTable(node.name); onNavigate('sql-editor') }}
               >
                 {node.type === 'view'
                   ? <Eye className="h-3 w-3 text-violet-400 flex-shrink-0" />
