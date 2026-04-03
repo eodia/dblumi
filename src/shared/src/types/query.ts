@@ -37,3 +37,22 @@ export const SavedQuerySchema = z.object({
   updatedAt: z.string().datetime(),
 })
 export type SavedQuery = z.infer<typeof SavedQuerySchema>
+
+export const SavedQueryVersionSchema = z.object({
+  id: z.string().uuid(),
+  queryId: z.string().uuid(),
+  sql: z.string(),
+  label: z.string().nullable(),
+  editedBy: z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+  }),
+  createdAt: z.string().datetime(),
+})
+export type SavedQueryVersion = z.infer<typeof SavedQueryVersionSchema>
+
+export const VersionsResponseSchema = z.object({
+  versions: z.array(SavedQueryVersionSchema),
+  nextCursor: z.string().nullable(),
+})
+export type VersionsResponse = z.infer<typeof VersionsResponseSchema>
