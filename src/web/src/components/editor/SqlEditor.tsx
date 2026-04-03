@@ -34,6 +34,10 @@ import { lintGutter, linter, type Diagnostic } from '@codemirror/lint'
 import { sql, PostgreSQL, MySQL, type SQLNamespace } from '@codemirror/lang-sql'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { format as formatSql } from 'sql-formatter'
+import { createCollabInstance, type CollabInstance } from '@/collab/collab-provider'
+import { collabExtensions } from '@/collab/collab-extensions'
+import { CollabAvatars } from './CollabAvatars'
+import { useAuthStore } from '@/stores/auth.store'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
 import { connectionsApi, type Connection, type SchemaTable, type SchemaFunction } from '@/api/connections'
@@ -305,12 +309,17 @@ export function SqlEditor({ onSave }: Props) {
   const sqlCompartment = useRef(new Compartment())
   const fnCompartment = useRef(new Compartment())
   const phrasesCompartment = useRef(new Compartment())
+  const collabRef = useRef<CollabInstance | null>(null)
+  const collabCompartment = useRef(new Compartment())
+  const historyCompartment = useRef(new Compartment())
   const { locale, t } = useI18n()
 
   const { tabs, activeTabId, activeConnectionId, setSql, setSelection, executeQuery, executeSelection } = useEditorStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const sqlText = activeTab?.sql ?? ''
   const isRunning = activeTab?.result.status === 'running'
+  const user = useAuthStore((s) => s.user)
+  const isCollaborative = activeTab?.collaborative ?? false
 
   const { data: connData } = useQuery({
     queryKey: ['connections'],
@@ -348,7 +357,7 @@ export function SqlEditor({ onSave }: Props) {
           phrasesCompartment.current.of(getCmPhrases(locale)),
 
           // Core
-          history(),
+          historyCompartment.current.of(history()),
           drawSelection(),
           dropCursor(),
           EditorState.allowMultipleSelections.of(true),
@@ -419,6 +428,9 @@ export function SqlEditor({ onSave }: Props) {
 
           // Line wrapping
           EditorView.lineWrapping,
+
+          // Collab (empty by default, reconfigured when collaborative)
+          collabCompartment.current.of([]),
         ],
       }),
       parent: containerRef.current,
@@ -458,6 +470,54 @@ export function SqlEditor({ onSave }: Props) {
       view.dispatch({ changes: { from: 0, to: current.length, insert: sqlText } })
     }
   }, [activeTabId, sqlText])
+
+  // Manage collab connection lifecycle
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view || !activeTab) return
+
+    if (isCollaborative && activeTab.savedQueryId && user) {
+      const tokenMatch = document.cookie.match(/dblumi_token=([^;]+)/)
+      const token = tokenMatch?.[1]
+      if (!token) return
+
+      const instance = createCollabInstance(
+        activeTab.savedQueryId,
+        token,
+        { userId: user.id, name: user.name, avatarUrl: (user as any).avatarUrl ?? null },
+      )
+      collabRef.current = instance
+
+      // Enable collab extensions, disable history
+      view.dispatch({
+        effects: [
+          collabCompartment.current.reconfigure(
+            collabExtensions(instance.ytext, instance.provider.awareness),
+          ),
+          historyCompartment.current.reconfigure([]),
+        ],
+      })
+
+      // Sync Yjs text changes back to store
+      const observer = () => {
+        const text = instance.ytext.toString()
+        setSql(text)
+      }
+      instance.ytext.observe(observer)
+
+      return () => {
+        instance.ytext.unobserve(observer)
+        view.dispatch({
+          effects: [
+            collabCompartment.current.reconfigure([]),
+            historyCompartment.current.reconfigure(history()),
+          ],
+        })
+        instance.destroy()
+        collabRef.current = null
+      }
+    }
+  }, [activeTabId, isCollaborative, activeTab?.savedQueryId, user])
 
   const handleCut = useCallback(async () => {
     const view = viewRef.current
@@ -514,39 +574,49 @@ export function SqlEditor({ onSave }: Props) {
   }, [activeConnection?.driver])
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div className="h-full">
-          <div
-            ref={containerRef}
-            className={cn('h-full overflow-hidden', isRunning && 'opacity-60 pointer-events-none')}
+    <>
+      {isCollaborative && (
+        <div className="flex items-center justify-end px-2 py-1 border-b border-border-subtle">
+          <CollabAvatars
+            awareness={collabRef.current?.provider.awareness ?? null}
+            currentUserId={user?.id ?? ''}
           />
         </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent className="w-52">
-        <ContextMenuItem onSelect={handleCut}>
-          {t('editor.cut')}
-          <ContextMenuShortcut>⌘X</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCopy}>
-          {t('editor.copy')}
-          <ContextMenuShortcut>⌘C</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuItem onSelect={handlePaste}>
-          {t('editor.paste')}
-          <ContextMenuShortcut>⌘V</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onSelect={handleSelectAll}>
-          {t('editor.selectAll')}
-          <ContextMenuShortcut>⌘A</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onSelect={handleBeautify}>
-          {t('editor.beautify')}
-          <ContextMenuShortcut>⇧⌘F</ContextMenuShortcut>
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+      )}
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="h-full">
+            <div
+              ref={containerRef}
+              className={cn('h-full overflow-hidden', isRunning && 'opacity-60 pointer-events-none')}
+            />
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-52">
+          <ContextMenuItem onSelect={handleCut}>
+            {t('editor.cut')}
+            <ContextMenuShortcut>⌘X</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={handleCopy}>
+            {t('editor.copy')}
+            <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={handlePaste}>
+            {t('editor.paste')}
+            <ContextMenuShortcut>⌘V</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={handleSelectAll}>
+            {t('editor.selectAll')}
+            <ContextMenuShortcut>⌘A</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={handleBeautify}>
+            {t('editor.beautify')}
+            <ContextMenuShortcut>⇧⌘F</ContextMenuShortcut>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    </>
   )
 }
