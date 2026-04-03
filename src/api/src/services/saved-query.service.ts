@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { db } from '../db/index.js'
 import { savedQueries, queryGroups, queryUsers, userGroups, users } from '../db/schema.js'
 import type { SavedQuery } from '@dblumi/shared'
+import { createVersion } from './saved-query-version.service.js'
 
 export class SavedQueryError extends Error {
   constructor(
@@ -136,7 +137,12 @@ export async function updateSavedQuery(
   data: UpdateSavedQuery,
   userId: string
 ): Promise<SavedQuery> {
-  await getSavedQuery(id, userId)
+  const existing = await getSavedQuery(id, userId)
+
+  // Snapshot the old SQL before overwriting if it changed
+  if (data.sql !== undefined && data.sql !== existing.sql) {
+    await createVersion(id, existing.sql, userId)
+  }
 
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() }
   if (data.name !== undefined) updates['name'] = data.name
