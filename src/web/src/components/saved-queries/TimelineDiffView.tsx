@@ -28,12 +28,16 @@ const readOnlyTheme = EditorView.theme({
   },
 })
 
-type Props = {
-  original: string
-  modified: string
-}
+const baseExtensions = [
+  sql(),
+  oneDark,
+  syntaxHighlighting(defaultHighlightStyle),
+  readOnlyTheme,
+  EditorView.editable.of(false),
+  EditorState.readOnly.of(true),
+]
 
-export function TimelineDiffView({ original, modified }: Props) {
+export function TimelineDiffView({ original, modified }: { original: string; modified: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
 
@@ -48,12 +52,7 @@ export function TimelineDiffView({ original, modified }: Props) {
     const view = new EditorView({
       doc: modified,
       extensions: [
-        sql(),
-        oneDark,
-        syntaxHighlighting(defaultHighlightStyle),
-        readOnlyTheme,
-        EditorView.editable.of(false),
-        EditorState.readOnly.of(true),
+        ...baseExtensions,
         unifiedMergeView({
           original,
           mergeControls: false,
@@ -70,6 +69,35 @@ export function TimelineDiffView({ original, modified }: Props) {
       viewRef.current = null
     }
   }, [original, modified])
+
+  return <div ref={containerRef} className="h-full overflow-hidden" />
+}
+
+export function SqlReadOnlyView({ value }: { value: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const viewRef = useRef<EditorView | null>(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    if (viewRef.current) {
+      viewRef.current.destroy()
+      viewRef.current = null
+    }
+
+    const view = new EditorView({
+      doc: value,
+      extensions: baseExtensions,
+      parent: containerRef.current,
+    })
+
+    viewRef.current = view
+
+    return () => {
+      view.destroy()
+      viewRef.current = null
+    }
+  }, [value])
 
   return <div ref={containerRef} className="h-full overflow-hidden" />
 }

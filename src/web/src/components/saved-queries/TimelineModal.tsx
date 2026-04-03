@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useI18n } from '@/i18n'
-import { useEditorStore } from '@/stores/editor.store'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { savedQueryVersionsApi, type SavedQueryVersion } from '@/api/saved-query-versions'
-import { TimelineDiffView } from './TimelineDiffView'
+import { TimelineDiffView, SqlReadOnlyView } from './TimelineDiffView'
 import { Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -23,16 +22,15 @@ type Props = {
   onOpenChange: (open: boolean) => void
 }
 
-type DiffState =
-  | { mode: 'current' }
-  | { mode: 'sequential'; versionId: string }
+type ViewState =
+  | { mode: 'view'; sql: string; label: string }
   | { mode: 'vsCurrent'; versionId: string }
   | { mode: 'compare'; versionA: string; versionB: string }
 
 export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChange }: Props) {
   const { t } = useI18n()
   const qc = useQueryClient()
-  const [diff, setDiff] = useState<DiffState>({ mode: 'current' })
+  const [view, setView] = useState<ViewState>({ mode: 'view', sql: currentSql, label: t('sq.timeline.current') })
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [editingLabel, setEditingLabel] = useState<string | null>(null)
   const [labelValue, setLabelValue] = useState('')
@@ -85,55 +83,47 @@ export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChan
     })
   }
 
-  // Update diff based on checked state
+  // Checkboxes trigger comparison mode
   useEffect(() => {
     const ids = Array.from(checked)
     if (ids.length === 2) {
-      setDiff({ mode: 'compare', versionA: ids[0]!, versionB: ids[1]! })
+      setView({ mode: 'compare', versionA: ids[0]!, versionB: ids[1]! })
     } else if (ids.length === 1) {
-      setDiff({ mode: 'vsCurrent', versionId: ids[0]! })
+      setView({ mode: 'vsCurrent', versionId: ids[0]! })
     }
   }, [checked])
 
-  // Click on version row (not checkbox)
+  // Click on version row = view its SQL (no diff)
   const selectVersion = (versionId: string) => {
     if (checked.size > 0) return
-    setDiff({ mode: 'sequential', versionId })
+    const v = versions.find((ver) => ver.id === versionId)
+    if (v) setView({ mode: 'view', sql: v.sql, label: formatDate(v.createdAt) })
   }
 
-  // Resolve SQL strings for diff
+  // Resolve SQL strings for comparison modes
   const getSqlById = (id: string) => versions.find((v) => v.id === id)?.sql ?? ''
 
   let original = ''
   let modified = ''
-  let diffLabel = ''
+  let headerLabel = ''
 
-  if (diff.mode === 'current') {
+  if (view.mode === 'view') {
+    headerLabel = view.label
+  } else if (view.mode === 'vsCurrent') {
+    original = getSqlById(view.versionId)
     modified = currentSql
-    diffLabel = t('sq.timeline.current')
-  } else if (diff.mode === 'sequential') {
-    const idx = versions.findIndex((v) => v.id === diff.versionId)
-    const version = versions[idx]
-    const prev = versions[idx + 1]
-    original = prev?.sql ?? ''
-    modified = version?.sql ?? ''
-    diffLabel = t('sq.timeline.sequential')
-  } else if (diff.mode === 'vsCurrent') {
-    original = getSqlById(diff.versionId)
-    modified = currentSql
-    diffLabel = t('sq.timeline.vsCurrent')
-  } else if (diff.mode === 'compare') {
-    // Order: older first (original) → newer (modified)
-    const idxA = versions.findIndex((v) => v.id === diff.versionA)
-    const idxB = versions.findIndex((v) => v.id === diff.versionB)
+    headerLabel = t('sq.timeline.vsCurrent')
+  } else if (view.mode === 'compare') {
+    const idxA = versions.findIndex((v) => v.id === view.versionA)
+    const idxB = versions.findIndex((v) => v.id === view.versionB)
     if (idxA > idxB) {
-      original = getSqlById(diff.versionA)
-      modified = getSqlById(diff.versionB)
+      original = getSqlById(view.versionA)
+      modified = getSqlById(view.versionB)
     } else {
-      original = getSqlById(diff.versionB)
-      modified = getSqlById(diff.versionA)
+      original = getSqlById(view.versionB)
+      modified = getSqlById(view.versionA)
     }
-    diffLabel = t('sq.timeline.comparing')
+    headerLabel = t('sq.timeline.comparing')
   }
 
   const startEditLabel = (v: SavedQueryVersion) => {
@@ -172,9 +162,9 @@ export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChan
             <div
               className={cn(
                 'px-3 py-2.5 border-b border-border-subtle cursor-pointer transition-colors',
-                diff.mode === 'current' && 'bg-accent',
+                view.mode === 'view' && view.sql === currentSql && 'bg-accent',
               )}
-              onClick={() => { setChecked(new Set()); setDiff({ mode: 'current' }) }}
+              onClick={() => { setChecked(new Set()); setView({ mode: 'view', sql: currentSql, label: t('sq.timeline.current') }) }}
             >
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
@@ -188,7 +178,7 @@ export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChan
             )}
 
             {versions.map((v) => {
-              const isSelected = diff.mode === 'sequential' && diff.versionId === v.id
+              const isSelected = view.mode === 'view' && view.sql === v.sql && view.label === formatDate(v.createdAt)
               const isChecked = checked.has(v.id)
               return (
                 <div
@@ -261,14 +251,14 @@ export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChan
             )}
           </div>
 
-          {/* Right panel: diff view */}
+          {/* Right panel: view or diff */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-4 py-2 border-b border-border-subtle flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{diffLabel}</span>
+              <span className="text-xs text-muted-foreground">{headerLabel}</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              {diff.mode === 'current' ? (
-                <pre className="p-4 text-xs text-foreground font-mono whitespace-pre-wrap overflow-auto h-full">{currentSql}</pre>
+              {view.mode === 'view' ? (
+                <SqlReadOnlyView value={view.sql} />
               ) : (
                 <TimelineDiffView original={original} modified={modified} />
               )}
