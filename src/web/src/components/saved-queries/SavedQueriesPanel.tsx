@@ -366,7 +366,7 @@ export function SavedQueriesPanel() {
       key={q.id}
       query={q}
       folders={folders}
-      onLoad={() => { openQuery(q.sql, q.name, q.id); if (isMobile) setOpenMobile(false) }}
+      onLoad={() => { openQuery(q.sql, q.name, q.id, q.collaborative || false); if (isMobile) setOpenMobile(false) }}
       onRename={(name) => updateMutation.mutate({ id: q.id, data: { name } })}
       onDuplicate={() => {
         const payload: Parameters<typeof savedQueriesApi.create>[0] = {
@@ -489,7 +489,7 @@ export function SavedQueriesPanel() {
                       <TooltipTrigger asChild>
                         <div
                           className="group flex items-center gap-1.5 px-1 py-1 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-                          onClick={() => { openQuery(q.sql, q.name); if (isMobile) setOpenMobile(false) }}
+                          onClick={() => { openQuery(q.sql, q.name, q.isCollaborator ? q.id : undefined, q.isCollaborator || false); if (isMobile) setOpenMobile(false) }}
                         >
                           <FileCode2 className="h-3 w-3 flex-shrink-0 text-primary/60" />
                           <span className="truncate flex-1">{q.name}</span>
