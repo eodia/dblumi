@@ -191,6 +191,16 @@ export const fr = {
   'sq.saveDescriptionPlaceholder': 'Description courte...',
   'sq.saveAction': 'Sauvegarder',
   'sq.saved': 'Requête sauvegardée',
+  'sq.timeline': 'Timeline',
+  'sq.timeline.current': 'Actuel (éditeur)',
+  'sq.timeline.editing': 'En cours de modification',
+  'sq.timeline.comparing': 'Comparaison',
+  'sq.timeline.addLabel': 'Ajouter un label',
+  'sq.timeline.noVersions': 'Aucun historique de versions',
+  'sq.timeline.vs': 'vs',
+  'sq.timeline.sequential': 'vs version précédente',
+  'sq.timeline.vsCurrent': 'vs actuel',
+  'sq.timeline.labelSaved': 'Label enregistré',
 
   // ── Copilot ──
   'copilot.title': 'Copilot',
