@@ -139,6 +139,7 @@ export const queryGroups = sqliteTable('query_groups', {
   groupId: text('group_id')
     .notNull()
     .references(() => groups.id, { onDelete: 'cascade' }),
+  collaborative: integer('collaborative', { mode: 'boolean' }).notNull().default(false),
 })
 
 export const queryUsers = sqliteTable('query_users', {
@@ -148,4 +149,5 @@ export const queryUsers = sqliteTable('query_users', {
   userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  collaborative: integer('collaborative', { mode: 'boolean' }).notNull().default(false),
 })
