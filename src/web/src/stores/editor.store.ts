@@ -44,6 +44,7 @@ export type QueryTab = {
   savedQueryId: string | null
   functionParams: FunctionParam[]
   connectionId: string | null
+  collaborative: boolean
 }
 
 const DEFAULT_PAGE_SIZE = 100
@@ -78,7 +79,7 @@ type EditorState = {
   setSelection: (text: string) => void
   setSavedQueryId: (id: string | null) => void
   loadQuery: (sql: string, name: string) => void
-  openQuery: (sql: string, name: string, savedQueryId?: string) => void
+  openQuery: (sql: string, name: string, savedQueryId?: string, collaborative?: boolean) => void
   openTable: (tableName: string) => Promise<void>
   openFunction: (name: string, source: string, params: Array<{ name: string; type: string }>) => void
   setFunctionParams: (params: FunctionParam[]) => void
@@ -104,7 +105,7 @@ type EditorState = {
 }
 
 function makeQueryTab(n: number, connectionId: string | null = null): QueryTab {
-  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId }
+  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId, collaborative: false }
 }
 
 function makeTableTab(tableName: string, connectionId: string | null = null): QueryTab {
@@ -116,6 +117,7 @@ function makeTableTab(tableName: string, connectionId: string | null = null): Qu
     savedQueryId: null,
     functionParams: [],
     connectionId,
+    collaborative: false,
     result: emptyResult(),
   }
 }
@@ -367,7 +369,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })
   },
 
-  openQuery: (sql, name, savedQueryId) => {
+  openQuery: (sql, name, savedQueryId, collaborative) => {
     const { tabs, activeConnectionId } = get()
     const displayName = name.length > 20 ? name.slice(0, 20) + '…' : name
     const existing = tabs.find((t) => t.kind === 'query' && t.name === displayName)
@@ -380,6 +382,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       sql,
       name: displayName,
       savedQueryId: savedQueryId ?? null,
+      collaborative: collaborative ?? false,
     }
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
   },
