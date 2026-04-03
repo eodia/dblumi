@@ -85,6 +85,7 @@ function QueryItem({
   onDelete,
   onMoveToFolder,
   onRequestNewFolder,
+  isOwn,
 }: {
   query: SavedQuery
   folders: string[]
@@ -96,6 +97,7 @@ function QueryItem({
   onDelete: () => void
   onMoveToFolder: (folder: string | null) => void
   onRequestNewFolder: () => void
+  isOwn: boolean
 }) {
   const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: query.id })
@@ -190,7 +192,7 @@ function QueryItem({
             <History className="h-3.5 w-3.5" />
             {t('sq.timeline')}
           </ContextMenuItem>
-          {!query.shared && (<>
+          {isOwn && (<>
             <ContextMenuSeparator />
             <ContextMenuItem className="gap-2 text-xs" onClick={onShare}>
               <Share2 className="h-3.5 w-3.5" />
@@ -385,6 +387,7 @@ export function SavedQueriesPanel() {
         updateMutation.mutate({ id: q.id, data: { folder: folder ?? null } })
       }
       onRequestNewFolder={() => { setNewFolderTarget(q.id); setNewFolderName('') }}
+      isOwn={q.createdBy === userId}
     />
   )
 
