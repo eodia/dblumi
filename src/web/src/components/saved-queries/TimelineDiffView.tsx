@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { EditorView } from '@codemirror/view'
+import { EditorView, lineNumbers } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { unifiedMergeView } from '@codemirror/merge'
 import { sql } from '@codemirror/lang-sql'
@@ -23,12 +23,21 @@ const readOnlyTheme = EditorView.theme({
   '.cm-deletedChunk': {
     backgroundColor: 'rgba(239, 68, 68, 0.10)',
   },
+  '.cm-deletedChunk .cm-gutters': {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    color: '#ef4444',
+  },
   '.cm-insertedChunk': {
     backgroundColor: 'rgba(34, 197, 94, 0.10)',
+  },
+  '.cm-insertedChunk .cm-gutters': {
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    color: '#22c55e',
   },
 })
 
 const baseExtensions = [
+  lineNumbers(),
   sql(),
   oneDark,
   syntaxHighlighting(defaultHighlightStyle),
