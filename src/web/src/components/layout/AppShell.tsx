@@ -496,6 +496,9 @@ function SortableTab({
             <span className={cn('truncate max-w-[120px]', tab.kind === 'table' && 'font-mono')}>
               {tab.name}
             </span>
+            {tab.unreadChat > 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive flex-shrink-0" />
+            )}
           </div>
 
           <button
