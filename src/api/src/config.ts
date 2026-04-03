@@ -28,6 +28,9 @@ const ConfigSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  KEYCLOAK_ISSUER: z.string().url().optional(),
+  KEYCLOAK_CLIENT_ID: z.string().optional(),
+  KEYCLOAK_CLIENT_SECRET: z.string().optional(),
 })
 
 const result = ConfigSchema.safeParse(process.env)

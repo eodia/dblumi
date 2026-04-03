@@ -11,6 +11,7 @@ import { copilotRouter } from './routes/copilot.js'
 import { adminRouter } from './routes/admin.js'
 import { sharingRouter } from './routes/sharing.js'
 import { settingsRouter } from './routes/settings.js'
+import { keycloakRouter } from './routes/keycloak.js'
 
 const app = new Hono()
 
@@ -41,6 +42,7 @@ app.onError((err, c) => {
 // ── API routes ────────────────────────────────
 app.route('/api/health', health)
 app.route('/api/v1/auth', auth)
+app.route('/api/v1/auth/keycloak', keycloakRouter)
 app.route('/api/v1/connections', connectionsRouter)
 app.route('/api/v1/query', queryRouter)
 app.route('/api/v1/saved-queries', savedQueriesRouter)

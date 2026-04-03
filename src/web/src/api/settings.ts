@@ -7,4 +7,5 @@ export type CopilotInfo = {
 
 export const settingsApi = {
   getCopilotInfo: () => api.get<CopilotInfo>('/settings/copilot-info'),
+  getAuthProviders: () => api.get<{ keycloak: boolean; github: boolean; google: boolean }>('/settings/auth-providers'),
 }

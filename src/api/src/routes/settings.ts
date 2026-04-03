@@ -7,6 +7,14 @@ import type { AuthVariables } from '../middleware/auth.js'
 const settingsRouter = new Hono<AuthVariables>()
 settingsRouter.use('*', authMiddleware)
 
+settingsRouter.get('/auth-providers', (c) => {
+  return c.json({
+    keycloak: !!(config.KEYCLOAK_ISSUER && config.KEYCLOAK_CLIENT_ID && config.KEYCLOAK_CLIENT_SECRET),
+    github: !!(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET),
+    google: !!(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET),
+  })
+})
+
 settingsRouter.get('/copilot-info', (c) => {
   const provider = getActiveProvider()
   const model = provider === 'openai'

@@ -1,16 +1,23 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError } from '@/api/client'
 import { useI18n } from '@/i18n'
+import { settingsApi } from '@/api/settings'
 
 type Props = { onSwitchToRegister: () => void }
 
 export function LoginPage({ onSwitchToRegister }: Props) {
   const login = useAuthStore((s) => s.login)
   const { t } = useI18n()
+  const { data: authProviders } = useQuery({
+    queryKey: ['auth-providers'],
+    queryFn: settingsApi.getAuthProviders,
+    staleTime: Infinity,
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -53,6 +60,17 @@ export function LoginPage({ onSwitchToRegister }: Props) {
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg> : t('auth.login.submit')}
             </Button>
+            {authProviders?.keycloak && (
+              <a
+                href="/api/v1/auth/keycloak"
+                className="flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-surface-raised transition-colors"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 4.5c4.142 0 7.5 3.358 7.5 7.5s-3.358 7.5-7.5 7.5S4.5 16.142 4.5 12 7.858 4.5 12 4.5zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11z"/>
+                </svg>
+                {t('auth.keycloak')}
+              </a>
+            )}
           </form>
         </div>
         <p className="mt-6 text-center text-xs text-text-muted">

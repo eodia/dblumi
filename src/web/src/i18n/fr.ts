@@ -7,6 +7,7 @@ export const fr = {
   'auth.login.error': 'Connexion impossible.',
   'auth.login.noAccount': 'Pas encore de compte ?',
   'auth.login.createAccount': 'Créer un compte',
+  'auth.keycloak': 'Continuer avec Keycloak',
   'auth.register.title': 'Créez votre compte administrateur',
   'auth.register.name': 'Nom',
   'auth.register.email': 'Email',

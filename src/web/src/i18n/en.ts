@@ -7,6 +7,7 @@ export const en = {
   'auth.login.error': 'Unable to sign in.',
   'auth.login.noAccount': 'Don\'t have an account?',
   'auth.login.createAccount': 'Create an account',
+  'auth.keycloak': 'Continue with Keycloak',
   'auth.register.title': 'Create your admin account',
   'auth.register.name': 'Name',
   'auth.register.email': 'Email',
