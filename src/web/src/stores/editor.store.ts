@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
 import { readSSE } from '../api/client'
 
@@ -330,11 +331,25 @@ async function fetchTotalCount(
 
 // ── Store ───────────────────────────────────────
 
-const initialTab = makeQueryTab(1)
+type PersistedState = {
+  tabs: QueryTab[]
+  activeTabId: string
+}
 
-export const useEditorStore = create<EditorState>((set, get) => ({
-  tabs: [initialTab],
-  activeTabId: initialTab.id,
+function partialize(state: EditorState): PersistedState {
+  return {
+    tabs: state.tabs.map((t) => ({ ...t, result: emptyResult(), unreadChat: 0 })),
+    activeTabId: state.activeTabId,
+  }
+}
+
+const fallbackTab = makeQueryTab(1)
+
+export const useEditorStore = create<EditorState>()(
+  persist(
+    (set, get) => ({
+      tabs: [fallbackTab],
+      activeTabId: fallbackTab.id,
   activeConnectionId: null,
   selection: '',
   pendingCsvImport: null,
@@ -650,4 +665,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   resetUnread: (tabId) => set((s) => ({
     tabs: s.tabs.map((t) => t.id === tabId ? { ...t, unreadChat: 0 } : t),
   })),
-}))
+    }),
+    {
+      name: 'dblumi:editor-tabs',
+      version: 1,
+      partialize,
+    },
+  ),
+)
