@@ -1,0 +1,35 @@
+---
+title: dblumi
+description: The modern SQL client with AI, built for developers
+template: splash
+hero:
+  tagline: The modern SQL client with AI, built for developers
+  actions:
+    - text: Get started
+      link: /guides/installation/
+      icon: right-arrow
+      variant: primary
+    - text: Live demo
+      link: https://dblumi.eodia.com/app
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why dblumi?
+
+<CardGrid stagger>
+  <Card title="SQL Editor with guardrails" icon="warning">
+    Write and execute SQL with confidence. Built-in safety checks detect destructive queries and require explicit confirmation before execution.
+  </Card>
+  <Card title="AI Copilot" icon="rocket">
+    Generate, explain, and optimize SQL with AI. Supports Anthropic Claude, OpenAI, and Azure OpenAI — bring your own API key.
+  </Card>
+  <Card title="Saved queries, shared with your team" icon="open-book">
+    Organize queries in folders, pin your favorites, and share them with teammates or groups. Everyone works from the same playbook.
+  </Card>
+  <Card title="PostgreSQL, MySQL, Oracle" icon="setting">
+    Connect to all major databases. Manage multiple connections with environment tags (prod, staging, dev) and per-connection access control.
+  </Card>
+</CardGrid>
