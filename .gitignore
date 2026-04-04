@@ -42,5 +42,8 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
+.superpowers
+/docs/superpowers
+
 # PlayWright Test results
 /test-results

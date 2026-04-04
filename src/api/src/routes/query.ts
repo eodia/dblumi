@@ -92,9 +92,10 @@ queryRouter.post(
       } catch (err) {
         const raw = err instanceof Error ? err.message : String(err)
         const code = err instanceof Error && 'code' in err ? (err as Record<string, unknown>).code : undefined
+        const detail = err instanceof Error && 'detail' in err ? (err as Record<string, unknown>).detail as string : undefined
         const message = raw || (code ? `Database error (${code})` : 'Connection or query failed')
         logger.warn({ connectionId, err, code }, 'Query execution error')
-        await send('error', { message })
+        await send('error', { message, detail })
       }
     })
   }

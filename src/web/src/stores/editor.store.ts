@@ -1,7 +1,20 @@
 import { create } from 'zustand'
+import { toast } from 'sonner'
 import { readSSE } from '../api/client'
 
 export type QueryStatus = 'idle' | 'running' | 'done' | 'error'
+
+function showSqlErrorToast(message: string, detail?: string) {
+  const full = detail ? `${message}\n${detail}` : message
+  toast.error(message, {
+    description: detail,
+    duration: Infinity,
+    action: {
+      label: 'Copy',
+      onClick: () => navigator.clipboard.writeText(full),
+    },
+  })
+}
 
 export type GuardrailInfo = {
   level: 1 | 2 | 3 | 4
@@ -227,10 +240,9 @@ async function runSse(
           },
         }))
       } else {
-        setTabs(patchResult(getTabs(), tabId, {
-          status: 'error',
-          error: (b['message'] ?? b['title'] ?? 'Unknown error') as string,
-        }))
+        const msg = (b['message'] ?? b['title'] ?? 'Unknown error') as string
+        setTabs(patchResult(getTabs(), tabId, { status: 'error', error: msg }))
+        showSqlErrorToast(msg)
       }
       return
     }
@@ -243,8 +255,10 @@ async function runSse(
       const d = data as { rowCount: number; durationMs: number }
       setTabs(patchResult(getTabs(), tabId, { status: 'done', rowCount: d.rowCount, durationMs: d.durationMs }))
     } else if (event === 'error') {
-      const d = data as { message: string }
-      setTabs(patchResult(getTabs(), tabId, { status: 'error', error: d.message || 'Query execution failed' }))
+      const d = data as { message: string; detail?: string }
+      const msg = d.message || 'Query execution failed'
+      setTabs(patchResult(getTabs(), tabId, { status: 'error', error: msg }))
+      showSqlErrorToast(msg, d.detail)
     }
   }
 }
@@ -276,8 +290,10 @@ async function fetchPageSse(
       const d = data as { rowCount: number; durationMs: number }
       setTabs(patchResult(getTabs(), tabId, { status: 'done', durationMs: d.durationMs }))
     } else if (event === 'error') {
-      const d = data as { message: string }
-      setTabs(patchResult(getTabs(), tabId, { status: 'error', error: d.message || 'Query execution failed' }))
+      const d = data as { message: string; detail?: string }
+      const msg = d.message || 'Query execution failed'
+      setTabs(patchResult(getTabs(), tabId, { status: 'error', error: msg }))
+      showSqlErrorToast(msg, d.detail)
     }
   }
 }

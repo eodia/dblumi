@@ -41,6 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { toast } from 'sonner'
 import { readSSE } from '@/api/client'
 import { useEditorStore, type QueryColumn, type SortBy, type SortEntry } from '@/stores/editor.store'
 import { cn } from '@/lib/utils'
@@ -880,8 +881,18 @@ export function ResultsTable() {
         const pk = r[pkCol.name]
         const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
         const sql = `UPDATE ${tableName} SET ${cn} = ${newVal} WHERE ${pkCol.name} = ${pl}`
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        for await (const _ of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) { /* drain */ }
+        for await (const { event, data } of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) {
+          if (event === 'error') {
+            const d = data as { message: string; detail?: string }
+            const msg = d.message || 'Query execution failed'
+            const full = d.detail ? `${msg}\n${d.detail}` : msg
+            toast.error(msg, { description: d.detail, duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(full) } })
+          } else if (event === '__http') {
+            const resp = data as { status: number; body: Record<string, unknown> }
+            const msg = (resp.body['message'] ?? resp.body['title'] ?? 'Unknown error') as string
+            toast.error(msg, { duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(msg) } })
+          }
+        }
       }
     }
 
@@ -907,8 +918,18 @@ export function ResultsTable() {
       const pk = row[pkCol.name]
       const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
       const sql = `UPDATE ${tableName} SET ${colName} = NULL WHERE ${pkCol.name} = ${pl}`
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for await (const _ of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) { /* drain */ }
+      for await (const { event, data } of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) {
+        if (event === 'error') {
+          const d = data as { message: string; detail?: string }
+          const msg = d.message || 'Query execution failed'
+          const full = d.detail ? `${msg}\n${d.detail}` : msg
+          toast.error(msg, { description: d.detail, duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(full) } })
+        } else if (event === '__http') {
+          const resp = data as { status: number; body: Record<string, unknown> }
+          const msg = (resp.body['message'] ?? resp.body['title'] ?? 'Unknown error') as string
+          toast.error(msg, { duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(msg) } })
+        }
+      }
     }
 
     setSelectedCells(new Set())
@@ -928,8 +949,18 @@ export function ResultsTable() {
       const pk = row[pkCol.name]
       const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
       const sql = `UPDATE ${tableName} SET ${colName} = ${newVal} WHERE ${pkCol.name} = ${pl}`
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for await (const _ of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) { /* drain */ }
+      for await (const { event, data } of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) {
+        if (event === 'error') {
+          const d = data as { message: string; detail?: string }
+          const msg = d.message || 'Query execution failed'
+          const full = d.detail ? `${msg}\n${d.detail}` : msg
+          toast.error(msg, { description: d.detail, duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(full) } })
+        } else if (event === '__http') {
+          const resp = data as { status: number; body: Record<string, unknown> }
+          const msg = (resp.body['message'] ?? resp.body['title'] ?? 'Unknown error') as string
+          toast.error(msg, { duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(msg) } })
+        }
+      }
     }
     setSelectedCells(new Set())
     await reloadTab()
