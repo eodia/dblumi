@@ -38,6 +38,7 @@ export function SaveQueryModal({ onClose }: Props) {
       qc.invalidateQueries({ queryKey: ['saved-queries'] })
       loadQuery(sql, name.trim())
       setSavedQueryId(data.savedQuery.id)
+      useEditorStore.getState().markSaved()
       toast.success(t('sq.saved'))
       onClose()
     },

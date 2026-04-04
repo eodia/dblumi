@@ -494,7 +494,7 @@ function SortableTab({
               : <TerminalSquare className="h-3 w-3 flex-shrink-0 opacity-70" style={connColor ? { color: connColor } : undefined} />
             }
             <span className={cn('truncate max-w-[120px]', tab.kind === 'table' && 'font-mono')}>
-              {tab.name}
+              {tab.originalSql !== undefined && tab.sql !== tab.originalSql && <span className="text-muted-foreground mr-0.5">*</span>}{tab.name}
             </span>
             {tab.unreadChat > 0 && (
               <span className="w-1.5 h-1.5 rounded-full bg-destructive flex-shrink-0" />
@@ -787,6 +787,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
     if (activeTab.savedQueryId) {
       savedQueriesApi.update(activeTab.savedQueryId, { sql: activeTab.sql }).then(() => {
         qcRef.current.invalidateQueries({ queryKey: ['saved-queries'] })
+        useEditorStore.getState().markSaved()
         toast.success(t('sq.saved'))
       })
     } else {

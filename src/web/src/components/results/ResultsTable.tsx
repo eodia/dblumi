@@ -43,7 +43,7 @@ import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { readSSE } from '@/api/client'
-import { useEditorStore, type QueryColumn, type SortBy, type SortEntry } from '@/stores/editor.store'
+import { useEditorStore, type QueryColumn, type SortBy, type SortEntry, type FilterRow } from '@/stores/editor.store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -81,7 +81,6 @@ const FILTER_OPERATORS = [
   { value: 'IS NOT NULL', label: 'IS NOT NULL' },
 ] as const
 
-type FilterRow = { column: string; operator: string; value: string }
 type CellRef = { rowIdx: number; colName: string }
 
 // ── Per-tab state that persists across tab switches ─
@@ -706,7 +705,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
 // ── Main component ───────────────────────────────
 export function ResultsTable() {
   const { t } = useI18n()
-  const { tabs, activeTabId, activeConnectionId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, executeSql, pendingCsvImport, setPendingCsvImport } = useEditorStore()
+  const { tabs, activeTabId, activeConnectionId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, executeSql, pendingCsvImport, setPendingCsvImport, setTabFilters } = useEditorStore()
   const tab = tabs.find((t) => t.id === activeTabId)
   const result = tab?.result
   const isTableMode = tab?.kind === 'table'
@@ -720,7 +719,14 @@ export function ResultsTable() {
   // ── Per-tab persistent local state ──────
   const getTabState = (): TabLocalState => {
     if (!activeTabId) return defaultTabState()
-    if (!_tabStates.has(activeTabId)) _tabStates.set(activeTabId, defaultTabState())
+    if (!_tabStates.has(activeTabId)) {
+      // Seed from persisted store data on first access
+      _tabStates.set(activeTabId, {
+        ...defaultTabState(),
+        filters: tab?.filters ?? [],
+        sorts: result?.sortMulti ?? [],
+      })
+    }
     return _tabStates.get(activeTabId)!
   }
   const setTabState = (patch: Partial<TabLocalState>) => {
@@ -1130,11 +1136,12 @@ export function ResultsTable() {
       })
       sql += ` WHERE ${clauses.join(' AND ')}`
     }
+    setTabFilters(filters)
     useEditorStore.getState().setSql(sql)
     void executeQuery(true)
     setTabState({ showFilter: false })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, tableName, executeQuery, activeTabId])
+  }, [filters, tableName, executeQuery, activeTabId, setTabFilters])
 
   // ── Apply multi-sort ────────────────────
   const handleApplySort = useCallback(() => {
@@ -1328,6 +1335,7 @@ export function ResultsTable() {
           setFilters={(f) => setTabState({ filters: f })} onApply={handleApplyFilter}
           onClear={() => {
             setTabState({ filters: [], showFilter: false })
+            setTabFilters([])
             if (!tableName) return
             useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`)
             void executeQuery(true)

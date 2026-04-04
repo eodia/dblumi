@@ -49,17 +49,21 @@ export type TabKind = 'query' | 'table' | 'function'
 
 export type FunctionParam = { name: string; type: string; value: string }
 
+export type FilterRow = { column: string; operator: string; value: string }
+
 export type QueryTab = {
   id: string
   name: string
   kind: TabKind
   sql: string
+  originalSql: string
   result: TabResult
   savedQueryId: string | null
   functionParams: FunctionParam[]
   connectionId: string | null
   collaborative: boolean
   unreadChat: number
+  filters: FilterRow[]
 }
 
 const DEFAULT_PAGE_SIZE = 100
@@ -117,6 +121,8 @@ type EditorState = {
   sortByMulti: (sorts: SortEntry[]) => Promise<void>
   clearGuardrail: () => void
   clearResults: () => void
+  setTabFilters: (filters: FilterRow[]) => void
+  markSaved: () => void
 
   chatOpen: boolean
   setChatOpen: (open: boolean) => void
@@ -125,20 +131,23 @@ type EditorState = {
 }
 
 function makeQueryTab(n: number, connectionId: string | null = null): QueryTab {
-  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId, collaborative: false, unreadChat: 0 }
+  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', originalSql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId, collaborative: false, unreadChat: 0, filters: [] }
 }
 
 function makeTableTab(tableName: string, connectionId: string | null = null): QueryTab {
+  const sql = `SELECT * FROM ${tableName}`
   return {
     id: crypto.randomUUID(),
     name: tableName,
     kind: 'table',
-    sql: `SELECT * FROM ${tableName}`,
+    sql,
+    originalSql: sql,
     savedQueryId: null,
     functionParams: [],
     connectionId,
     collaborative: false,
     unreadChat: 0,
+    filters: [],
     result: emptyResult(),
   }
 }
@@ -338,7 +347,12 @@ type PersistedState = {
 
 function partialize(state: EditorState): PersistedState {
   return {
-    tabs: state.tabs.map((t) => ({ ...t, result: emptyResult(), unreadChat: 0, collaborative: false })),
+    tabs: state.tabs.map((t) => ({
+      ...t,
+      result: { ...emptyResult(), sortBy: t.result.sortBy, sortMulti: t.result.sortMulti },
+      unreadChat: 0,
+      collaborative: false,
+    })),
     activeTabId: state.activeTabId,
   }
 }
@@ -364,6 +378,14 @@ export const useEditorStore = create<EditorState>()(
       updates.activeConnectionId = tab.connectionId
     }
     set(updates)
+    // Auto-run table tabs that have no results yet (e.g. restored from localStorage)
+    if (tab?.kind === 'table' && tab.result.status === 'idle' && tab.result.rows.length === 0 && tab.connectionId) {
+      const ps = tab.result.pageSize
+      void Promise.all([
+        runSse(tab.connectionId, tab.sql, tab.id, ps, 0, () => get().tabs, (tabs) => set({ tabs })),
+        fetchTotalCount(tab.connectionId, tab.sql, tab.id, get, set),
+      ])
+    }
   },
   setSelection: (text) => set({ selection: text }),
   setSavedQueryId: (id) => {
@@ -418,6 +440,7 @@ export const useEditorStore = create<EditorState>()(
     const tab: QueryTab = {
       ...makeQueryTab(tabs.filter((t) => t.kind === 'query').length + 1, activeConnectionId),
       sql,
+      originalSql: sql,
       name: displayName,
       savedQueryId: savedQueryId ?? null,
       collaborative: collaborative ?? false,
@@ -462,6 +485,8 @@ export const useEditorStore = create<EditorState>()(
       connectionId: activeConnectionId,
       collaborative: false,
       unreadChat: 0,
+      filters: [],
+      originalSql: source,
     }
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
   },
@@ -657,6 +682,16 @@ export const useEditorStore = create<EditorState>()(
   clearResults: () => {
     const { tabs, activeTabId } = get()
     set({ tabs: patchResult(tabs, activeTabId, emptyResult()) })
+  },
+
+  setTabFilters: (filters) => {
+    const { tabs, activeTabId } = get()
+    set({ tabs: tabs.map((t) => t.id === activeTabId ? { ...t, filters } : t) })
+  },
+
+  markSaved: () => {
+    const { tabs, activeTabId } = get()
+    set({ tabs: tabs.map((t) => t.id === activeTabId ? { ...t, originalSql: t.sql } : t) })
   },
 
   chatOpen: false,
