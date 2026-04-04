@@ -338,7 +338,7 @@ type PersistedState = {
 
 function partialize(state: EditorState): PersistedState {
   return {
-    tabs: state.tabs.map((t) => ({ ...t, result: emptyResult(), unreadChat: 0 })),
+    tabs: state.tabs.map((t) => ({ ...t, result: emptyResult(), unreadChat: 0, collaborative: false })),
     activeTabId: state.activeTabId,
   }
 }
@@ -460,6 +460,8 @@ export const useEditorStore = create<EditorState>()(
       savedQueryId: null,
       functionParams: params.map((p) => ({ ...p, value: '' })),
       connectionId: activeConnectionId,
+      collaborative: false,
+      unreadChat: 0,
     }
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
   },
@@ -670,6 +672,7 @@ export const useEditorStore = create<EditorState>()(
       name: 'dblumi:editor-tabs',
       version: 1,
       partialize,
+      migrate: (persisted, _fromVersion) => persisted as PersistedState,
     },
   ),
 )
