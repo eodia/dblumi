@@ -13,6 +13,7 @@ import { sharingRouter } from './routes/sharing.js'
 import { settingsRouter } from './routes/settings.js'
 import { keycloakRouter } from './routes/keycloak.js'
 import { docsRouter } from './routes/docs.js'
+import { dbUsersRouter } from './routes/db-users.js'
 
 const app = new Hono()
 
@@ -51,6 +52,7 @@ app.route('/api/v1/copilot', copilotRouter)
 app.route('/api/v1/admin', adminRouter)
 app.route('/api/v1/sharing', sharingRouter)
 app.route('/api/v1/settings', settingsRouter)
+app.route('/api/v1/connections/:connectionId/db-users', dbUsersRouter)
 
 // ── API Docs (Swagger UI) ─────────────────────
 app.route('/api/docs', docsRouter)
