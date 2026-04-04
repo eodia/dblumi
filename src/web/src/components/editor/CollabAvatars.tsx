@@ -116,7 +116,7 @@ export function CollabAvatars({
           </div>
         )}
         {/* Chat button */}
-        <div className="ml-2">
+        <div className="ml-4">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
