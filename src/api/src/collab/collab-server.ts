@@ -12,7 +12,7 @@ import { persistMessage } from '../services/collab-message.service.js'
 
 const MSG_SYNC = 0
 const MSG_AWARENESS = 1
-const MSG_CHAT = 2
+// MSG_CHAT removed — chat uses Y.Array synced via Yjs protocol
 
 type CollabConnection = {
   clientId: number
@@ -49,6 +49,24 @@ async function getOrCreateDoc(queryId: string): Promise<CollabDoc> {
 
   const collabDoc: CollabDoc = { doc, awareness, connections: new Map() }
   docs.set(queryId, collabDoc)
+
+  // Persist chat messages added to the Y.Array
+  const ychat = doc.getArray('chat')
+  ychat.observe((event) => {
+    if (event.changes.added.size > 0) {
+      event.changes.delta.forEach((d: any) => {
+        if (d.insert) {
+          for (const item of d.insert as any[]) {
+            if (item.userId && item.content) {
+              persistMessage(queryId, item.userId, item.content).catch((err) => {
+                logger.error({ err, queryId }, 'Failed to persist chat message')
+              })
+            }
+          }
+        }
+      })
+    }
+  })
 
   // Broadcast doc updates to all clients
   doc.on('update', (update: Uint8Array, origin: any) => {
@@ -121,7 +139,9 @@ export async function handleCollabConnection(
   ws.send(encoding.toUint8Array(awarenessEncoder))
 
   ws.on('message', async (rawData: ArrayBuffer | Buffer) => {
-    const data = new Uint8Array(rawData instanceof ArrayBuffer ? rawData : rawData.buffer)
+    const data = rawData instanceof Uint8Array
+      ? new Uint8Array(rawData.buffer, rawData.byteOffset, rawData.byteLength)
+      : new Uint8Array(rawData)
     const decoder = decoding.createDecoder(data)
     const msgType = decoding.readVarUint(decoder)
 
@@ -135,21 +155,6 @@ export async function handleCollabConnection(
     } else if (msgType === MSG_AWARENESS) {
       const update = decoding.readVarUint8Array(decoder)
       awarenessProtocol.applyAwarenessUpdate(collabDoc.awareness, update, ws)
-    } else if (msgType === MSG_CHAT) {
-      const content = decoding.readVarString(decoder)
-      const connInfo = collabDoc.connections.get(ws)
-      if (!connInfo || !content.trim()) return
-
-      const msg = await persistMessage(queryId, connInfo.userId, content.trim())
-      const chatEncoder = encoding.createEncoder()
-      encoding.writeVarUint(chatEncoder, MSG_CHAT)
-      encoding.writeVarString(chatEncoder, JSON.stringify(msg))
-      const chatMsg = encoding.toUint8Array(chatEncoder)
-      for (const [client] of collabDoc.connections) {
-        if (client.readyState === 1) {
-          client.send(chatMsg)
-        }
-      }
     }
   })
 

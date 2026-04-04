@@ -60,12 +60,18 @@ export function CollabAvatars({
     if (!awareness || !editorView) return
     const state = awareness.getStates().get(clientId)
     const cursor = state?.cursor
-    if (cursor?.anchor != null) {
+    if (cursor?.anchor == null) return
+    const docLen = editorView.state.doc.length
+    const anchor = Math.min(cursor.anchor, docLen)
+    const head = Math.min(cursor.head ?? anchor, docLen)
+    try {
       editorView.dispatch({
-        selection: { anchor: cursor.anchor, head: cursor.head ?? cursor.anchor },
+        selection: { anchor, head },
         scrollIntoView: true,
       })
       editorView.focus()
+    } catch {
+      // Cursor position may be stale — ignore
     }
   }
 

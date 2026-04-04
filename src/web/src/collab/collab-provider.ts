@@ -1,9 +1,5 @@
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
-import * as encoding from 'lib0/encoding'
-import * as decoding from 'lib0/decoding'
-
-const MSG_CHAT = 2
 
 const COLLAB_COLORS = [
   '#f87171', '#fb923c', '#facc15', '#4ade80',
@@ -58,46 +54,35 @@ export function createCollabInstance(
     color,
   })
 
-  // Chat message handling
+  // Chat via Y.Array — synced automatically by Yjs
+  const ychat = doc.getArray<Record<string, unknown>>('chat')
   const chatHandlers = new Set<(msg: any) => void>()
 
-  const setupWsListener = () => {
-    const ws = (provider as any).ws as WebSocket | null
-    if (!ws) return
-    const prevOnMessage = ws.onmessage
-    ws.onmessage = (event: MessageEvent) => {
-      if (prevOnMessage) prevOnMessage.call(ws, event)
-      try {
-        const data = new Uint8Array(event.data as ArrayBuffer)
-        const decoder = decoding.createDecoder(data)
-        const msgType = decoding.readVarUint(decoder)
-        if (msgType === MSG_CHAT) {
-          const jsonStr = decoding.readVarString(decoder)
-          const msg = JSON.parse(jsonStr)
-          chatHandlers.forEach((h) => h(msg))
+  ychat.observe((event) => {
+    if (event.changes.added.size > 0) {
+      // Get newly added items
+      let idx = 0
+      event.changes.delta.forEach((d: any) => {
+        if (d.retain) idx += d.retain
+        if (d.insert) {
+          for (const item of d.insert as any[]) {
+            chatHandlers.forEach((h) => h(item))
+          }
         }
-      } catch {
-        // Not a chat message — ignore
-      }
-    }
-  }
-
-  provider.on('status', ({ status }: { status: string }) => {
-    if (status === 'connected') {
-      setTimeout(setupWsListener, 50)
+      })
     }
   })
-  if (provider.wsconnected) {
-    setTimeout(setupWsListener, 50)
-  }
 
   const sendChatMessage = (content: string) => {
-    const ws = (provider as any).ws as WebSocket | null
-    if (!ws || ws.readyState !== 1) return
-    const encoder = encoding.createEncoder()
-    encoding.writeVarUint(encoder, MSG_CHAT)
-    encoding.writeVarString(encoder, content)
-    ws.send(encoding.toUint8Array(encoder))
+    const msg = {
+      id: crypto.randomUUID(),
+      userId: user.userId,
+      userName: user.name,
+      avatarUrl: user.avatarUrl,
+      content,
+      createdAt: new Date().toISOString(),
+    }
+    ychat.push([msg])
   }
 
   const onChatMessage = (handler: (msg: any) => void) => {
