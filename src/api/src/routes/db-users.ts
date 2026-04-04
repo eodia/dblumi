@@ -124,11 +124,6 @@ async function getPrivilegesMysql(pool: MySQLPool, username: string, host: strin
   }
 }
 
-function escapeMysqlId(name: string): string {
-  if (/`/.test(name)) throw new Error(`Invalid identifier: ${name}`)
-  return `\`${name}\``
-}
-
 async function applyMysqlServerPrivs(
   pool: MySQLPool, username: string, host: string, privs: Record<string, boolean>
 ): Promise<void> {
@@ -154,7 +149,7 @@ async function applyMysqlTablePrivs(
   )
   for (const r of existing as any[]) {
     await pool.execute(
-      `REVOKE ALL PRIVILEGES ON ${escapeMysqlId(r.Db)}.${escapeMysqlId(r.Table_name)} FROM ?@?`,
+      `REVOKE ALL PRIVILEGES ON ${pool.escapeId(r.Db)}.${pool.escapeId(r.Table_name)} FROM ?@?`,
       [username, host]
     )
   }
@@ -164,7 +159,7 @@ async function applyMysqlTablePrivs(
     const withGrant = tp.privileges.includes('GRANT')
     if (privNames) {
       await pool.execute(
-        `GRANT ${privNames} ON ${escapeMysqlId(tp.database)}.${escapeMysqlId(tp.table)} TO ?@?${withGrant ? ' WITH GRANT OPTION' : ''}`,
+        `GRANT ${privNames} ON ${pool.escapeId(tp.database)}.${pool.escapeId(tp.table)} TO ?@?${withGrant ? ' WITH GRANT OPTION' : ''}`,
         [username, host]
       )
     }
