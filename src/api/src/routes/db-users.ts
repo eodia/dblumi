@@ -84,6 +84,11 @@ const MYSQL_PRIV_COLS: Record<string, string> = {
 }
 
 // ── MySQL helpers ────────────────────────────────
+function escapeMysqlId(name: string): string {
+  if (/`/.test(name)) throw new Error(`Invalid identifier: ${name}`)
+  return `\`${name}\``
+}
+
 async function listUsersMysql(pool: MySQLPool): Promise<{ users: DbUser[]; count: number }> {
   const [rows] = await pool.execute<any[]>(
     'SELECT User AS username, Host AS host, plugin FROM mysql.user ORDER BY User, Host'
@@ -98,7 +103,8 @@ async function getPrivilegesMysql(pool: MySQLPool, username: string, host: strin
     `SELECT ${cols}, max_questions, max_updates, max_connections, max_user_connections FROM mysql.user WHERE User = ? AND Host = ?`,
     [username, host]
   )
-  const row = (rows as any[])[0] ?? {}
+  if (!(rows as any[]).length) throw new Error(`User '${username}'@'${host}' not found`)
+  const row = (rows as any[])[0]
   const serverPrivileges: Record<string, boolean> = {}
   for (const [col, priv] of Object.entries(MYSQL_PRIV_COLS)) {
     serverPrivileges[priv] = row[col] === 'Y'
@@ -149,7 +155,7 @@ async function applyMysqlTablePrivs(
   )
   for (const r of existing as any[]) {
     await pool.execute(
-      `REVOKE ALL PRIVILEGES ON ${pool.escapeId(r.Db)}.${pool.escapeId(r.Table_name)} FROM ?@?`,
+      `REVOKE ALL PRIVILEGES ON ${escapeMysqlId(r.Db)}.${escapeMysqlId(r.Table_name)} FROM ?@?`,
       [username, host]
     )
   }
@@ -159,7 +165,7 @@ async function applyMysqlTablePrivs(
     const withGrant = tp.privileges.includes('GRANT')
     if (privNames) {
       await pool.execute(
-        `GRANT ${privNames} ON ${pool.escapeId(tp.database)}.${pool.escapeId(tp.table)} TO ?@?${withGrant ? ' WITH GRANT OPTION' : ''}`,
+        `GRANT ${privNames} ON ${escapeMysqlId(tp.database)}.${escapeMysqlId(tp.table)} TO ?@?${withGrant ? ' WITH GRANT OPTION' : ''}`,
         [username, host]
       )
     }
@@ -218,7 +224,8 @@ async function getPrivilegesPg(pool: PgPool, username: string): Promise<DbUserPr
       'SELECT rolsuper, rolcreatedb, rolcreaterole, rolcanlogin, rolreplication, rolbypassrls, rolconnlimit FROM pg_roles WHERE rolname = $1',
       [username]
     )
-    const role = rows[0] ?? {}
+    if (!rows.length) throw new Error(`Role '${username}' not found`)
+    const role = rows[0]
     const serverPrivileges: Record<string, boolean> = {
       SUPERUSER: !!role.rolsuper,
       CREATEDB: !!role.rolcreatedb,
@@ -262,13 +269,17 @@ function pgRoleOpts(privs: Record<string, boolean>, connLimit: number): string {
 async function createUserPg(pool: PgPool, input: CreateUserInput): Promise<void> {
   const client = await pool.connect()
   try {
+    await client.query('BEGIN')
     const opts = pgRoleOpts(input.serverPrivileges, input.advanced.connectionLimit ?? -1)
-    const pwd = input.password.replace(/'/g, "''")
-    await client.query(`CREATE ROLE "${input.username}" WITH ${opts} PASSWORD '${pwd}'`)
+    await client.query(`CREATE ROLE "${input.username}" WITH ${opts} PASSWORD ${client.escapeLiteral(input.password)}`)
     for (const tp of input.tablePrivileges) {
       if (!tp.privileges.length) continue
       await client.query(`GRANT ${tp.privileges.join(', ')} ON "${tp.database}"."${tp.table}" TO "${input.username}"`)
     }
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
   } finally {
     client.release()
   }
@@ -277,11 +288,11 @@ async function createUserPg(pool: PgPool, input: CreateUserInput): Promise<void>
 async function updateUserPg(pool: PgPool, username: string, input: UpdateUserInput): Promise<void> {
   const client = await pool.connect()
   try {
+    await client.query('BEGIN')
     const opts = pgRoleOpts(input.serverPrivileges, input.advanced.connectionLimit ?? -1)
     await client.query(`ALTER ROLE "${username}" WITH ${opts}`)
     if (input.password) {
-      const pwd = input.password.replace(/'/g, "''")
-      await client.query(`ALTER ROLE "${username}" WITH PASSWORD '${pwd}'`)
+      await client.query(`ALTER ROLE "${username}" WITH PASSWORD ${client.escapeLiteral(input.password)}`)
     }
     const existing = await client.query(
       'SELECT table_schema AS "schema", table_name AS "table", privilege_type AS privilege FROM information_schema.role_table_grants WHERE grantee = $1',
@@ -301,6 +312,10 @@ async function updateUserPg(pool: PgPool, username: string, input: UpdateUserInp
       if (!tp.privileges.length) continue
       await client.query(`GRANT ${tp.privileges.join(', ')} ON "${tp.database}"."${tp.table}" TO "${username}"`)
     }
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
   } finally {
     client.release()
   }
@@ -339,6 +354,8 @@ async function getPrivilegesOracle(pool: OraclePool, username: string): Promise<
     const sysResult = await conn.execute('SELECT privilege FROM dba_sys_privs WHERE grantee = :1', [u])
     const tabResult = await conn.execute('SELECT owner, table_name, privilege FROM dba_tab_privs WHERE grantee = :1', [u])
     const profResult = await conn.execute('SELECT profile FROM dba_users WHERE username = :1', [u])
+    const profRows = (profResult.rows ?? []) as unknown[][]
+    if (!profRows.length) throw new Error(`User '${username}' not found`)
     const serverPrivileges: Record<string, boolean> = {}
     for (const r of (sysResult.rows ?? []) as unknown[][]) {
       serverPrivileges[r[0] as string] = true
@@ -349,7 +366,7 @@ async function getPrivilegesOracle(pool: OraclePool, username: string): Promise<
       if (!tableMap.has(key)) tableMap.set(key, { database: r[0] as string, table: r[1] as string, privileges: [] })
       tableMap.get(key)!.privileges.push(r[2] as string)
     }
-    const profile = (((profResult.rows ?? []) as unknown[][])[0]?.[0] as string) ?? ''
+    const profile = (profRows[0]?.[0] as string) ?? ''
     return {
       serverPrivileges,
       tablePrivileges: Array.from(tableMap.values()),
@@ -361,10 +378,10 @@ async function getPrivilegesOracle(pool: OraclePool, username: string): Promise<
 }
 
 async function createUserOracle(pool: OraclePool, input: CreateUserInput): Promise<void> {
+  if (input.password.includes('"')) throw new Error('Password must not contain double-quote characters')
   const conn = await pool.getConnection()
   try {
-    const pwd = input.password.replace(/"/g, '')
-    await conn.execute(`CREATE USER "${input.username}" IDENTIFIED BY "${pwd}"`)
+    await conn.execute(`CREATE USER "${input.username}" IDENTIFIED BY "${input.password}"`)
     for (const [priv, granted] of Object.entries(input.serverPrivileges)) {
       if (granted) await conn.execute(`GRANT ${priv} TO "${input.username}"`)
     }
@@ -379,11 +396,11 @@ async function createUserOracle(pool: OraclePool, input: CreateUserInput): Promi
 }
 
 async function updateUserOracle(pool: OraclePool, username: string, input: UpdateUserInput): Promise<void> {
+  if (input.password?.includes('"')) throw new Error('Password must not contain double-quote characters')
   const conn = await pool.getConnection()
   try {
     if (input.password) {
-      const pwd = input.password.replace(/"/g, '')
-      await conn.execute(`ALTER USER "${username}" IDENTIFIED BY "${pwd}"`)
+      await conn.execute(`ALTER USER "${username}" IDENTIFIED BY "${input.password}"`)
     }
     const u = username.toUpperCase()
     const sysResult = await conn.execute('SELECT privilege FROM dba_sys_privs WHERE grantee = :1', [u])
