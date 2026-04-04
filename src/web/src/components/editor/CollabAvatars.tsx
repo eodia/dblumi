@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import type { Awareness } from 'y-protocols/awareness'
 import { MessageSquare } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useEditorStore } from '@/stores/editor.store'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -34,6 +36,7 @@ export function CollabAvatars({
   onToggleChat: () => void
 }) {
   const { t } = useI18n()
+  const chatOpen = useEditorStore((s) => s.chatOpen)
   const [participants, setParticipants] = useState<Participant[]>([])
 
   useEffect(() => {
@@ -115,21 +118,24 @@ export function CollabAvatars({
             +{overflow}
           </div>
         )}
-        {/* Chat button */}
+        {/* Chat toggle */}
         <div className="ml-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant={chatOpen ? 'default' : 'ghost'}
+                size="sm"
                 onClick={onToggleChat}
-                className="relative flex items-center justify-center w-6 h-6 rounded-full bg-muted hover:bg-accent transition-colors"
+                className="relative gap-1.5 h-6 px-2 text-xs"
               >
-                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                <MessageSquare className="h-3 w-3" />
+                <span className="hidden sm:inline">{t('chat.title')}</span>
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full bg-destructive text-[9px] font-bold text-white flex items-center justify-center px-0.5">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">{t('chat.title')}</TooltipContent>
           </Tooltip>
