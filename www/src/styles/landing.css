@@ -302,10 +302,90 @@ body {
   width: 100%;
   max-width: 1100px;
   border-radius: 16px;
-  border: 1px solid var(--dl-border);
   background: var(--dl-surface);
-  overflow: hidden;
+  padding: 2px;
   box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 80px var(--dl-green-glow);
+}
+
+/* Animated clockwise green border */
+.dl-hero-visual::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--dl-border-angle, 0deg),
+    transparent 0%,
+    transparent 25%,
+    var(--dl-green) 35%,
+    var(--dl-green-light) 40%,
+    var(--dl-green) 45%,
+    transparent 55%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-spin 4s linear infinite;
+  z-index: 1;
+}
+
+/* Subtle secondary trail for depth */
+.dl-hero-visual::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--dl-border-angle-2, 0deg),
+    transparent 0%,
+    transparent 30%,
+    var(--dl-green-glow-strong) 40%,
+    transparent 50%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-spin-glow 4s linear infinite;
+  z-index: 0;
+  filter: blur(4px);
+}
+
+@property --dl-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@property --dl-border-angle-2 {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-spin {
+  to {
+    --dl-border-angle: 360deg;
+  }
+}
+
+@keyframes border-spin-glow {
+  to {
+    --dl-border-angle-2: 360deg;
+  }
+}
+
+.dl-hero-visual-inner {
+  position: relative;
+  z-index: 2;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--dl-surface);
 }
 
 .dl-hero-visual img {
@@ -510,6 +590,224 @@ body {
   position: relative;
 }
 
+/* ── Planet / Globe Effect ─────────────────────────── */
+
+.dl-planet-wrapper {
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
+  margin: -12rem auto -18rem;
+  height: 50rem;
+  overflow: hidden;
+  -webkit-mask-image: radial-gradient(ellipse at center center, #000, transparent 50%);
+  mask-image: radial-gradient(ellipse at center center, #000, transparent 50%);
+}
+
+.dl-planet-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.4;
+  background-image: radial-gradient(circle at bottom center, var(--dl-green), transparent 70%);
+}
+
+.dl-planet-wrapper::after {
+  content: '';
+  position: absolute;
+  left: -50%;
+  top: 50%;
+  width: 200%;
+  aspect-ratio: 1 / 0.7;
+  border-radius: 50%;
+  border-top: 1px solid var(--dl-border);
+  background: var(--dl-bg);
+}
+
+/* ── Pricing Section ──────────────────────────────── */
+
+.dl-pricing {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem 6rem;
+  text-align: center;
+}
+
+.dl-pricing-header {
+  margin-bottom: 3.5rem;
+}
+
+.dl-pricing-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dl-green);
+  margin-bottom: 1rem;
+}
+
+.dl-pricing-header h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.dl-pricing-header p {
+  font-size: 1.125rem;
+  color: var(--dl-text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.dl-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  text-align: left;
+}
+
+.dl-pricing-card {
+  position: relative;
+  background: var(--dl-surface);
+  border: 1px solid var(--dl-border);
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.dl-pricing-card:hover {
+  border-color: #333338;
+}
+
+.dl-pricing-card.featured {
+  border-color: var(--dl-green);
+  box-shadow: 0 0 40px var(--dl-green-glow), 0 16px 48px rgba(0,0,0,0.3);
+}
+
+.dl-pricing-card.featured::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  padding: 1px;
+  background: linear-gradient(180deg, var(--dl-green) 0%, transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.dl-pricing-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.dl-pricing-desc {
+  font-size: 0.875rem;
+  color: var(--dl-text-secondary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+  min-height: 2.6rem;
+}
+
+.dl-pricing-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.dl-pricing-amount {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.dl-pricing-period {
+  font-size: 0.875rem;
+  color: var(--dl-text-muted);
+}
+
+.dl-pricing-cta {
+  display: block;
+  text-align: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  transition: all 0.25s;
+  margin-bottom: 2rem;
+  cursor: pointer;
+}
+
+.dl-pricing-cta-default {
+  background: transparent;
+  color: var(--dl-text);
+  border: 1px solid var(--dl-border);
+}
+
+.dl-pricing-cta-default:hover {
+  border-color: var(--dl-text-muted);
+  background: var(--dl-surface-raised, #1c1c1f);
+}
+
+.dl-pricing-cta-primary {
+  background: var(--dl-green);
+  color: #000;
+  border: 1px solid var(--dl-green);
+}
+
+.dl-pricing-cta-primary:hover {
+  background: var(--dl-green-light);
+  box-shadow: 0 0 24px var(--dl-green-glow-strong);
+}
+
+.dl-pricing-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid var(--dl-border);
+  padding-top: 1.5rem;
+}
+
+.dl-pricing-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--dl-text-secondary);
+}
+
+.dl-pricing-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  background: var(--dl-green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dl-pricing-check svg {
+  width: 12px;
+  height: 12px;
+  stroke: #000;
+  stroke-width: 3;
+  fill: none;
+}
+
 /* ── Footer ────────────────────────────────────────── */
 
 .dl-footer {
@@ -559,6 +857,18 @@ body {
 
   .dl-nav-links {
     display: none;
+  }
+
+  .dl-pricing-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .dl-planet-wrapper {
+    margin-top: -8rem;
+    margin-bottom: -14rem;
+    height: 36rem;
   }
 }
 

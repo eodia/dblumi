@@ -65,9 +65,11 @@ import '../../styles/landing.css';
     </div>
 
     <div class="dl-hero-visual">
-      <div class="dl-hero-visual-placeholder">
-        <!-- Replace with: <img src="/images/hero-screenshot.png" alt="Editeur SQL dblumi" /> -->
-        Capture de l'editeur SQL dblumi
+      <div class="dl-hero-visual-inner">
+        <div class="dl-hero-visual-placeholder">
+          <!-- Replace with: <img src="/images/hero-screenshot.png" alt="Editeur SQL dblumi" /> -->
+          Capture de l'editeur SQL dblumi
+        </div>
       </div>
     </div>
   </section>
@@ -218,6 +220,71 @@ import '../../styles/landing.css';
     <div>
       <div class="dl-stat-value">100%</div>
       <div class="dl-stat-label">Auto-heberge</div>
+    </div>
+  </section>
+
+  <!-- ═══ Planet + Pricing ═══ -->
+  <div class="dl-planet-wrapper"></div>
+
+  <section class="dl-pricing">
+    <div class="dl-pricing-header">
+      <div class="dl-pricing-label">Tarifs</div>
+      <h2>Des tarifs simples pour tous.</h2>
+      <p>dblumi est open source et gratuit pour les individuels. Pour les equipes, choisissez la formule adaptee.</p>
+    </div>
+
+    <div class="dl-pricing-grid">
+      <!-- Gratuit -->
+      <div class="dl-pricing-card">
+        <div class="dl-pricing-name">Gratuit</div>
+        <div class="dl-pricing-desc">Pour les individus et les petits projets</div>
+        <div class="dl-pricing-price">
+          <span class="dl-pricing-amount">0 &euro;</span>
+          <span class="dl-pricing-period">/ pour toujours</span>
+        </div>
+        <a href="/fr/guides/installation/" class="dl-pricing-cta dl-pricing-cta-default">Demarrer</a>
+        <ul class="dl-pricing-features">
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Connexions illimitees</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Editeur SQL avec garde-fous</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Copilot IA (votre cle API)</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Explorateur de schema & ERD</li>
+        </ul>
+      </div>
+
+      <!-- Equipe (featured) -->
+      <div class="dl-pricing-card featured">
+        <div class="dl-pricing-name">Equipe</div>
+        <div class="dl-pricing-desc">Pour les equipes qui collaborent sur les bases de donnees</div>
+        <div class="dl-pricing-price">
+          <span class="dl-pricing-amount">12 &euro;</span>
+          <span class="dl-pricing-period">/ utilisateur / mois</span>
+        </div>
+        <a href="/fr/guides/installation/" class="dl-pricing-cta dl-pricing-cta-primary">Essai gratuit</a>
+        <ul class="dl-pricing-features">
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Tout ce qui est dans Gratuit</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Requetes & dossiers partages</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Groupes & RBAC</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> SSO (GitHub, Google, Keycloak)</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Support prioritaire</li>
+        </ul>
+      </div>
+
+      <!-- Entreprise -->
+      <div class="dl-pricing-card">
+        <div class="dl-pricing-name">Entreprise</div>
+        <div class="dl-pricing-desc">Pour les organisations avec des besoins de securite avances</div>
+        <div class="dl-pricing-price">
+          <span class="dl-pricing-amount">Sur mesure</span>
+        </div>
+        <a href="mailto:contact@eodia.com" class="dl-pricing-cta dl-pricing-cta-default">Nous contacter</a>
+        <ul class="dl-pricing-features">
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Tout ce qui est dans Equipe</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Support dedie</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Integrations sur mesure</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> SLA & conformite</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Aide au deploiement on-premise</li>
+        </ul>
+      </div>
     </div>
   </section>
 
