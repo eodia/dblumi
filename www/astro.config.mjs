@@ -9,39 +9,51 @@ export default defineConfig({
 		starlight({
 			title: 'dblumi',
 			description: 'The modern SQL client with AI, built for developers',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/marcjamain/dblumi' }],
+			social: [
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/marcjamain/dblumi' },
+				{ icon: 'discord', label: 'Discord', href: 'https://discord.gg/dblumi' },
+			],
+			customCss: ['./src/styles/starlight-custom.css'],
+			locales: {
+				root: { label: 'English', lang: 'en' },
+				fr: { label: 'Francais', lang: 'fr' },
+			},
 			sidebar: [
 				{
 					label: 'Getting Started',
+					translations: { fr: 'Pour commencer' },
 					items: [
-						{ label: 'Introduction', slug: 'guides/introduction' },
-						{ label: 'Installation', slug: 'guides/installation' },
-						{ label: 'First connection', slug: 'guides/first-connection' },
+						{ label: 'Introduction', slug: 'guides/introduction', translations: { fr: 'Introduction' } },
+						{ label: 'Installation', slug: 'guides/installation', translations: { fr: 'Installation' } },
+						{ label: 'First connection', slug: 'guides/first-connection', translations: { fr: 'Premiere connexion' } },
 					],
 				},
 				{
 					label: 'Features',
+					translations: { fr: 'Fonctionnalites' },
 					items: [
-						{ label: 'SQL Editor', slug: 'features/sql-editor' },
-						{ label: 'AI Copilot', slug: 'features/ai-copilot' },
-						{ label: 'Saved Queries', slug: 'features/saved-queries' },
-						{ label: 'Schema & ERD', slug: 'features/schema-erd' },
-						{ label: 'Security & Guardrails', slug: 'features/security' },
+						{ label: 'SQL Editor', slug: 'features/sql-editor', translations: { fr: 'Editeur SQL' } },
+						{ label: 'AI Copilot', slug: 'features/ai-copilot', translations: { fr: 'Copilot IA' } },
+						{ label: 'Saved Queries', slug: 'features/saved-queries', translations: { fr: 'Requetes sauvegardees' } },
+						{ label: 'Schema & ERD', slug: 'features/schema-erd', translations: { fr: 'Schema & ERD' } },
+						{ label: 'Security & Guardrails', slug: 'features/security', translations: { fr: 'Securite & Garde-fous' } },
 					],
 				},
 				{
 					label: 'Self-hosting',
+					translations: { fr: 'Hebergement' },
 					items: [
-						{ label: 'Configuration', slug: 'self-hosting/configuration' },
-						{ label: 'Auth & SSO', slug: 'self-hosting/auth-sso' },
-						{ label: 'Environment variables', slug: 'self-hosting/environment-variables' },
+						{ label: 'Configuration', slug: 'self-hosting/configuration', translations: { fr: 'Configuration' } },
+						{ label: 'Auth & SSO', slug: 'self-hosting/auth-sso', translations: { fr: 'Auth & SSO' } },
+						{ label: 'Environment variables', slug: 'self-hosting/environment-variables', translations: { fr: 'Variables d\'environnement' } },
 					],
 				},
 				{
 					label: 'Administration',
+					translations: { fr: 'Administration' },
 					items: [
-						{ label: 'User management', slug: 'admin/users' },
-						{ label: 'Groups & permissions', slug: 'admin/groups' },
+						{ label: 'User management', slug: 'admin/users', translations: { fr: 'Gestion des utilisateurs' } },
+						{ label: 'Groups & permissions', slug: 'admin/groups', translations: { fr: 'Groupes & permissions' } },
 					],
 				},
 			],
