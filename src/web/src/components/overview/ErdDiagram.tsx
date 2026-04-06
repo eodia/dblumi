@@ -1,88 +1,103 @@
 // src/web/src/components/overview/ErdDiagram.tsx
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type Edge,
+  type NodeTypes,
+  BackgroundVariant,
+  Position,
+  MarkerType,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import { connectionsApi, type SchemaTable } from '@/api/connections'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
-import { Table2, Eye } from 'lucide-react'
+import { TableNode, type TableNodeData } from './TableNode'
 
 type Props = { connectionId: string; onNavigate: (page: 'sql-editor' | 'tables') => void }
 
-const NODE_W = 240
-const HEADER_H = 32
-const COL_H = 22
-const NODE_PAD = 8
-const COL_GAP = 60
-const ROW_GAP = 48
+const NODE_W = 260
+const HEADER_H = 36
+const COL_H = 24
 const COL_LIMIT = 10
+const COL_GAP = 80
+const ROW_GAP = 60
 
-type LayoutNode = SchemaTable & { x: number; y: number; width: number; height: number; visibleColCount: number }
+const nodeTypes: NodeTypes = { tableNode: TableNode }
 
-function layoutNodes(tables: SchemaTable[], expandedNodes: Set<string>): LayoutNode[] {
+function buildNodesAndEdges(
+  tables: SchemaTable[],
+  expandedNodes: Set<string>,
+  onToggleExpand: (name: string) => void,
+  onClickTable: (name: string) => void,
+): { nodes: Node<TableNodeData>[]; edges: Edge[] } {
   const COLS = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(tables.length))))
-  const nodes = tables.map((table, i) => {
+
+  // Calculate row heights for proper positioning
+  const tablesMeta = tables.map((table, i) => {
     const isExpanded = expandedNodes.has(table.name)
     const visibleColCount = isExpanded ? table.columns.length : Math.min(COL_LIMIT, table.columns.length)
     const hasMore = !isExpanded && table.columns.length > COL_LIMIT
-    return {
-      ...table,
-      col: i % COLS,
-      row: Math.floor(i / COLS),
-      width: NODE_W,
-      height: HEADER_H + visibleColCount * COL_H + (hasMore ? COL_H : 0) + NODE_PAD,
-      visibleColCount,
-    }
+    const height = HEADER_H + visibleColCount * COL_H + (hasMore ? COL_H : 0) + 8
+    return { table, col: i % COLS, row: Math.floor(i / COLS), height, visibleColCount }
   })
+
   const rowCount = Math.ceil(tables.length / COLS)
   const rowHeights = Array.from({ length: rowCount }, (_, r) =>
-    Math.max(...nodes.filter((n) => n.row === r).map((n) => n.height), 80),
+    Math.max(...tablesMeta.filter((m) => m.row === r).map((m) => m.height), 80),
   )
   const rowY = rowHeights.reduce<number[]>((acc, _, i) => {
     acc.push(i === 0 ? 0 : acc[i - 1]! + rowHeights[i - 1]! + ROW_GAP)
     return acc
   }, [])
-  return nodes.map((n) => ({
-    ...n,
-    x: n.col * (NODE_W + COL_GAP),
-    y: rowY[n.row]!,
+
+  const nodes: Node<TableNodeData>[] = tablesMeta.map((meta) => ({
+    id: meta.table.name,
+    type: 'tableNode',
+    position: { x: meta.col * (NODE_W + COL_GAP), y: rowY[meta.row]! },
+    data: {
+      table: meta.table,
+      visibleColCount: meta.visibleColCount,
+      isExpanded: expandedNodes.has(meta.table.name),
+      onToggleExpand,
+      onClickTable,
+    },
+    style: { width: NODE_W },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
   }))
-}
 
-type EdgePath = { id: string; d: string }
-
-function buildEdges(nodes: LayoutNode[]): EdgePath[] {
-  const nodeMap = new Map(nodes.map((n) => [n.name, n]))
-  const edges: EdgePath[] = []
-
-  for (const node of nodes) {
-    for (const fk of node.foreignKeys ?? []) {
-      const target = nodeMap.get(fk.referencedTable)
-      if (!target) continue
-      const srcColIdx = node.columns.findIndex((c) => fk.fields.includes(c.name))
-      const dstColIdx = target.columns.findIndex((c) => fk.referencedFields.includes(c.name))
-      const srcY = node.y + HEADER_H + (srcColIdx >= 0 ? srcColIdx : 0) * COL_H + COL_H / 2
-      const dstY = target.y + HEADER_H + (dstColIdx >= 0 ? dstColIdx : 0) * COL_H + COL_H / 2
-      const srcRight = node.x + NODE_W
-      const dstLeft = target.x
-      const srcLeft = node.x
-      const dstRight = target.x + NODE_W
-      let x1: number, x2: number, y1: number, y2: number
-      if (Math.abs(srcRight - dstLeft) <= Math.abs(srcLeft - dstRight)) {
-        x1 = srcRight; y1 = srcY; x2 = dstLeft; y2 = dstY
-      } else {
-        x1 = srcLeft; y1 = srcY; x2 = dstRight; y2 = dstY
-      }
-      const cp = Math.abs(x2 - x1) * 0.5
-      const d = `M ${x1} ${y1} C ${x1 + (x1 < x2 ? cp : -cp)} ${y1} ${x2 + (x1 < x2 ? -cp : cp)} ${y2} ${x2} ${y2}`
-      edges.push({ id: `${node.name}-${fk.name ?? fk.referencedTable}`, d })
+  const edges: Edge[] = []
+  for (const table of tables) {
+    for (const fk of table.foreignKeys ?? []) {
+      if (!tables.some((t) => t.name === fk.referencedTable)) continue
+      edges.push({
+        id: `${table.name}-${fk.name || fk.referencedTable}-${fk.fields.join(',')}`,
+        source: table.name,
+        target: fk.referencedTable,
+        type: 'smoothstep',
+        animated: false,
+        style: { stroke: 'var(--color-muted-foreground)', strokeWidth: 1.5, opacity: 0.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-muted-foreground)', width: 16, height: 16 },
+        label: fk.fields.join(', '),
+        labelStyle: { fill: 'var(--color-muted-foreground)', fontSize: 9, fontFamily: 'var(--font-mono)' },
+        labelBgStyle: { fill: 'var(--color-background)', fillOpacity: 0.8 },
+      })
     }
   }
-  return edges
+
+  return { nodes, edges }
 }
 
 export function ErdDiagram({ connectionId, onNavigate }: Props) {
   const { t } = useI18n()
-  const { openTable } = useEditorStore()
 
   const { data: schema, isLoading } = useQuery({
     queryKey: ['schema', connectionId],
@@ -100,48 +115,43 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
     })
   }, [])
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [transform, setTransform] = useState({ x: 20, y: 20, scale: 1 })
-  const isDragging = useRef(false)
-  const lastPos = useRef({ x: 0, y: 0 })
-
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[data-node]')) return
-    isDragging.current = true
-    lastPos.current = { x: e.clientX, y: e.clientY }
-    e.preventDefault()
-  }, [])
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging.current) return
-    const dx = e.clientX - lastPos.current.x
-    const dy = e.clientY - lastPos.current.y
-    lastPos.current = { x: e.clientX, y: e.clientY }
-    setTransform((t) => ({ ...t, x: t.x + dx, y: t.y + dy }))
-  }, [])
-
-  const onWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault()
-    const factor = e.deltaY > 0 ? 0.9 : 1.1
-    setTransform((t) => ({ ...t, scale: Math.max(0.15, Math.min(3, t.scale * factor)) }))
-  }, [])
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [onWheel, isLoading])
+  const { openTable } = useEditorStore()
+  const handleClickTable = useCallback((name: string) => {
+    openTable(name)
+    onNavigate('sql-editor')
+  }, [openTable, onNavigate])
 
   const allTables = schema?.tables ?? []
 
-  if (isLoading) return <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Loading…</div>
-  if (allTables.length === 0) return <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">{t('overview.noSchema')}</div>
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(
+    () => buildNodesAndEdges(allTables, expandedNodes, toggleExpand, handleClickTable),
+    [allTables, expandedNodes, toggleExpand, handleClickTable],
+  )
 
-  const nodes = layoutNodes(allTables, expandedNodes)
-  const edges = buildEdges(nodes)
-  const totalW = Math.max(...nodes.map((n) => n.x + n.width)) + COL_GAP
-  const totalH = Math.max(...nodes.map((n) => n.y + n.height)) + ROW_GAP
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+
+  // Sync when data changes (expand/collapse, new schema)
+  useMemo(() => {
+    setNodes(initialNodes)
+    setEdges(initialEdges)
+  }, [initialNodes, initialEdges, setNodes, setEdges])
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Loading…</div>
+      </div>
+    )
+  }
+
+  if (allTables.length === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">{t('overview.noSchema')}</div>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -149,92 +159,32 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
         <span className="text-sm font-medium">{t('overview.erd')}</span>
         <span className="text-[10px] text-muted-foreground">{t('overview.erdHint')}</span>
       </div>
-      <div
-        ref={containerRef}
-        className="relative overflow-hidden rounded border border-border bg-surface h-[520px] cursor-grab active:cursor-grabbing select-none"
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={() => { isDragging.current = false }}
-        onMouseLeave={() => { isDragging.current = false }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-            transformOrigin: '0 0',
-            width: totalW,
-            height: totalH,
-          }}
+      <div className="rounded border border-border bg-surface h-[520px]">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.15 }}
+          minZoom={0.1}
+          maxZoom={3}
+          proOptions={{ hideAttribution: true }}
+          defaultEdgeOptions={{ type: 'smoothstep' }}
         >
-          {/* SVG edges layer */}
-          <svg
-            style={{ position: 'absolute', inset: 0, width: totalW, height: totalH, overflow: 'visible', pointerEvents: 'none' }}
-          >
-            <defs>
-              <marker id="erd-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                <path d="M0,0 L0,6 L6,3 z" fill="currentColor" className="text-muted-foreground" />
-              </marker>
-            </defs>
-            {edges.map((edge) => (
-              <path
-                key={edge.id}
-                d={edge.d}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeOpacity={0.6}
-                className="text-muted-foreground"
-                markerEnd="url(#erd-arrow)"
-              />
-            ))}
-          </svg>
-
-          {/* Table nodes */}
-          {nodes.map((node) => (
-            <div
-              key={node.name}
-              data-node="true"
-              style={{ position: 'absolute', left: node.x, top: node.y, width: node.width }}
-              className="rounded border border-border bg-card shadow-sm overflow-hidden"
-            >
-              <div
-                className="flex items-center gap-1.5 px-2.5 border-b border-border bg-surface-raised cursor-pointer hover:bg-surface-overlay transition-colors"
-                style={{ height: HEADER_H }}
-                onClick={() => { openTable(node.name); onNavigate('sql-editor') }}
-              >
-                {node.type === 'view'
-                  ? <Eye className="h-3 w-3 text-violet-400 flex-shrink-0" />
-                  : <Table2 className="h-3 w-3 text-blue-400 flex-shrink-0" />}
-                <span className="text-[11px] font-semibold truncate">{node.name}</span>
-              </div>
-              {node.columns.slice(0, node.visibleColCount).map((col) => (
-                <div
-                  key={col.name}
-                  className="flex items-center gap-1.5 px-2.5 border-b border-border/20 last:border-0"
-                  style={{ height: COL_H }}
-                >
-                  {col.primaryKey && (
-                    <span className="text-[9px] font-bold text-amber-400 flex-shrink-0 leading-none">PK</span>
-                  )}
-                  <span className="text-[10px] truncate flex-1">{col.name}</span>
-                  <span className="text-[9px] text-muted-foreground/60 flex-shrink-0 truncate max-w-[60px]">{col.dataType}</span>
-                </div>
-              ))}
-              {node.columns.length > COL_LIMIT && (
-                <button
-                  type="button"
-                  className="flex items-center justify-center w-full text-[9px] text-muted-foreground hover:text-foreground transition-colors border-t border-border/20"
-                  style={{ height: COL_H }}
-                  onClick={(e) => { e.stopPropagation(); toggleExpand(node.name) }}
-                >
-                  {expandedNodes.has(node.name)
-                    ? '▲ voir moins'
-                    : `+ ${node.columns.length - COL_LIMIT} colonnes`}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--color-border-subtle)" />
+          <Controls
+            showInteractive={false}
+            className="erd-controls"
+          />
+          <MiniMap
+            nodeColor="var(--color-surface-raised)"
+            nodeStrokeColor="var(--color-border)"
+            maskColor="rgba(0, 0, 0, 0.6)"
+            className="erd-minimap"
+          />
+        </ReactFlow>
       </div>
     </div>
   )
