@@ -4,7 +4,7 @@ title: Schema & ERD
 
 Parcourez le schema de votre base de donnees et visualisez les relations entre tables.
 
-![Vue d'ensemble avec explorateur de schema et diagramme ERD](/images/feature-schema.png)
+![Vue d'ensemble avec explorateur de schema et diagramme ERD](/dblumi/images/feature-schema.png)
 
 ## Explorateur de schema
 

@@ -4,7 +4,7 @@ title: Saved Queries
 
 Save, organize, and share SQL queries across your team.
 
-![Saved queries with team sharing and chat](/images/feature-team.png)
+![Saved queries with team sharing and chat](/dblumi/images/feature-team.png)
 
 ## Saving a query
 
@@ -35,7 +35,7 @@ Every time a saved query is modified, a new version is automatically created. Op
 - **Restore** a previous version in one click — the SQL is loaded back into your editor
 - **Label** important versions to mark milestones (e.g. "v2 — added joins", "before refactor")
 
-![Version history timeline with diff comparison](/images/feature-timeline.png)
+![Version history timeline with diff comparison](/dblumi/images/feature-timeline.png)
 
 ## Filtering by connection
 

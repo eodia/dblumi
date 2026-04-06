@@ -16,7 +16,7 @@ Once dblumi is running, connect it to your database.
 
 By default, a connection is **private** — only you can see it. You can share it with specific users or groups from the connection settings.
 
-![Table browser showing database content with schema sidebar](/images/feature-connection.png)
+![Table browser showing database content with schema sidebar](/dblumi/images/feature-connection.png)
 
 ## You're ready
 

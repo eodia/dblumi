@@ -4,7 +4,7 @@ title: Introduction
 
 **dblumi** is a self-hosted database client built for developer teams. It combines a modern SQL editor, an AI copilot, and team collaboration features in a single tool.
 
-![dblumi overview — SQL editor with AI copilot and schema browser](/images/hero-screenshot.png)
+![dblumi overview — SQL editor with AI copilot and schema browser](/dblumi/images/hero-screenshot.png)
 
 ## What you can do with dblumi
 

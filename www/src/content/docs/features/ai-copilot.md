@@ -23,7 +23,7 @@ Bring your own API key — dblumi never proxies your requests.
 - **Optimize** a slow query
 - **Answer questions** about your schema
 
-![AI Copilot generating a SQL query from a natural language prompt](/images/feature-ai.png)
+![AI Copilot generating a SQL query from a natural language prompt](/dblumi/images/feature-ai.png)
 
 ## Context awareness
 

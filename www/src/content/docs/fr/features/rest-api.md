@@ -4,7 +4,7 @@ title: API REST & Swagger
 
 Chaque action disponible dans l'interface dblumi est aussi accessible via une API REST, ce qui facilite l'automatisation des workflows, l'integration avec les pipelines CI/CD ou la creation d'outils personnalises.
 
-![Documentation Swagger interactive de l'API](/images/feature-swagger.png)
+![Documentation Swagger interactive de l'API](/dblumi/images/feature-swagger.png)
 
 ## Documentation Swagger
 

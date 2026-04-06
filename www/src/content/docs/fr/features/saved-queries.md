@@ -4,7 +4,7 @@ title: Requetes sauvegardees
 
 Sauvegardez, organisez et partagez vos requetes SQL avec votre equipe.
 
-![Requetes sauvegardees avec partage en equipe et chat](/images/feature-team.png)
+![Requetes sauvegardees avec partage en equipe et chat](/dblumi/images/feature-team.png)
 
 ## Sauvegarder une requete
 
@@ -35,7 +35,7 @@ Chaque modification d'une requete sauvegardee cree automatiquement une nouvelle 
 - **Restaurer** une version precedente en un clic — le SQL est recharge dans votre editeur
 - **Labelliser** les versions importantes pour marquer les jalons (ex. "v2 — ajout des jointures", "avant refacto")
 
-![Timeline de l'historique des versions avec comparaison diff](/images/feature-timeline.png)
+![Timeline de l'historique des versions avec comparaison diff](/dblumi/images/feature-timeline.png)
 
 ## Filtrage par connexion
 

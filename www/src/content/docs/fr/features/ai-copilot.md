@@ -23,7 +23,7 @@ Utilisez votre propre cle API — dblumi ne fait jamais transiter vos requetes p
 - **Optimiser** une requete lente
 - **Repondre aux questions** sur votre schema
 
-![Le Copilot IA genere une requete SQL a partir d'une description en langage naturel](/images/feature-ai.png)
+![Le Copilot IA genere une requete SQL a partir d'une description en langage naturel](/dblumi/images/feature-ai.png)
 
 ## Connaissance du contexte
 
