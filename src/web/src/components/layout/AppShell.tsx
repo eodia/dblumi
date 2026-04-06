@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
 import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -44,6 +45,7 @@ import {
   Braces,
   Settings2,
   Upload,
+  KeyRound,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -91,6 +93,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import logoSvg from '@/assets/logo-dblumi.svg'
 import {
   Tooltip,
   TooltipContent,
@@ -128,6 +131,7 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
+import { useDynamicHead } from '@/hooks/use-dynamic-head'
 
 type NavPage = 'overview' | 'tables' | 'sql-editor' | 'admin'
 
@@ -494,7 +498,7 @@ function SortableTab({
               : <TerminalSquare className="h-3 w-3 flex-shrink-0 opacity-70" style={connColor ? { color: connColor } : undefined} />
             }
             <span className={cn('truncate max-w-[120px]', tab.kind === 'table' && 'font-mono')}>
-              {tab.originalSql !== undefined && tab.sql !== tab.originalSql && <span className="text-muted-foreground mr-0.5">*</span>}{tab.name}
+              {tab.kind !== 'table' && tab.originalSql !== undefined && tab.sql !== tab.originalSql && <span className="text-muted-foreground mr-0.5">*</span>}{tab.name}
             </span>
             {tab.unreadChat > 0 && (
               <span className="w-1.5 h-1.5 rounded-full bg-destructive flex-shrink-0" />
@@ -989,6 +993,7 @@ function AppShellInner({
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
   const { t, locale, setLocale } = useI18n()
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const qc = useQueryClient()
 
   const logout = useCallback(async () => {
@@ -1258,6 +1263,12 @@ function AppShellInner({
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
+                  {user?.hasPassword && (
+                    <DropdownMenuItem onClick={() => setChangePasswordOpen(true)} className="gap-2 cursor-pointer">
+                      <KeyRound className="h-4 w-4" />
+                      {t('auth.changePassword.title')}
+                    </DropdownMenuItem>
+                  )}
                   {user?.role === 'admin' && (
                     <DropdownMenuItem onClick={() => setPage('admin')} className="gap-2 cursor-pointer">
                       <Settings2 className="h-4 w-4" />
@@ -1271,6 +1282,7 @@ function AppShellInner({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <ChangePasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
@@ -1284,9 +1296,7 @@ function AppShellInner({
         <header className="flex items-center h-10 px-3 gap-2 border-b border-border-subtle flex-shrink-0">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="h-4" />
-          <span className="text-sm font-extrabold tracking-tight">
-            db<span className="text-primary glow-primary">lumi</span>
-          </span>
+          <img src={logoSvg} alt="dblumi" className="h-5" />
         </header>
 
         {/* Page content */}
@@ -1354,6 +1364,7 @@ function AppShellInner({
 
 // ── Root export ─────────────────────────────────────────────────────────
 export function AppShell() {
+  useDynamicHead()
   const [page, setPage] = useState<NavPage>('sql-editor')
   const [saveOpen, setSaveOpen] = useState(false)
   const [connModalOpen, setConnModalOpen] = useState(false)
