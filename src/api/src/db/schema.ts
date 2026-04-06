@@ -25,6 +25,7 @@ export const users = sqliteTable('users', {
   updatedAt: text('updated_at')
     .notNull()
     .default(sql`(datetime('now'))`),
+  passwordChangedAt: text('password_changed_at'),
 })
 
 export const connections = sqliteTable('connections', {
@@ -104,6 +105,19 @@ export const collabMessages = sqliteTable('collab_messages', {
 export const revokedTokens = sqliteTable('revoked_tokens', {
   jti: text('jti').primaryKey(),
   expiresAt: text('expires_at').notNull(),
+})
+
+export const passwordResetTokens = sqliteTable('password_reset_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  usedAt: text('used_at'),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 })
 
 export const groups = sqliteTable('groups', {
