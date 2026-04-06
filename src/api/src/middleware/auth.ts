@@ -1,7 +1,10 @@
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
+import { eq } from 'drizzle-orm'
 import { verifyToken, extractToken } from '../lib/jwt.js'
 import { isTokenRevoked } from '../services/auth.service.js'
+import { db } from '../db/index.js'
+import { users } from '../db/schema.js'
 import type { UserRole } from '@dblumi/shared'
 
 export type AuthVariables = {
@@ -30,6 +33,23 @@ export const authMiddleware = createMiddleware<AuthVariables>(async (c, next) =>
   // Revocation check
   if (payload.jti && await isTokenRevoked(payload.jti)) {
     throw new HTTPException(401, { message: 'Token has been revoked' })
+  }
+
+  // Password change invalidation: reject tokens issued before password was changed
+  if (payload.iat) {
+    const user = await db
+      .select({ passwordChangedAt: users.passwordChangedAt })
+      .from(users)
+      .where(eq(users.id, payload.sub))
+      .get()
+
+    if (user?.passwordChangedAt) {
+      const changedAtMs = new Date(user.passwordChangedAt).getTime()
+      const issuedAtMs = payload.iat * 1000
+      if (issuedAtMs < changedAtMs) {
+        throw new HTTPException(401, { message: 'Password has been changed, please log in again' })
+      }
+    }
   }
 
   c.set('userId', payload.sub)
