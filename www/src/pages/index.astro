@@ -1,6 +1,7 @@
 ---
 // dblumi Landing Page — Raycast-inspired design with green theme
 import '../styles/landing.css';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <html lang="en">
@@ -9,31 +10,31 @@ import '../styles/landing.css';
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>dblumi — The modern SQL client with AI</title>
   <meta name="description" content="The modern SQL client with AI, built for developers. Self-hosted, secure, and team-ready." />
-  <link rel="sitemap" href="/sitemap-index.xml" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="sitemap" href={`${base}/sitemap-index.xml`} />
+  <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
 </head>
 <body>
 
   <!-- ═══ Navbar ═══ -->
   <nav class="dl-nav">
-    <a href="/" class="dl-nav-logo">
+    <a href={`${base}/`} class="dl-nav-logo">
       <span class="dot"></span>
       dblumi
     </a>
     <ul class="dl-nav-links">
-      <li><a href="/guides/introduction/">Docs</a></li>
-      <li><a href="/features/sql-editor/">Features</a></li>
-      <li><a href="/self-hosting/configuration/">Self-hosting</a></li>
+      <li><a href={`${base}/guides/introduction/`}>Docs</a></li>
+      <li><a href={`${base}/features/sql-editor/`}>Features</a></li>
+      <li><a href={`${base}/self-hosting/configuration/`}>Self-hosting</a></li>
     </ul>
     <div class="dl-nav-right">
-      <a href="/fr/" class="dl-nav-lang" aria-label="Passer en francais">FR</a>
+      <a href={`${base}/fr/`} class="dl-nav-lang" aria-label="Passer en francais">FR</a>
       <a href="https://discord.gg/dblumi" target="_blank" rel="noopener" class="dl-nav-social" aria-label="Discord">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.947 2.418-2.157 2.418z"/></svg>
       </a>
       <a href="https://github.com/marcjamain/dblumi" target="_blank" rel="noopener" class="dl-nav-social" aria-label="GitHub">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
       </a>
-      <a href="/guides/installation/" class="dl-nav-cta">Get started</a>
+      <a href={`${base}/guides/installation/`} class="dl-nav-cta">Get started</a>
     </div>
   </nav>
 
@@ -54,11 +55,11 @@ import '../styles/landing.css';
     </p>
 
     <div class="dl-hero-actions">
-      <a href="/guides/installation/" class="dl-btn-primary">
+      <a href={`${base}/guides/installation/`} class="dl-btn-primary">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Self-host now
       </a>
-      <a href="https://eodia.github.io/dblumi/app" class="dl-btn-secondary" target="_blank" rel="noopener">
+      <a href={`${base}/app`} class="dl-btn-secondary" target="_blank" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
         Live demo
       </a>
@@ -257,7 +258,7 @@ import '../styles/landing.css';
           <span class="dl-pricing-amount">$0</span>
           <span class="dl-pricing-period">/ forever</span>
         </div>
-        <a href="/guides/installation/" class="dl-pricing-cta dl-pricing-cta-default">Get started</a>
+        <a href={`${base}/guides/installation/`} class="dl-pricing-cta dl-pricing-cta-default">Get started</a>
         <ul class="dl-pricing-features">
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Unlimited connections</li>
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> SQL editor with guardrails</li>
@@ -274,7 +275,7 @@ import '../styles/landing.css';
           <span class="dl-pricing-amount">$12</span>
           <span class="dl-pricing-period">/ user / month</span>
         </div>
-        <a href="/guides/installation/" class="dl-pricing-cta dl-pricing-cta-primary">Start free trial</a>
+        <a href={`${base}/guides/installation/`} class="dl-pricing-cta dl-pricing-cta-primary">Start free trial</a>
         <ul class="dl-pricing-features">
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Everything in Free</li>
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Shared queries & folders</li>
@@ -310,11 +311,11 @@ import '../styles/landing.css';
     <h2>Ready to <span class="gradient">take control</span>?</h2>
     <p>Deploy dblumi in minutes. One Docker command, full control over your data.</p>
     <div class="dl-hero-actions">
-      <a href="/guides/installation/" class="dl-btn-primary">
+      <a href={`${base}/guides/installation/`} class="dl-btn-primary">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Get started
       </a>
-      <a href="/guides/introduction/" class="dl-btn-secondary">
+      <a href={`${base}/guides/introduction/`} class="dl-btn-secondary">
         Read the docs
       </a>
     </div>
@@ -324,9 +325,9 @@ import '../styles/landing.css';
   <footer class="dl-footer">
     <div>&copy; 2025 dblumi &middot; Open source SQL client</div>
     <ul class="dl-footer-links">
-      <li><a href="/guides/introduction/">Documentation</a></li>
+      <li><a href={`${base}/guides/introduction/`}>Documentation</a></li>
       <li><a href="https://github.com/marcjamain/dblumi" target="_blank" rel="noopener">GitHub</a></li>
-      <li><a href="/self-hosting/configuration/">Self-hosting</a></li>
+      <li><a href={`${base}/self-hosting/configuration/`}>Self-hosting</a></li>
     </ul>
   </footer>
 
