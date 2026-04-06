@@ -31,6 +31,12 @@ const ConfigSchema = z.object({
   KEYCLOAK_ISSUER: z.string().url().optional(),
   KEYCLOAK_CLIENT_ID: z.string().optional(),
   KEYCLOAK_CLIENT_SECRET: z.string().optional(),
+  // ── SMTP (optional — required for password reset emails) ──
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 })
 
 const result = ConfigSchema.safeParse(process.env)

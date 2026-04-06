@@ -59,6 +59,9 @@ importers:
       mysql2:
         specifier: ^3.12.0
         version: 3.20.0(@types/node@22.19.15)
+      nodemailer:
+        specifier: ^8.0.4
+        version: 8.0.4
       openai:
         specifier: ^6.33.0
         version: 6.33.0(ws@8.20.0)(zod@3.25.76)
@@ -87,6 +90,9 @@ importers:
       '@types/node':
         specifier: ^22.13.10
         version: 22.19.15
+      '@types/nodemailer':
+        specifier: ^8.0.0
+        version: 8.0.0
       '@types/oracledb':
         specifier: ^6.10.2
         version: 6.10.2
@@ -1878,6 +1884,9 @@ packages:
   '@types/node@22.19.15':
     resolution: {integrity: sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==}
 
+  '@types/nodemailer@8.0.0':
+    resolution: {integrity: sha512-fyf8jWULsCo0d0BuoQ75i6IeoHs47qcqxWc7yUdUcV0pOZGjUTTOvwdG1PRXUDqN/8A64yQdQdnA2pZgcdi+cA==}
+
   '@types/oracledb@6.10.2':
     resolution: {integrity: sha512-qoKTrOQ3n9GX3uFlcGSCi+saRnwPwB5Pe7ga+7o7ZNoHT1Sss4/Lzu5CMolsyXH94ULZdv9lIMCPe0R+Sofd8Q==}
 
@@ -2468,6 +2477,10 @@ packages:
 
   node-releases@2.0.36:
     resolution: {integrity: sha512-TdC8FSgHz8Mwtw9g5L4gR/Sh9XhSP/0DEkQxfEFXOpiul5IiHgHan2VhYYb6agDSfp4KuvltmGApc8HMgUrIkA==}
+
+  nodemailer@8.0.4:
+    resolution: {integrity: sha512-k+jf6N8PfQJ0Fe8ZhJlgqU5qJU44Lpvp2yvidH3vp1lPnVQMgi4yEEMPXg5eJS1gFIJTVq1NHBk7Ia9ARdSBdQ==}
+    engines: {node: '>=6.0.0'}
 
   on-exit-leak-free@2.1.2:
     resolution: {integrity: sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==}
@@ -4391,6 +4404,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nodemailer@8.0.0':
+    dependencies:
+      '@types/node': 22.19.15
+
   '@types/oracledb@6.10.2':
     dependencies:
       '@types/node': 22.19.15
@@ -4919,6 +4936,8 @@ snapshots:
       formdata-polyfill: 4.0.10
 
   node-releases@2.0.36: {}
+
+  nodemailer@8.0.4: {}
 
   on-exit-leak-free@2.1.2: {}
 

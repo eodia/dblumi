@@ -25,6 +25,7 @@
     "jose": "^5.10.0",
     "lib0": "^0.2.117",
     "mysql2": "^3.12.0",
+    "nodemailer": "^8.0.4",
     "openai": "^6.33.0",
     "oracledb": "^6.10.0",
     "pg": "^8.13.3",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "@types/nodemailer": "^8.0.0",
     "@types/oracledb": "^6.10.2",
     "@types/pg": "^8.11.11",
     "@types/ws": "^8.18.1",
