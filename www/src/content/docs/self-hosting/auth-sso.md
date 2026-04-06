@@ -8,6 +8,8 @@ dblumi supports local authentication and several OAuth/SSO providers.
 
 Enabled by default. Users register with email and password.
 
+Users can change their password from the user menu in the sidebar. To enable the "Forgot password?" flow on the login page, configure SMTP (see [Environment variables](/self-hosting/environment-variables/#smtp-password-reset)).
+
 ## GitHub OAuth
 
 ```env

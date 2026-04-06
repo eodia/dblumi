@@ -8,6 +8,8 @@ dblumi supporte l'authentification locale et plusieurs fournisseurs OAuth/SSO.
 
 Activee par defaut. Les utilisateurs s'inscrivent avec email et mot de passe.
 
+Les utilisateurs peuvent changer leur mot de passe depuis le menu utilisateur dans la barre laterale. Pour activer le lien "Mot de passe oublie ?" sur la page de connexion, configurez le SMTP (voir [Variables d'environnement](/fr/self-hosting/environment-variables/#smtp-reinitialisation-de-mot-de-passe)).
+
 ## GitHub OAuth
 
 ```env

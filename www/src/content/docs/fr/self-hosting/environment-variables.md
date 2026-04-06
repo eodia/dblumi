@@ -22,3 +22,25 @@ title: Variables d'environnement
 | `KEYCLOAK_REALM` | Non | Realm Keycloak |
 | `KEYCLOAK_CLIENT_ID` | Non | ID client Keycloak |
 | `KEYCLOAK_CLIENT_SECRET` | Non | Secret client Keycloak |
+
+## SMTP (reinitialisation de mot de passe)
+
+Requis uniquement pour la fonctionnalite "Mot de passe oublie ?". Sans SMTP, les utilisateurs peuvent changer leur mot de passe depuis le menu de leur profil (une fois connectes).
+
+| Variable | Obligatoire | Defaut | Description |
+|----------|-------------|--------|-------------|
+| `SMTP_HOST` | Non | — | Nom d'hote du serveur SMTP |
+| `SMTP_PORT` | Non | `587` | Port du serveur SMTP |
+| `SMTP_USER` | Non | — | Nom d'utilisateur SMTP |
+| `SMTP_PASS` | Non | — | Mot de passe SMTP |
+| `SMTP_FROM` | Non | — | Adresse email de l'expediteur (ex : `noreply@votre-domaine.com`) |
+
+Exemple avec Gmail :
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=votre-email@gmail.com
+SMTP_PASS=votre-mot-de-passe-application
+SMTP_FROM=votre-email@gmail.com
+```

@@ -22,3 +22,25 @@ title: Environment variables
 | `KEYCLOAK_REALM` | No | Keycloak realm |
 | `KEYCLOAK_CLIENT_ID` | No | Keycloak client ID |
 | `KEYCLOAK_CLIENT_SECRET` | No | Keycloak client secret |
+
+## SMTP (password reset)
+
+Required only if you want the "Forgot password?" feature. Without SMTP, users can only change their password from their profile menu (when logged in).
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SMTP_HOST` | No | — | SMTP server hostname |
+| `SMTP_PORT` | No | `587` | SMTP server port |
+| `SMTP_USER` | No | — | SMTP username |
+| `SMTP_PASS` | No | — | SMTP password |
+| `SMTP_FROM` | No | — | Sender email address (e.g. `noreply@your-domain.com`) |
+
+Example with Gmail:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=your-email@gmail.com
+```

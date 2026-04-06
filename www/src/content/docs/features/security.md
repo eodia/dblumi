@@ -16,9 +16,17 @@ Before any destructive query runs, dblumi shows a confirmation modal with the ri
 
 ## Authentication
 
-- Email/password with secure hashed storage
+- Email/password with secure hashed storage (Argon2)
 - OAuth/SSO: Keycloak, GitHub, Google
 - JWT-based sessions with token revocation
+
+## Password management
+
+- **Change password** from the user menu (for local accounts, not OAuth)
+- **Forgot password** with email reset link (requires SMTP configuration)
+- Password strength indicator (weak / fair / strong)
+- Reset tokens are hashed (SHA-256) and single-use, expiring after 1 hour
+- All existing sessions are invalidated after a password change or reset
 
 ## Role-based access control
 

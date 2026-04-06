@@ -16,9 +16,17 @@ Avant l'execution de toute requete destructrice, dblumi affiche une modale de co
 
 ## Authentification
 
-- Email/mot de passe avec stockage hache securise
+- Email/mot de passe avec stockage hache securise (Argon2)
 - OAuth/SSO : Keycloak, GitHub, Google
 - Sessions basees sur JWT avec revocation de tokens
+
+## Gestion des mots de passe
+
+- **Changer le mot de passe** depuis le menu utilisateur (pour les comptes locaux, pas OAuth)
+- **Mot de passe oublie** avec lien de reinitialisation par email (necessite la configuration SMTP)
+- Indicateur de force du mot de passe (faible / correct / fort)
+- Les tokens de reinitialisation sont haches (SHA-256) et a usage unique, expirent apres 1 heure
+- Toutes les sessions existantes sont invalidees apres un changement ou une reinitialisation
 
 ## Controle d'acces base sur les roles
 
