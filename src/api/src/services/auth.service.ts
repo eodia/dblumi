@@ -1,7 +1,7 @@
 import { hash, verify } from '@node-rs/argon2'
 import { eq, count } from 'drizzle-orm'
 import { db } from '../db/index.js'
-import { users, revokedTokens } from '../db/schema.js'
+import { users, revokedTokens, passwordResetTokens } from '../db/schema.js'
 import { signToken, verifyToken } from '../lib/jwt.js'
 import type { UserRole } from '@dblumi/shared'
 
@@ -17,6 +17,7 @@ export type AuthUser = {
   avatarUrl: string | null
   language: string
   createdAt: string
+  hasPassword: boolean
 }
 
 export type AuthResult = {
@@ -74,7 +75,7 @@ export async function register(input: {
   return {
     token,
     expiresAt,
-    user: { id, email: input.email.toLowerCase(), name: input.name, role, avatarUrl: null, language, createdAt: now },
+    user: { id, email: input.email.toLowerCase(), name: input.name, role, avatarUrl: null, language, createdAt: now, hasPassword: true },
   }
 }
 
@@ -119,6 +120,7 @@ export async function login(input: {
       avatarUrl: user.avatarUrl,
       language: user.language ?? 'fr',
       createdAt: user.createdAt,
+      hasPassword: true,
     },
   }
 }
@@ -169,6 +171,7 @@ export async function getMe(userId: string): Promise<AuthUser> {
     avatarUrl: user.avatarUrl,
     language: user.language ?? 'fr',
     createdAt: user.createdAt,
+    hasPassword: user.passwordHash !== null,
   }
 }
 
@@ -183,6 +186,122 @@ export async function isTokenRevoked(jti: string): Promise<boolean> {
     .where(eq(revokedTokens.jti, jti))
     .get()
   return row !== undefined
+}
+
+// ──────────────────────────────────────────────
+// Change password
+// ──────────────────────────────────────────────
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const user = await db.select().from(users).where(eq(users.id, userId)).get()
+
+  if (!user) {
+    throw new AuthError('NOT_FOUND', 'Utilisateur introuvable.')
+  }
+
+  if (!user.passwordHash) {
+    throw new AuthError('OAUTH_USER', 'Password managed by external provider.')
+  }
+
+  const valid = await verify(user.passwordHash, currentPassword)
+  if (!valid) {
+    throw new AuthError('INVALID_CREDENTIALS', 'Mot de passe actuel incorrect.')
+  }
+
+  const newHash = await hash(newPassword)
+  const now = new Date().toISOString()
+
+  await db
+    .update(users)
+    .set({ passwordHash: newHash, passwordChangedAt: now, updatedAt: now })
+    .where(eq(users.id, userId))
+}
+
+// ──────────────────────────────────────────────
+// Request password reset
+// ──────────────────────────────────────────────
+
+export async function requestPasswordReset(email: string): Promise<{ token: string; userName: string } | null> {
+  const user = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email.toLowerCase()))
+    .get()
+
+  // Return null silently for non-existent users or OAuth-only users (anti-enumeration)
+  if (!user || !user.passwordHash) return null
+
+  // Delete any existing tokens for this user
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id))
+
+  // Generate token and store hash
+  const tokenBytes = crypto.getRandomValues(new Uint8Array(32))
+  const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  const tokenHashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+  const tokenHash = Array.from(new Uint8Array(tokenHashBuffer), (b) => b.toString(16).padStart(2, '0')).join('')
+
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour
+
+  await db.insert(passwordResetTokens).values({
+    id: crypto.randomUUID(),
+    userId: user.id,
+    tokenHash,
+    expiresAt: expiresAt.toISOString(),
+    createdAt: now.toISOString(),
+  })
+
+  return { token, userName: user.name }
+}
+
+// ──────────────────────────────────────────────
+// Reset password (with token)
+// ──────────────────────────────────────────────
+
+export async function resetPassword(
+  token: string,
+  newPassword: string
+): Promise<void> {
+  // Hash the incoming token
+  const tokenHashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+  const tokenHash = Array.from(new Uint8Array(tokenHashBuffer), (b) => b.toString(16).padStart(2, '0')).join('')
+
+  const resetToken = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(eq(passwordResetTokens.tokenHash, tokenHash))
+    .get()
+
+  if (!resetToken) {
+    throw new AuthError('INVALID_TOKEN', 'Lien invalide ou expiré.')
+  }
+
+  if (resetToken.usedAt) {
+    throw new AuthError('INVALID_TOKEN', 'Ce lien a déjà été utilisé.')
+  }
+
+  if (new Date(resetToken.expiresAt) < new Date()) {
+    throw new AuthError('INVALID_TOKEN', 'Ce lien a expiré.')
+  }
+
+  // Update password
+  const newHash = await hash(newPassword)
+  const now = new Date().toISOString()
+
+  await db
+    .update(users)
+    .set({ passwordHash: newHash, passwordChangedAt: now, updatedAt: now })
+    .where(eq(users.id, resetToken.userId))
+
+  // Mark token as used
+  await db
+    .update(passwordResetTokens)
+    .set({ usedAt: now })
+    .where(eq(passwordResetTokens.id, resetToken.id))
 }
 
 // ──────────────────────────────────────────────
