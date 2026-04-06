@@ -3,6 +3,7 @@
 /docs/superpowers
 .agents
 .claude
+CLAUDE.md
 
 # Dependencies
 node_modules/
