@@ -7,10 +7,16 @@ import {
   logout,
   getMe,
   isTokenRevoked,
+  changePassword,
+  requestPasswordReset,
+  resetPassword,
   AuthError,
 } from '../services/auth.service.js'
 import { authMiddleware } from '../middleware/auth.js'
 import { tokenCookie, clearCookie, extractToken } from '../lib/jwt.js'
+import { isSmtpConfigured, sendMail } from '../lib/mailer.js'
+import { resetPasswordEmail } from '../templates/reset-password.js'
+import { config } from '../config.js'
 
 const auth = new Hono()
 
@@ -143,6 +149,86 @@ auth.patch(
     const { eq } = await import('drizzle-orm')
     await db.update(users).set({ language }).where(eq(users.id, userId))
     return c.json({ language })
+  }
+)
+
+// ── PATCH /password ──────────────────────────
+auth.patch(
+  '/password',
+  authMiddleware,
+  zValidator(
+    'json',
+    z.object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8, 'Le mot de passe doit faire au moins 8 caractères.'),
+    })
+  ),
+  async (c) => {
+    const userId = c.get('userId')
+    const { currentPassword, newPassword } = c.req.valid('json')
+
+    try {
+      await changePassword(userId, currentPassword, newPassword)
+    } catch (e) {
+      if (e instanceof AuthError) {
+        const status = e.code === 'OAUTH_USER' ? 400
+          : e.code === 'INVALID_CREDENTIALS' ? 401
+          : 404
+        return c.json(problem(status, e.message), status)
+      }
+      throw e
+    }
+
+    return c.json({ success: true })
+  }
+)
+
+// ── POST /forgot-password ────────────────────
+auth.post(
+  '/forgot-password',
+  zValidator('json', z.object({ email: z.string().email() })),
+  async (c) => {
+    if (!isSmtpConfigured()) {
+      return c.json(problem(400, 'SMTP is not configured.'), 400)
+    }
+
+    const { email } = c.req.valid('json')
+    const result = await requestPasswordReset(email)
+
+    if (result) {
+      const resetLink = `${config.BASE_URL}?view=reset-password&token=${result.token}`
+      const { html, text } = resetPasswordEmail(result.userName, resetLink, 60)
+      await sendMail(email, 'Réinitialiser votre mot de passe — dblumi', html, text)
+    }
+
+    // Always return 200 (anti-enumeration)
+    return c.json({ success: true })
+  }
+)
+
+// ── POST /reset-password ─────────────────────
+auth.post(
+  '/reset-password',
+  zValidator(
+    'json',
+    z.object({
+      token: z.string().min(1),
+      newPassword: z.string().min(8, 'Le mot de passe doit faire au moins 8 caractères.'),
+    })
+  ),
+  async (c) => {
+    const { token, newPassword } = c.req.valid('json')
+
+    try {
+      await resetPassword(token, newPassword)
+    } catch (e) {
+      if (e instanceof AuthError) {
+        return c.json(problem(400, e.message), 400)
+      }
+      throw e
+    }
+
+    return c.json({ success: true })
   }
 )
 
