@@ -9,6 +9,7 @@ type AuthState = {
   register: (name: string, email: string, password: string, language?: string) => Promise<void>
   logout: () => Promise<void>
   setLanguage: (language: string) => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -45,5 +46,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await authApi.updateLanguage(language)
     const { user } = get()
     if (user) set({ user: { ...user, language } })
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    await authApi.changePassword(currentPassword, newPassword)
   },
 }))

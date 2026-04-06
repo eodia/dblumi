@@ -8,6 +8,7 @@ export type User = {
   avatarUrl: string | null
   language: string
   createdAt: string
+  hasPassword: boolean
 }
 
 type AuthResponse = { user: User; token: string }
@@ -20,4 +21,10 @@ export const authApi = {
   logout: () => api.post<void>('/auth/logout'),
   me: () => api.get<{ user: User }>('/auth/me'),
   updateLanguage: (language: string) => api.patch<{ language: string }>('/auth/language', { language }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.patch<{ success: boolean }>('/auth/password', { currentPassword, newPassword }),
+  forgotPassword: (email: string) =>
+    api.post<{ success: boolean }>('/auth/forgot-password', { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    api.post<{ success: boolean }>('/auth/reset-password', { token, newPassword }),
 }
