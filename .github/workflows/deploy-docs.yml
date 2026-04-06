@@ -21,15 +21,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Disable corepack
+        run: corepack disable
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
 
       - name: Install dependencies
         working-directory: www
-        run: |
-          corepack disable
-          npm ci
+        run: npm ci
 
       - name: Build
         working-directory: www
