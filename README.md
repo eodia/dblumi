@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://dblumi.eodia.com"><strong>Website</strong></a> &middot;
-  <a href="https://dblumi.eodia.com/guides/introduction/"><strong>Docs</strong></a> &middot;
+  <a href="https://eodia.github.io/dblumi"><strong>Website</strong></a> &middot;
+  <a href="https://eodia.github.io/dblumi/guides/introduction/"><strong>Docs</strong></a> &middot;
   <a href="https://discord.gg/dblumi"><strong>Discord</strong></a>
 </p>
 
@@ -147,7 +147,7 @@ dblumi/
 | `SMTP_PASS` | No | SMTP password |
 | `SMTP_FROM` | No | Sender email address (e.g. `noreply@your-domain.com`) |
 
-See the full reference in the [docs](https://dblumi.eodia.com/self-hosting/environment-variables/).
+See the full reference in the [docs](https://eodia.github.io/dblumi/self-hosting/environment-variables/).
 
 ## Supported Databases
 
