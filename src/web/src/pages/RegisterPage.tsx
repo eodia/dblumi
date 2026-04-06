@@ -3,8 +3,10 @@ import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordStrengthIndicator } from '@/components/ui/password-strength'
 import { ApiError } from '@/api/client'
 import { useI18n, detectLocale } from '@/i18n'
+import logoSvg from '@/assets/logo-dblumi.svg'
 
 type Props = { onSwitchToLogin: () => void }
 
@@ -37,7 +39,7 @@ export function RegisterPage({ onSwitchToLogin }: Props) {
       </div>
       <div className="relative w-full max-w-[380px] mx-4">
         <div className="mb-10 text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight">db<span className="text-primary glow-primary">lumi</span></h1>
+          <img src={logoSvg} alt="dblumi" className="h-10 mx-auto" />
           <p className="mt-2 text-sm text-muted-foreground">{t('auth.register.title')}</p>
         </div>
         <div className="rounded-xl border border-border-subtle bg-card p-6 shadow-2xl shadow-black/40">
@@ -53,6 +55,7 @@ export function RegisterPage({ onSwitchToLogin }: Props) {
             <div className="space-y-2">
               <Label htmlFor="reg-password">{t('auth.register.password')}</Label>
               <Input id="reg-password" type="password" placeholder={t('auth.register.passwordHint')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
+              <PasswordStrengthIndicator password={password} />
             </div>
             {error && <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>}
             <Button type="submit" disabled={loading} className="w-full">
