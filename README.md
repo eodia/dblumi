@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://eodia.github.io/dblumi"><strong>Website</strong></a> &middot;
   <a href="https://eodia.github.io/dblumi/guides/introduction/"><strong>Docs</strong></a> &middot;
-  <a href="https://discord.gg/dblumi"><strong>Discord</strong></a>
+  <a href="https://discord.gg/2uTk5X9B"><strong>Discord</strong></a>
 </p>
 
 ---

@@ -16,7 +16,7 @@ export default defineConfig({
 			description: 'The modern SQL client with AI, built for developers',
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/eodia/dblumi' },
-				{ icon: 'discord', label: 'Discord', href: 'https://discord.gg/dblumi' },
+				{ icon: 'discord', label: 'Discord', href: 'https://discord.gg/2uTk5X9B' },
 			],
 			customCss: ['./src/styles/starlight-custom.css'],
 			locales: {
