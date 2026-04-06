@@ -4,7 +4,8 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://dblumi.eodia.com',
+	site: 'https://eodia.github.io',
+	base: '/dblumi',
 	integrations: [
 		starlight({
 			title: 'dblumi',
