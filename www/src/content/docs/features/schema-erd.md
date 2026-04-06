@@ -4,6 +4,8 @@ title: Schema & ERD
 
 Browse your database schema and visualize table relationships.
 
+![Database overview with schema browser and ERD diagram](/images/feature-schema.png)
+
 ## Schema browser
 
 The sidebar shows all tables, views, and functions in your database. Click any table to open it in the SQL editor.

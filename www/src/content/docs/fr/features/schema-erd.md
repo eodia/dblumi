@@ -4,6 +4,8 @@ title: Schema & ERD
 
 Parcourez le schema de votre base de donnees et visualisez les relations entre tables.
 
+![Vue d'ensemble avec explorateur de schema et diagramme ERD](/images/feature-schema.png)
+
 ## Explorateur de schema
 
 La barre laterale affiche toutes les tables, vues et fonctions de votre base de donnees. Cliquez sur une table pour l'ouvrir dans l'editeur SQL.

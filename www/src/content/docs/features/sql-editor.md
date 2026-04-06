@@ -4,6 +4,8 @@ title: SQL Editor
 
 The SQL editor is the core of dblumi. It supports PostgreSQL, MySQL, and Oracle with syntax highlighting, auto-complete, and real-time result streaming.
 
+![SQL editor with syntax highlighting and query results](/images/feature-editor.png)
+
 ## Key features
 
 - **Syntax highlighting** for PostgreSQL, MySQL, and Oracle SQL

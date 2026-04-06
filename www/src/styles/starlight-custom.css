@@ -30,14 +30,14 @@
   --sl-color-gray-1: #f0f0f0;
   --sl-color-gray-2: #c4c4c8;
   --sl-color-gray-3: #8e8e96;
-  --sl-color-gray-4: #585860;
+  --sl-color-gray-4: #6e6e78;
   --sl-color-gray-5: #33333a;
   --sl-color-gray-6: #1c1c20;
   --sl-color-gray-7: #111114;
 
   /* ── Borders ───────────────────────────────────── */
-  --sl-color-hairline-light: #222225;
-  --sl-color-hairline: #2a2a2e;
+  --sl-color-hairline-light: #252528;
+  --sl-color-hairline: #2e2e32;
 
   /* ── Black/White ───────────────────────────────── */
   --sl-color-white: #fafafa;
@@ -49,74 +49,85 @@
    ════════════════════════════════════════════════════ */
 :root[data-theme='light'] {
   /* ── Accent: darker green for readability ──────── */
-  --sl-color-accent-low: #e8f5e4;
-  --sl-color-accent: #2a8c1a;
-  --sl-color-accent-high: #1a5c10;
-  --sl-color-text-accent: #238015;
+  --sl-color-accent-low: #dcefd6;
+  --sl-color-accent: #1a6e10;
+  --sl-color-accent-high: #114a0a;
+  --sl-color-text-accent: #176210;
 
   /* ── Backgrounds: clean white ──────────────────── */
   --sl-color-bg: #ffffff;
-  --sl-color-bg-nav: rgba(255, 255, 255, 0.9);
-  --sl-color-bg-sidebar: #f8faf8;
-  --sl-color-bg-inline-code: #f0f4f0;
+  --sl-color-bg-nav: rgba(255, 255, 255, 0.92);
+  --sl-color-bg-sidebar: #f6f8f6;
+  --sl-color-bg-inline-code: #eef2ee;
 
   /* ── Gray scale ────────────────────────────────── */
   --sl-color-gray-1: #1a1a1e;
-  --sl-color-gray-2: #3a3a40;
-  --sl-color-gray-3: #6a6a72;
-  --sl-color-gray-4: #9a9aa2;
-  --sl-color-gray-5: #d0d0d6;
-  --sl-color-gray-6: #eaeaee;
-  --sl-color-gray-7: #f5f5f8;
+  --sl-color-gray-2: #33333a;
+  --sl-color-gray-3: #585862;
+  --sl-color-gray-4: #6e6e78;
+  --sl-color-gray-5: #c8c8d0;
+  --sl-color-gray-6: #e4e4ea;
+  --sl-color-gray-7: #f2f2f6;
 
   /* ── Borders ───────────────────────────────────── */
-  --sl-color-hairline-light: #e0e4e0;
-  --sl-color-hairline: #d0d4d0;
+  --sl-color-hairline-light: #d8dcd8;
+  --sl-color-hairline: #c4c8c4;
 
-  /* ── Black/White ───────────────────────────────── */
-  --sl-color-white: #ffffff;
-  --sl-color-black: #1a1a1e;
+  /* ── Black/White (inverted for light mode) ───── */
+  --sl-color-white: #1a1a1e;
+  --sl-color-black: #ffffff;
 }
 
 /* ════════════════════════════════════════════════════
    Component overrides — DARK
    ════════════════════════════════════════════════════ */
 
-/* ── Sidebar active link ─────────────────────────── */
+/* ── Sidebar links ───────────────────────────────── */
 :root[data-theme='dark'] nav.sidebar a[aria-current="page"],
 :root:not([data-theme]) nav.sidebar a[aria-current="page"] {
-  background: rgba(65, 205, 42, 0.08);
+  background: rgba(65, 205, 42, 0.12);
+  border-inline-start-color: var(--sl-color-accent);
+  color: #5de847;
+}
+
+:root[data-theme='dark'] nav.sidebar a:hover,
+:root:not([data-theme]) nav.sidebar a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fafafa;
 }
 
 /* ── Code blocks ─────────────────────────────────── */
 :root[data-theme='dark'] .expressive-code pre,
 :root:not([data-theme]) .expressive-code pre {
   background: #0e0e10 !important;
-  border-color: #222225 !important;
+  border-color: #2e2e32 !important;
 }
 
 /* ── Tables ──────────────────────────────────────── */
 :root[data-theme='dark'] table,
 :root:not([data-theme]) table {
-  border-color: #222225;
+  border-color: #2e2e32;
 }
 
 :root[data-theme='dark'] table th,
 :root:not([data-theme]) table th {
-  background: #161618;
-  border-color: #222225;
+  background: #1a1a1e;
+  border-color: #2e2e32;
+  color: #f0f0f0;
+  font-weight: 600;
 }
 
 :root[data-theme='dark'] table td,
 :root:not([data-theme]) table td {
-  border-color: #222225;
+  border-color: #2e2e32;
+  color: #c4c4c8;
 }
 
 /* ── Search modal ────────────────────────────────── */
 :root[data-theme='dark'] dialog,
 :root:not([data-theme]) dialog {
   --pagefind-ui-background: #111114;
-  --pagefind-ui-border: #222225;
+  --pagefind-ui-border: #2e2e32;
   --pagefind-ui-text: #f0f0f0;
   --pagefind-ui-primary: #41cd2a;
 }
@@ -137,40 +148,50 @@
    ════════════════════════════════════════════════════ */
 
 :root[data-theme='light'] nav.sidebar a[aria-current="page"] {
-  background: rgba(42, 140, 26, 0.08);
+  background: rgba(26, 110, 16, 0.1);
+  border-inline-start-color: var(--sl-color-accent);
+  color: #114a0a;
+}
+
+:root[data-theme='light'] nav.sidebar a:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1a1a1e;
 }
 
 :root[data-theme='light'] .expressive-code pre {
-  background: #f8faf8 !important;
-  border-color: #e0e4e0 !important;
+  background: #f4f7f4 !important;
+  border-color: #c4c8c4 !important;
 }
 
 :root[data-theme='light'] table {
-  border-color: #e0e4e0;
+  border-color: #c4c8c4;
 }
 
 :root[data-theme='light'] table th {
-  background: #f0f4f0;
-  border-color: #e0e4e0;
+  background: #e8ece8;
+  border-color: #c4c8c4;
+  color: #1a1a1e;
+  font-weight: 600;
 }
 
 :root[data-theme='light'] table td {
-  border-color: #e0e4e0;
+  border-color: #d8dcd8;
+  color: #33333a;
 }
 
 :root[data-theme='light'] dialog {
   --pagefind-ui-background: #ffffff;
-  --pagefind-ui-border: #e0e4e0;
+  --pagefind-ui-border: #c4c8c4;
   --pagefind-ui-text: #1a1a1e;
-  --pagefind-ui-primary: #2a8c1a;
+  --pagefind-ui-primary: #1a6e10;
 }
 
 :root[data-theme='light'] ::-webkit-scrollbar-thumb {
-  background: #d0d0d6;
+  background: #c8c8d0;
 }
 
 :root[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
-  background: #9a9aa2;
+  background: #8e8e96;
 }
 
 /* ════════════════════════════════════════════════════
@@ -188,4 +209,21 @@
 
 ::-webkit-scrollbar-thumb {
   border-radius: 3px;
+}
+
+/* ── Focus indicators (accessibility) ─────────────── */
+
+a:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── Skip to content ─────────────────────────────── */
+
+.skip-link:focus {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 999;
 }

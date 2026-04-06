@@ -8,9 +8,11 @@ dblumi inclut un assistant IA capable de generer, expliquer et optimiser les req
 
 | Fournisseur | Modeles |
 |-------------|---------|
-| Anthropic | Claude 3.5 Sonnet, Claude 3 Haiku |
-| OpenAI | GPT-4o, GPT-4 Turbo |
-| Azure OpenAI | Vos modeles deployes |
+| Anthropic | Tous les modeles — Claude Opus 4, Sonnet 4, Haiku, et les futurs modeles |
+| OpenAI | Tous les modeles — GPT-4o, GPT-4.1, o3, o4-mini, et les futurs modeles |
+| Azure OpenAI | Tout modele deploye dans votre abonnement Azure |
+
+Configurez le modele via les variables d'environnement. dblumi utilise les meilleurs modeles par defaut (Claude Sonnet 4 pour Anthropic, GPT-4o pour OpenAI) mais vous pouvez choisir n'importe quel modele propose par votre fournisseur.
 
 Utilisez votre propre cle API — dblumi ne fait jamais transiter vos requetes par un proxy.
 
@@ -20,6 +22,8 @@ Utilisez votre propre cle API — dblumi ne fait jamais transiter vos requetes p
 - **Expliquer** une requete en termes simples
 - **Optimiser** une requete lente
 - **Repondre aux questions** sur votre schema
+
+![Le Copilot IA genere une requete SQL a partir d'une description en langage naturel](/images/feature-ai.png)
 
 ## Connaissance du contexte
 

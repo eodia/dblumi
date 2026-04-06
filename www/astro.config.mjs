@@ -9,15 +9,19 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'dblumi',
+			logo: {
+				src: './public/logo-dblumi.svg',
+				replacesTitle: true,
+			},
 			description: 'The modern SQL client with AI, built for developers',
 			social: [
-				{ icon: 'github', label: 'GitHub', href: 'https://github.com/marcjamain/dblumi' },
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/eodia/dblumi' },
 				{ icon: 'discord', label: 'Discord', href: 'https://discord.gg/dblumi' },
 			],
 			customCss: ['./src/styles/starlight-custom.css'],
 			locales: {
 				root: { label: 'English', lang: 'en' },
-				fr: { label: 'Francais', lang: 'fr' },
+				fr: { label: 'Français', lang: 'fr' },
 			},
 			sidebar: [
 				{
@@ -38,6 +42,7 @@ export default defineConfig({
 						{ label: 'Saved Queries', slug: 'features/saved-queries', translations: { fr: 'Requetes sauvegardees' } },
 						{ label: 'Schema & ERD', slug: 'features/schema-erd', translations: { fr: 'Schema & ERD' } },
 						{ label: 'Security & Guardrails', slug: 'features/security', translations: { fr: 'Securite & Garde-fous' } },
+						{ label: 'REST API & Swagger', slug: 'features/rest-api', translations: { fr: 'API REST & Swagger' } },
 					],
 				},
 				{

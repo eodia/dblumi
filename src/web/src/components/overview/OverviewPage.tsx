@@ -8,7 +8,7 @@ import { StatsCards } from './StatsCards'
 import { ActivityCard } from './ActivityCard'
 import { QuickAccessCard } from './QuickAccessCard'
 import { ErdDiagram } from './ErdDiagram'
-import { Server, RefreshCw, Users } from 'lucide-react'
+import { Server, RefreshCw, Users, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { DriverIcon, envBadgeClass } from '@/components/ui/driver-icon'
@@ -125,8 +125,10 @@ export function OverviewPage({ onNavigate }: Props) {
 
   if (!activeConnectionId) {
     return (
-      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        {t('overview.noConnection')}
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-text-muted bg-background text-center h-full">
+        <Database className="h-8 w-8 opacity-20" />
+        <span className="text-xs">{t('overview.noConnection')}</span>
+        <span className="text-[11px] text-text-muted/60">{t('overview.noConnectionHint')}</span>
       </div>
     )
   }

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { CheckCircle, XCircle, Loader2, Link2, FormInput } from 'lucide-react'
 import { DriverIcon } from '@/components/ui/driver-icon'
 import { ComboboxChips } from '@/components/ui/combobox-chips'
@@ -128,7 +129,6 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
     setSharesSynced(true)
   }
 
-  const [mode, setMode] = useState<'string' | 'manual'>('string')
   const [connString, setConnString] = useState('')
   const [parseError, setParseError] = useState('')
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
@@ -145,7 +145,7 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
 
     const parsed = parseConnectionString(value)
     if (!parsed) {
-      setParseError('Format non reconnu. Attendu: postgresql://user:pass@host:port/db')
+      setParseError(t('conn.parseError'))
       return
     }
 
@@ -194,9 +194,9 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
             password: form.password,
             ssl: form.ssl,
           })
-      setTestResult({ ok: r.ok, msg: r.ok ? `OK — ${r.latencyMs}ms` : (r.error ?? 'Echec') })
+      setTestResult({ ok: r.ok, msg: r.ok ? `OK — ${r.latencyMs}ms` : (r.error ?? t('conn.testFail')) })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur de connexion.'
+      const msg = err instanceof Error ? err.message : t('conn.testFail')
       setTestResult({ ok: false, msg })
     } finally {
       setTesting(false)
@@ -208,7 +208,7 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
       <DialogContent className="sm:max-w-md bg-card border-border-subtle">
         <DialogHeader>
           <DialogTitle className="text-base">
-            {editing ? 'Modifier la connexion' : 'Nouvelle connexion'}
+            {editing ? t('conn.titleEdit') : t('conn.titleNew')}
           </DialogTitle>
         </DialogHeader>
 
@@ -221,40 +221,21 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
         >
           {/* ── Mode toggle (create only) ────────── */}
           {!editing && (
-            <>
-              <div className="inline-flex w-full rounded-md border border-border-strong overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setMode('string')}
-                  className={cn(
-                    'flex-1 inline-flex items-center justify-center gap-1.5 h-8 text-xs font-medium transition-colors',
-                    mode === 'string'
-                      ? 'bg-surface-overlay text-foreground'
-                      : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-raised',
-                  )}
-                >
+            <Tabs defaultValue="string">
+              <TabsList className="w-full">
+                <TabsTrigger value="string" className="flex-1 gap-1.5">
                   <Link2 className="h-3 w-3" />
-                  Connection string
-                </button>
-                <span className="w-px bg-border-strong" />
-                <button
-                  type="button"
-                  onClick={() => setMode('manual')}
-                  className={cn(
-                    'flex-1 inline-flex items-center justify-center gap-1.5 h-8 text-xs font-medium transition-colors',
-                    mode === 'manual'
-                      ? 'bg-surface-overlay text-foreground'
-                      : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-raised',
-                  )}
-                >
+                  {t('conn.tabString')}
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="flex-1 gap-1.5">
                   <FormInput className="h-3 w-3" />
-                  Champs manuels
-                </button>
-              </div>
+                  {t('conn.tabManual')}
+                </TabsTrigger>
+              </TabsList>
 
-              {mode === 'string' && (
+              <TabsContent value="string">
                 <div className="space-y-2">
-                  <Label>Collez votre connection string</Label>
+                  <Label>{t('conn.pasteString')}</Label>
                   <Input
                     value={connString}
                     onChange={(e) => handlePasteConnString(e.target.value)}
@@ -267,39 +248,41 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
                   )}
                   {connString && !parseError && form.host !== 'localhost' && (
                     <div className="rounded-md border border-primary/20 bg-dblumi-subtle p-2.5 text-xs text-muted-foreground grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-                      <span className="text-text-muted">Driver</span><span>{form.driver}</span>
-                      <span className="text-text-muted">Hote</span><span>{form.host}:{form.port}</span>
-                      <span className="text-text-muted">Base</span><span>{form.database}</span>
-                      <span className="text-text-muted">User</span><span>{form.username}</span>
-                      <span className="text-text-muted">SSL</span><span>{form.ssl ? 'oui' : 'non'}</span>
+                      <span className="text-text-muted">{t('conn.parsedDriver')}</span><span>{form.driver}</span>
+                      <span className="text-text-muted">{t('conn.parsedHost')}</span><span>{form.host}:{form.port}</span>
+                      <span className="text-text-muted">{t('conn.parsedDb')}</span><span>{form.database}</span>
+                      <span className="text-text-muted">{t('conn.parsedUser')}</span><span>{form.username}</span>
+                      <span className="text-text-muted">{t('conn.parsedSsl')}</span><span>{form.ssl ? t('conn.parsedSslYes') : t('conn.parsedSslNo')}</span>
                     </div>
                   )}
                 </div>
-              )}
+              </TabsContent>
 
-              {mode === 'manual' && <ManualFields form={form} set={set} editing={false} />}
-            </>
+              <TabsContent value="manual">
+                <ManualFields form={form} set={set} editing={false} t={t} />
+              </TabsContent>
+            </Tabs>
           )}
 
           {/* When editing, always show manual fields */}
-          {editing && <ManualFields form={form} set={set} editing={true} />}
+          {editing && <ManualFields form={form} set={set} editing={true} t={t} />}
 
           {/* Name (always visible) */}
           <div className="space-y-1.5">
-            <Label>Nom</Label>
+            <Label>{t('conn.name')}</Label>
             <Input
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
               required
-              placeholder="Ma base prod"
+              placeholder={t('conn.namePlaceholder')}
             />
           </div>
 
           {/* Environment */}
           <div className="space-y-1.5">
             <Label>
-              Environnement{' '}
-              <span className="text-text-muted font-normal">(optionnel)</span>
+              {t('conn.environment')}{' '}
+              <span className="text-text-muted font-normal">{t('conn.environmentOptional')}</span>
             </Label>
             <div className="flex items-center gap-2">
               <div className="flex gap-1.5">
@@ -407,15 +390,15 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
           <DialogFooter className="flex-row justify-between sm:justify-between">
             <Button type="button" variant="ghost" size="sm" onClick={handleTest} disabled={testing || !form.host}>
               {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Tester
+              {t('conn.test')}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-                Annuler
+                {t('conn.cancel')}
               </Button>
               <Button type="submit" size="sm" disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                {editing ? 'Enregistrer' : 'Creer'}
+                {editing ? t('conn.save') : t('conn.create')}
               </Button>
             </div>
           </DialogFooter>
@@ -430,16 +413,18 @@ function ManualFields({
   form,
   set,
   editing,
+  t,
 }: {
   form: CreateConnectionInput
   set: <K extends keyof CreateConnectionInput>(k: K, v: CreateConnectionInput[K]) => void
   editing: boolean
+  t: (key: string) => string
 }) {
   return (
     <>
       {/* Driver toggle */}
       <div className="space-y-1.5">
-        <Label>Driver</Label>
+        <Label>{t('conn.parsedDriver')}</Label>
         <div className="inline-flex w-full rounded-md border border-border-strong overflow-hidden">
           {(['postgresql', 'mysql', 'oracle'] as const).map((d) => (
             <button
@@ -467,11 +452,11 @@ function ManualFields({
       {/* Host + Port */}
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-2 space-y-1.5">
-          <Label>Hote</Label>
+          <Label>{t('conn.host')}</Label>
           <Input value={form.host} onChange={(e) => set('host', e.target.value)} required />
         </div>
         <div className="space-y-1.5">
-          <Label>Port</Label>
+          <Label>{t('conn.port')}</Label>
           <Input
             type="number"
             value={form.port}
@@ -483,23 +468,23 @@ function ManualFields({
 
       {/* Database */}
       <div className="space-y-1.5">
-        <Label>Base de données <span className="text-text-muted font-normal text-xs">(optionnel — serveur entier)</span></Label>
-        <Input value={form.database} onChange={(e) => set('database', e.target.value)} placeholder="Laisser vide pour tout le serveur" />
+        <Label>{t('conn.database')} <span className="text-text-muted font-normal text-xs">{t('conn.databaseHint')}</span></Label>
+        <Input value={form.database} onChange={(e) => set('database', e.target.value)} placeholder={t('conn.databasePlaceholder')} />
       </div>
 
       {/* Username + Password */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Utilisateur</Label>
+          <Label>{t('conn.username')}</Label>
           <Input value={form.username} onChange={(e) => set('username', e.target.value)} required />
         </div>
         <div className="space-y-1.5">
-          <Label>Mot de passe</Label>
+          <Label>{t('conn.password')}</Label>
           <Input
             type="password"
             value={form.password}
             onChange={(e) => set('password', e.target.value)}
-            placeholder={editing ? '(inchange)' : ''}
+            placeholder={editing ? t('conn.passwordUnchanged') : ''}
           />
         </div>
       </div>

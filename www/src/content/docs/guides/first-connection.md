@@ -16,6 +16,8 @@ Once dblumi is running, connect it to your database.
 
 By default, a connection is **private** — only you can see it. You can share it with specific users or groups from the connection settings.
 
+![Table browser showing database content with schema sidebar](/images/feature-connection.png)
+
 ## You're ready
 
 Once connected, you land on the **Overview** page — your dashboard for this database. From there you can open the SQL editor, browse your schema, or jump to a saved query.

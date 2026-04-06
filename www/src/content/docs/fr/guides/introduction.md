@@ -4,6 +4,8 @@ title: Introduction
 
 **dblumi** est un client de base de donnees auto-heberge, concu pour les equipes de developpeurs. Il combine un editeur SQL moderne, un copilote IA et des fonctionnalites de collaboration en un seul outil.
 
+![Vue d'ensemble de dblumi — editeur SQL avec copilot IA et explorateur de schema](/images/hero-screenshot.png)
+
 ## Ce que vous pouvez faire avec dblumi
 
 - **Ecrire et executer du SQL** avec coloration syntaxique, auto-completion et streaming des resultats en temps reel

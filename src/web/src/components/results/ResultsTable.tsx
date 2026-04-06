@@ -1448,11 +1448,11 @@ export function ResultsTable() {
                       ? [...new Set(Array.from(selectedCells).map((k) => parseInt(k.split(':')[0]!, 10)))].sort((a, b) => a - b)
                       : []
                     const cellSelRows = cellSelRowIdxs.map((r) => rows[r]).filter(Boolean) as Record<string, unknown>[]
+                    const colNames = orderedColumns.map((c) => c.name)
+                    const selCols = isMultiCellSel ? colNames.filter((cn) => cellSelRowIdxs.some((r) => selectedCells.has(cellKey(r, cn)))) : []
 
                     const copyCell = () => {
                       if (isMultiCellSel) {
-                        const colNames = orderedColumns.map((c) => c.name)
-                        const selCols = colNames.filter((cn) => cellSelRowIdxs.some((r) => selectedCells.has(cellKey(r, cn))))
                         const text = cellSelRowIdxs.map((r) => selCols.map((cn) => {
                           if (!selectedCells.has(cellKey(r, cn))) return ''
                           const v = rows[r]?.[cn]; return v === null ? 'NULL' : v === undefined ? '' : String(v)
@@ -1473,7 +1473,7 @@ export function ResultsTable() {
                       <ContextMenuContent className="w-52">
                         <ContextMenuItem className="gap-2 text-xs" onClick={copyCell}>
                           <ClipboardCopy className="h-3.5 w-3.5" />
-                          {isMultiCellSel ? t('ctx.copyCells', { count: String(selectedCells.size) }) : t('ctx.copyCell')}
+                          {isMultiCellSel ? t('ctx.copyCells', { rows: String(cellSelRowIdxs.length), cols: String(selCols.length) }) : t('ctx.copyCell')}
                         </ContextMenuItem>
                         <ContextMenuItem className="gap-2 text-xs" onClick={copyRow}>
                           <Copy className="h-3.5 w-3.5" />
@@ -1517,11 +1517,11 @@ export function ResultsTable() {
                       ? [...new Set(Array.from(selectedCells).map((k) => parseInt(k.split(':')[0]!, 10)))].sort((a, b) => a - b)
                       : []
                     const cellSelRows = cellSelRowIdxs.map((r) => rows[r]).filter(Boolean) as Record<string, unknown>[]
+                    const colNames = orderedColumns.map((c) => c.name)
+                    const selCols = isMultiCellSel ? colNames.filter((cn) => cellSelRowIdxs.some((r) => selectedCells.has(cellKey(r, cn)))) : []
 
                     const copyCell = () => {
                       if (isMultiCellSel) {
-                        const colNames = orderedColumns.map((c) => c.name)
-                        const selCols = colNames.filter((cn) => cellSelRowIdxs.some((r) => selectedCells.has(cellKey(r, cn))))
                         const text = cellSelRowIdxs.map((r) => selCols.map((cn) => {
                           if (!selectedCells.has(cellKey(r, cn))) return ''
                           const v = rows[r]?.[cn]
@@ -1563,7 +1563,7 @@ export function ResultsTable() {
                       <ContextMenuContent className="w-52">
                         <ContextMenuItem className="gap-2 text-xs" onClick={copyCell}>
                           <ClipboardCopy className="h-3.5 w-3.5" />
-                          {isMultiCellSel ? t('ctx.copyCells', { count: String(selectedCells.size) }) : t('ctx.copyCell')}
+                          {isMultiCellSel ? t('ctx.copyCells', { rows: String(cellSelRowIdxs.length), cols: String(selCols.length) }) : t('ctx.copyCell')}
                         </ContextMenuItem>
                         <ContextMenuItem className="gap-2 text-xs" onClick={copyRows}>
                           <Copy className="h-3.5 w-3.5" />

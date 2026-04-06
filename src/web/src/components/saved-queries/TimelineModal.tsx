@@ -10,9 +10,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { savedQueryVersionsApi, type SavedQueryVersion } from '@/api/saved-query-versions'
 import { TimelineDiffView, SqlReadOnlyView } from './TimelineDiffView'
-import { Check, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Check, X, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useEditorStore } from '@/stores/editor.store'
 
 type Props = {
   queryId: string
@@ -30,6 +32,7 @@ type ViewState =
 export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChange }: Props) {
   const { t } = useI18n()
   const qc = useQueryClient()
+  const setSql = useEditorStore((s) => s.setSql)
   const [view, setView] = useState<ViewState>({ mode: 'view', sql: currentSql, label: t('sq.timeline.current') })
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [editingLabel, setEditingLabel] = useState<string | null>(null)
@@ -125,6 +128,15 @@ export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChan
     }
     headerLabel = t('sq.timeline.comparing')
   }
+
+  // Determine which SQL can be restored
+  const getRestorableSql = (): string | null => {
+    if (view.mode === 'view') return view.sql !== currentSql ? view.sql : null
+    if (view.mode === 'vsCurrent') return getSqlById(view.versionId) || null
+    // compare mode: restore the more recent version (modified = right side)
+    return modified || null
+  }
+  const restorableSql = getRestorableSql()
 
   const startEditLabel = (v: SavedQueryVersion) => {
     setEditingLabel(v.id)
@@ -255,6 +267,20 @@ export function TimelineModal({ queryId, queryName, currentSql, open, onOpenChan
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="px-4 py-2 border-b border-border-subtle flex items-center justify-between">
               <span className="text-xs text-muted-foreground">{headerLabel}</span>
+              {restorableSql && (
+                <Button
+                  size="sm"
+                  className="gap-1.5 h-6 px-2.5 text-xs"
+                  onClick={() => {
+                    setSql(restorableSql)
+                    onOpenChange(false)
+                    toast.success(t('sq.timeline.restored'))
+                  }}
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  {t('sq.timeline.restore')}
+                </Button>
+              )}
             </div>
             <div className="flex-1 overflow-hidden">
               {view.mode === 'view' ? (

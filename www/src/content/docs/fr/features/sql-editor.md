@@ -4,6 +4,8 @@ title: Editeur SQL
 
 L'editeur SQL est le coeur de dblumi. Il supporte PostgreSQL, MySQL et Oracle avec coloration syntaxique, auto-completion et streaming des resultats en temps reel.
 
+![Editeur SQL avec coloration syntaxique et resultats](/images/feature-editor.png)
+
 ## Fonctionnalites cles
 
 - **Coloration syntaxique** pour PostgreSQL, MySQL et Oracle SQL

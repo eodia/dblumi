@@ -16,6 +16,8 @@ Une fois dblumi lance, connectez-le a votre base de donnees.
 
 Par defaut, une connexion est **privee** — vous seul pouvez la voir. Vous pouvez la partager avec des utilisateurs ou groupes specifiques depuis les parametres de la connexion.
 
+![Explorateur de tables montrant le contenu de la base avec le schema en sidebar](/images/feature-connection.png)
+
 ## C'est pret
 
 Une fois connecte, vous arrivez sur la page **Vue d'ensemble** — votre tableau de bord pour cette base de donnees. De la, vous pouvez ouvrir l'editeur SQL, parcourir votre schema ou acceder a une requete sauvegardee.
