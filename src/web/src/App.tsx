@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { AppShell } from './components/layout/AppShell'
 import { I18nContext, createTranslator, detectLocale, type Locale } from './i18n'
+import logoSvg from '@/assets/logo-dblumi.svg'
 
 type AuthView = 'login' | 'register'
 
@@ -40,9 +41,7 @@ export function App() {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            db<span className="text-primary glow-primary">lumi</span>
-          </h1>
+          <img src={logoSvg} alt="dblumi" className="h-8" />
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -55,8 +54,9 @@ export function App() {
     )
   }
 
-  // ── Auth flow ──────────────────────────
-  if (!user) {
+  // ── Auth flow / Reset password ─────────
+  const isResetView = new URLSearchParams(window.location.search).get('view') === 'reset-password'
+  if (!user || isResetView) {
     return (
       <I18nContext.Provider value={i18nValue}>
         {view === 'login' ? (
