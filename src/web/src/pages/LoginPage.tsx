@@ -9,7 +9,9 @@ import { useI18n } from '@/i18n'
 import { settingsApi } from '@/api/settings'
 import { authApi } from '@/api/auth'
 import { PasswordStrengthIndicator } from '@/components/ui/password-strength'
-import logoSvg from '@/assets/logo-dblumi.svg'
+import { useThemeStore } from '@/stores/theme.store'
+import logoDark from '@/assets/logo-dblumi.svg'
+import logoLight from '@/assets/logo-dblumi-light.svg'
 
 type AuthView = 'login' | 'forgot' | 'reset'
 
@@ -18,6 +20,9 @@ type Props = { onSwitchToRegister: () => void }
 export function LoginPage({ onSwitchToRegister }: Props) {
   const login = useAuthStore((s) => s.login)
   const { t } = useI18n()
+  const theme = useThemeStore((s) => s.theme)
+  const logoSvg = theme === 'light' ? logoLight : logoDark
+  const starColor = theme === 'light' ? '0,0,0' : '255,255,255'
   const { data: authProviders } = useQuery({
     queryKey: ['auth-providers'],
     queryFn: settingsApi.getAuthProviders,
@@ -144,7 +149,7 @@ export function LoginPage({ onSwitchToRegister }: Props) {
         const alpha = s.a * (0.6 + 0.4 * Math.sin(s.phase))
         ctx!.beginPath()
         ctx!.arc(s.x, s.y, s.r, 0, Math.PI * 2)
-        ctx!.fillStyle = `rgba(255,255,255,${alpha})`
+        ctx!.fillStyle = `rgba(${starColor},${alpha})`
         ctx!.fill()
       }
       animId = requestAnimationFrame(draw)
@@ -157,7 +162,7 @@ export function LoginPage({ onSwitchToRegister }: Props) {
       window.removeEventListener('resize', resize)
       cancelAnimationFrame(animId)
     }
-  }, [])
+  }, [starColor])
 
   // ── Forgot password view ──
   if (authView === 'forgot') {

@@ -317,6 +317,10 @@ export const fr = {
   'user.language': 'Langue',
   'user.french': 'Français',
   'user.english': 'English',
+  'user.theme': 'Thème',
+  'user.theme.system': 'Système',
+  'user.theme.dark': 'Sombre',
+  'user.theme.light': 'Clair',
 
   // ── Common ──
   'common.cancel': 'Annuler',

@@ -6,13 +6,17 @@ import { Label } from '@/components/ui/label'
 import { PasswordStrengthIndicator } from '@/components/ui/password-strength'
 import { ApiError } from '@/api/client'
 import { useI18n, detectLocale } from '@/i18n'
-import logoSvg from '@/assets/logo-dblumi.svg'
+import { useThemeStore } from '@/stores/theme.store'
+import logoDark from '@/assets/logo-dblumi.svg'
+import logoLight from '@/assets/logo-dblumi-light.svg'
 
 type Props = { onSwitchToLogin: () => void }
 
 export function RegisterPage({ onSwitchToLogin }: Props) {
   const register = useAuthStore((s) => s.register)
   const { t } = useI18n()
+  const theme = useThemeStore((s) => s.theme)
+  const logoSvg = theme === 'light' ? logoLight : logoDark
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

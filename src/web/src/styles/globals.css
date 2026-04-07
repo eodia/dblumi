@@ -74,6 +74,67 @@
   --radius-sm: calc(var(--radius-lg) - 4px);
 }
 
+/* ═══════════════════════════════════════════════════
+   Light Theme overrides
+   ═══════════════════════════════════════════════════ */
+
+[data-theme="light"] {
+  --color-background:            #FAFAFA;
+  --color-foreground:            #0A0A0B;
+
+  --color-card:                  #FFFFFF;
+  --color-card-foreground:       #0A0A0B;
+
+  --color-popover:               #FFFFFF;
+  --color-popover-foreground:    #0A0A0B;
+
+  --color-primary:               #2DA31E;
+  --color-primary-foreground:    #FFFFFF;
+
+  --color-secondary:             #F0F0F2;
+  --color-secondary-foreground:  #0A0A0B;
+
+  --color-muted:                 #F0F0F2;
+  --color-muted-foreground:      #6B6B76;
+
+  --color-accent:                #F0F0F2;
+  --color-accent-foreground:     #0A0A0B;
+
+  --color-destructive:           #DC2626;
+  --color-destructive-foreground:#FFFFFF;
+
+  --color-border:                #E2E2E6;
+  --color-input:                 #E2E2E6;
+  --color-ring:                  #2DA31E;
+
+  --color-surface:               #FFFFFF;
+  --color-surface-raised:        #F5F5F7;
+  --color-surface-overlay:       #E8E8EC;
+
+  --color-border-subtle:         #EBEBEF;
+  --color-border-strong:         #D1D1D8;
+
+  --color-text-secondary:        #6B6B76;
+  --color-text-muted:            #9C9CA8;
+
+  --color-dblumi:                #2DA31E;
+  --color-dblumi-hover:          #258A19;
+  --color-dblumi-glow:           #2DA31E30;
+  --color-dblumi-subtle:         #2DA31E0A;
+
+  --color-success:               #059669;
+  --color-warning:               #D97706;
+
+  --color-sidebar:               #F5F5F7;
+  --color-sidebar-foreground:    #0A0A0B;
+  --color-sidebar-primary:       #2DA31E;
+  --color-sidebar-primary-foreground: #FFFFFF;
+  --color-sidebar-accent:        #E8E8EC;
+  --color-sidebar-accent-foreground: #0A0A0B;
+  --color-sidebar-border:        #EBEBEF;
+  --color-sidebar-ring:          #2DA31E;
+}
+
 /* ===== Base ===== */
 @layer base {
   *,
@@ -98,7 +159,11 @@
     color-scheme: dark;
   }
 
-  /* Scrollbars — minimal, dark */
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+
+  /* Scrollbars — minimal */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--color-surface-overlay); border-radius: 3px; }

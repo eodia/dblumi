@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useThemeStore } from '@/stores/theme.store'
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
 import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -46,6 +47,9 @@ import {
   Settings2,
   Upload,
   KeyRound,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -93,7 +97,8 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import logoSvg from '@/assets/logo-dblumi.svg'
+import logoDark from '@/assets/logo-dblumi.svg'
+import logoLight from '@/assets/logo-dblumi-light.svg'
 import {
   Tooltip,
   TooltipContent,
@@ -993,6 +998,7 @@ function AppShellInner({
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
   const { t, locale, setLocale } = useI18n()
+  const { theme, preference, setTheme } = useThemeStore()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const qc = useQueryClient()
 
@@ -1263,6 +1269,29 @@ function AppShellInner({
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                      {preference === 'system' ? <Monitor className="h-4 w-4" /> : theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                      {t('user.theme')}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={() => setTheme('system')} className="gap-2 cursor-pointer">
+                        <Monitor className="h-4 w-4" />
+                        {t('user.theme.system')}
+                        {preference === 'system' && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTheme('dark')} className="gap-2 cursor-pointer">
+                        <Moon className="h-4 w-4" />
+                        {t('user.theme.dark')}
+                        {preference === 'dark' && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTheme('light')} className="gap-2 cursor-pointer">
+                        <Sun className="h-4 w-4" />
+                        {t('user.theme.light')}
+                        {preference === 'light' && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                   {user?.hasPassword && (
                     <DropdownMenuItem onClick={() => setChangePasswordOpen(true)} className="gap-2 cursor-pointer">
                       <KeyRound className="h-4 w-4" />
@@ -1296,7 +1325,7 @@ function AppShellInner({
         <header className="flex items-center h-10 px-3 gap-2 border-b border-border-subtle flex-shrink-0">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="h-4" />
-          <img src={logoSvg} alt="dblumi" className="h-5" />
+          <img src={theme === 'light' ? logoLight : logoDark} alt="dblumi" className="h-5" />
         </header>
 
         {/* Page content */}
