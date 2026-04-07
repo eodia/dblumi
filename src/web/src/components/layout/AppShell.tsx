@@ -358,8 +358,8 @@ function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport:
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Functions</span>
                     <span className="text-[10px] text-text-muted/50 tabular-nums">{functions.length}</span>
                   </button>
-                  {sectionsOpen.functions && functions.map((fn) => (
-                    <ContextMenu key={`${fn.kind}-${fn.name}`}>
+                  {sectionsOpen.functions && functions.map((fn, idx) => (
+                    <ContextMenu key={`${fn.kind}-${fn.name}-${idx}`}>
                       <ContextMenuTrigger asChild>
                         <button
                           onClick={async () => {
