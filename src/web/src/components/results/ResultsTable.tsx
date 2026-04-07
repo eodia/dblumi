@@ -35,7 +35,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
@@ -44,6 +43,7 @@ import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { readSSE } from '@/api/client'
 import { useEditorStore, type QueryColumn, type SortBy, type SortEntry, type FilterRow } from '@/stores/editor.store'
+import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -841,6 +841,7 @@ export function ResultsTable() {
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set()) // "rowIdx:colName"
   const cellKey = (r: number, c: string) => `${r}:${c}`
   const [deleteConfirmRow, setDeleteConfirmRow] = useState<Record<string, unknown> | null>(null)
+  const [deleteMultiConfirm, setDeleteMultiConfirm] = useState<{ count: number; action: () => Promise<void> } | null>(null)
   const [ctxCell, setCtxCell] = useState<{ row: Record<string, unknown>; colName: string } | null>(null)
 
   // ── Apply filter → build WHERE ──────────
@@ -1226,7 +1227,7 @@ export function ResultsTable() {
       {/* Status / Action bar */}
       <div className="flex items-center gap-2 h-8 px-3 border-b border-border-subtle bg-surface flex-shrink-0">
         {isTableMode && someSelected ? (<>
-          <Button variant="outline" size="sm" className="h-6 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleDeleteSelected}>
+          <Button variant="outline" size="sm" className="h-6 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteMultiConfirm({ count: selected.size, action: handleDeleteSelected })}>
             <Trash2 className="h-3 w-3" />{t('sel.delete')} {selected.size} {selected.size !== 1 ? t('sel.deleteLines') : t('sel.deleteLine')}
           </Button>
           <DropdownMenu>
@@ -1542,12 +1543,22 @@ export function ResultsTable() {
                     }
 
                     const deleteRows = () => {
-                      if (isMultiRowSel) { void handleDeleteSelected(); return }
+                      if (isMultiRowSel) {
+                        setDeleteMultiConfirm({ count: selected.size, action: handleDeleteSelected })
+                        return
+                      }
                       if (isMultiCellSel) {
-                        const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]; if (!pkCol) return
-                        const ids = cellSelRows.map((r) => { const v = r[pkCol.name]; return typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''")}'` })
-                        useEditorStore.getState().setSql(`DELETE FROM ${tableName} WHERE ${pkCol.name} IN (${ids.join(', ')})`)
-                        void executeQuery(true).then(() => { useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`); return executeQuery(true) }).then(() => setTabState({ selected: new Set() }))
+                        setDeleteMultiConfirm({
+                          count: cellSelRows.length,
+                          action: async () => {
+                            const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]; if (!pkCol) return
+                            const ids = cellSelRows.map((r) => { const v = r[pkCol.name]; return typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''")}'` })
+                            useEditorStore.getState().setSql(`DELETE FROM ${tableName} WHERE ${pkCol.name} IN (${ids.join(', ')})`)
+                            await executeQuery(true)
+                            useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`); await executeQuery(true)
+                            setTabState({ selected: new Set() })
+                          },
+                        })
                         return
                       }
                       setDeleteConfirmRow(row)
@@ -1621,9 +1632,9 @@ export function ResultsTable() {
           <p className="text-sm text-muted-foreground">
             {t('ctx.deleteRecordConfirm')}
           </p>
-          <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmRow(null)}>{t('common.cancel')}</Button>
-            <Button variant="destructive" size="sm" onClick={async () => {
+          <SlideToConfirm
+            label={t('admin.slideToDelete')}
+            onConfirm={async () => {
               if (!deleteConfirmRow || !tableName) return
               const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
               if (!pkCol) return
@@ -1634,8 +1645,26 @@ export function ResultsTable() {
               useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`)
               await executeQuery(true)
               setDeleteConfirmRow(null)
-            }}>{t('common.delete')}</Button>
-          </DialogFooter>
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Multi-row delete confirmation dialog */}
+      <Dialog open={deleteMultiConfirm !== null} onOpenChange={(o) => { if (!o) setDeleteMultiConfirm(null) }}>
+        <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
+          <DialogHeader><DialogTitle className="text-base">{t('ctx.deleteRecordTitle')}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('ctx.deleteRecordsConfirm', { count: String(deleteMultiConfirm?.count ?? 0) })}
+          </p>
+          <SlideToConfirm
+            label={t('ctx.slideToDelete', { count: String(deleteMultiConfirm?.count ?? 0) })}
+            onConfirm={async () => {
+              if (!deleteMultiConfirm) return
+              await deleteMultiConfirm.action()
+              setDeleteMultiConfirm(null)
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>

@@ -210,6 +210,8 @@ export const fr = {
   'ctx.deleteRecords': 'Supprimer {count} lignes',
   'ctx.deleteRecordTitle': 'Supprimer l\'enregistrement',
   'ctx.deleteRecordConfirm': 'Êtes-vous sûr de vouloir supprimer cet enregistrement ? Cette action est irréversible.',
+  'ctx.deleteRecordsConfirm': 'Vous allez supprimer {count} lignes. Cette action est irréversible.',
+  'ctx.slideToDelete': 'Glisser pour supprimer {count} lignes',
 
   // ── Sheet (insert/edit) ──
   'sheet.newRow': 'Nouvelle ligne',

@@ -210,6 +210,8 @@ export const en = {
   'ctx.deleteRecords': 'Delete {count} rows',
   'ctx.deleteRecordTitle': 'Delete record',
   'ctx.deleteRecordConfirm': 'Are you sure you want to delete this record? This action is irreversible.',
+  'ctx.deleteRecordsConfirm': 'You are about to delete {count} rows. This action is irreversible.',
+  'ctx.slideToDelete': 'Slide to delete {count} rows',
 
   // ── Sheet (insert/edit) ──
   'sheet.newRow': 'New row',
