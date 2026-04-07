@@ -7,6 +7,9 @@ import { streamCopilotResponse, CopilotError } from '../services/copilot.service
 import { getPoolOptions } from '../services/connection.service.js'
 import { connectionManager } from '../lib/connection-manager.js'
 import { logger } from '../logger.js'
+import { db } from '../db/index.js'
+import { users } from '../db/schema.js'
+import { eq } from 'drizzle-orm'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
@@ -111,6 +114,14 @@ copilotRouter.post(
       return c.json({ type: 'error', message: 'Connexion introuvable.' }, 404)
     }
 
+    // Fetch user language preference
+    const userRow = await db
+      .select({ language: users.language })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get()
+    const lang = userRow?.language ?? 'en'
+
     // Fetch schema + functions for context
     let schema: Awaited<ReturnType<typeof fetchSchema>> = []
     let functions: Array<{ name: string; kind: string; return_type: string; arguments: string }> = []
@@ -165,6 +176,7 @@ copilotRouter.post(
           functions,
           poolOpts.driver,
           poolOpts.database,
+          lang,
           context,
         )) {
           if (chunk.type === 'text') {

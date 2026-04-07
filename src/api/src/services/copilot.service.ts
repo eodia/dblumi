@@ -6,6 +6,7 @@ import { db } from '../db/index.js'
 import { users } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
 import { decrypt } from '../lib/crypto.js'
+import copilotI18n, { type CopilotLocale } from '../i18n/copilot.i18n.js'
 
 export type SchemaTable = {
   name: string
@@ -63,27 +64,34 @@ async function resolveAnthropicKey(userId: string): Promise<string> {
 export type FunctionInfo = { name: string; kind: string; return_type: string; arguments: string }
 export type TabContext = { tabKind: 'query' | 'table' | 'function'; tabName: string; sql: string }
 
+function resolveLocale(lang?: string): CopilotLocale {
+  const key = (lang ?? 'en').slice(0, 2).toLowerCase()
+  return key in copilotI18n ? (key as CopilotLocale) : 'en'
+}
+
 function buildSystemPrompt(
   schema: SchemaTable[],
   functions: FunctionInfo[],
   driver: string,
   database: string,
+  lang?: string,
   context?: TabContext,
 ): string {
+  const t = copilotI18n[resolveLocale(lang)]
   const dialect = driver === 'postgresql' ? 'PostgreSQL' : driver === 'mysql' ? 'MySQL' : 'Oracle'
 
-  const tableDescriptions = schema.map((t) => {
-    const cols = t.columns.map((c) => {
+  const tableDescriptions = schema.map((tbl) => {
+    const cols = tbl.columns.map((c) => {
       const parts = [`  ${c.name} ${c.dataType}`]
       if (c.primaryKey) parts.push('PRIMARY KEY')
       if (!c.nullable) parts.push('NOT NULL')
       return parts.join(' ')
     }).join('\n')
-    return `TABLE ${t.name} (\n${cols}\n)`
+    return `TABLE ${tbl.name} (\n${cols}\n)`
   }).join('\n\n')
 
   const funcDescriptions = functions.length > 0
-    ? '\n\n## Fonctions & Procédures\n' + functions.map((f) => {
+    ? `\n\n## ${t.functionsLabel}\n` + functions.map((f) => {
         const kind = f.kind === 'procedure' ? 'PROCEDURE' : 'FUNCTION'
         const args = f.arguments ? `(${f.arguments})` : '()'
         const ret = f.kind !== 'procedure' && f.return_type ? ` RETURNS ${f.return_type}` : ''
@@ -94,34 +102,28 @@ function buildSystemPrompt(
   let contextSection = ''
   if (context) {
     if (context.tabKind === 'query' && context.sql.trim()) {
-      contextSection = `\n\n## Onglet actif — Requête SQL\nL'utilisateur travaille sur cette requête :\n\`\`\`sql\n${context.sql}\n\`\`\``
+      contextSection = `\n\n## ${t.activeTabQuery}\n${t.activeTabQueryHint}\n\`\`\`sql\n${context.sql}\n\`\`\``
     } else if (context.tabKind === 'table') {
-      contextSection = `\n\n## Onglet actif — Table "${context.tabName}"\nL'utilisateur explore la table \`${context.tabName}\`.`
+      contextSection = `\n\n## ${t.activeTabTable(context.tabName)}\n${t.activeTabTableHint(context.tabName)}`
     } else if (context.tabKind === 'function') {
-      contextSection = `\n\n## Onglet actif — Fonction "${context.tabName}"\nL'utilisateur consulte cette fonction/procédure :\n\`\`\`sql\n${context.sql}\n\`\`\``
+      contextSection = `\n\n## ${t.activeTabFunction(context.tabName)}\n${t.activeTabFunctionHint}\n\`\`\`sql\n${context.sql}\n\`\`\``
     }
   }
 
-  return `Tu es le copilot SQL de dblumi, un assistant expert en bases de données.
+  const instructionLines = t.instructions(dialect).map((line) => `- ${line}`).join('\n')
 
-## Contexte
-- Base de données : ${database}
-- Driver : ${dialect}
-- Tu connais le schéma exact de cette base de données, y compris ses fonctions et procédures stockées.
+  return `${t.role}
 
-## Schéma
+## ${t.contextLabel}
+- ${t.dbLabel} : ${database}
+- ${t.driverLabel} : ${dialect}
+- ${t.schemaKnowledge}
+
+## ${t.schemaLabel}
 ${tableDescriptions}${funcDescriptions}${contextSection}
 
 ## Instructions
-- Quand l'utilisateur demande une requête, génère du SQL valide pour ${dialect}.
-- Utilise les noms exacts des tables, colonnes et fonctions du schéma ci-dessus.
-- Entoure le SQL dans un bloc \`\`\`sql ... \`\`\` pour qu'il soit facilement identifiable.
-- Si l'utilisateur pose une question sur l'onglet actif (requête, table ou fonction), réponds dans ce contexte.
-- Si l'utilisateur demande une explication, explique de manière concise.
-- Si la requête est ambiguë, demande des précisions plutôt que de deviner.
-- Privilégie les requêtes performantes (index, LIMIT, etc.).
-- Ne génère JAMAIS de requêtes destructives (DROP, TRUNCATE, DELETE sans WHERE) sauf demande explicite.
-- Sois concis. Pas de préambule inutile.`
+${instructionLines}`
 }
 
 export type CopilotMessage = { role: 'user' | 'assistant'; content: string }
@@ -196,10 +198,11 @@ export async function* streamCopilotResponse(
   functions: FunctionInfo[],
   driver: string,
   database: string,
+  lang?: string,
   context?: TabContext,
 ): AsyncGenerator<StreamChunk> {
   const provider = getActiveProvider()
-  const systemPrompt = buildSystemPrompt(schema, functions, driver, database, context)
+  const systemPrompt = buildSystemPrompt(schema, functions, driver, database, lang, context)
 
   if (provider === 'openai') {
     const client = new OpenAI({ apiKey: config.OPENAI_API_KEY! })
