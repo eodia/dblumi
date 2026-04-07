@@ -998,7 +998,9 @@ function AppShellInner({
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
   const { t, locale, setLocale } = useI18n()
-  const { theme, preference, setTheme } = useThemeStore()
+  const theme = useThemeStore((s) => s.theme)
+  const preference = useThemeStore((s) => s.preference)
+  const setTheme = useThemeStore((s) => s.setTheme)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const qc = useQueryClient()
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/auth.store'
-import { useThemeStore } from './stores/theme.store'
+import { useThemeStore, getSystemTheme, applyTheme } from './stores/theme.store'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { AppShell } from './components/layout/AppShell'
@@ -38,6 +38,23 @@ export function App() {
   useEffect(() => {
     hydrate()
   }, [hydrate])
+
+  // Sync theme with OS preference when set to "system"
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: light)')
+    const handler = () => {
+      const state = useThemeStore.getState()
+      if (state.preference === 'system') {
+        const resolved = getSystemTheme()
+        if (resolved !== state.theme) {
+          applyTheme(resolved)
+          useThemeStore.setState({ theme: resolved })
+        }
+      }
+    }
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
 
   // ── Splash screen ──────────────────────
   if (!hydrated) {
