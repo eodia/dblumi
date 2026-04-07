@@ -294,6 +294,8 @@ export const fr = {
   'copilot.errorContact': 'Impossible de contacter le copilot.',
   'copilot.subtitleOpenai': 'OpenAI',
   'copilot.subtitleAzure': 'Azure OpenAI',
+  'copilot.regenerate': 'Régénérer',
+  'copilot.clear': 'Effacer la conversation',
 
   // ── Command palette ──
   'cmd.placeholder': 'Rechercher une action, une table, une requête...',

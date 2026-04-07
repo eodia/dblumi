@@ -1,13 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { settingsApi } from '@/api/settings'
-import { Bot, Send, Copy, Play, Loader2, X, Sparkles } from 'lucide-react'
+import { Bot, Send, Copy, Play, Loader2, X, Sparkles, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/stores/editor.store'
-import { streamCopilot, type CopilotMessage, type CopilotContext } from '@/api/copilot'
+import { useCopilotStore } from '@/stores/copilot.store'
+import { streamCopilot, type CopilotContext } from '@/api/copilot'
+import type { CopilotMessage } from '@/stores/copilot.store'
 import { SqlHighlight } from './SqlHighlight'
 import { useI18n } from '@/i18n'
+
+const emptyMessages: CopilotMessage[] = []
 
 // ── Markdown inline: **bold**, *italic*, `code` ──
 function parseInline(text: string): React.ReactNode[] {
@@ -126,7 +130,17 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
     staleTime: Infinity,
   })
 
-  const [messages, setMessages] = useState<CopilotMessage[]>([])
+  const messages = useCopilotStore((s) => s.conversations[activeConnectionId ?? ''] ?? emptyMessages)
+  const setMessages = useCallback(
+    (msgs: CopilotMessage[] | ((prev: CopilotMessage[]) => CopilotMessage[])) => {
+      if (!activeConnectionId) return
+      const next = typeof msgs === 'function' ? msgs(useCopilotStore.getState().getMessages(activeConnectionId)) : msgs
+      useCopilotStore.getState().setMessages(activeConnectionId, next)
+    },
+    [activeConnectionId],
+  )
+  const clearConversation = useCopilotStore((s) => s.clearConversation)
+
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -143,25 +157,19 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
     setSql(current ? `${current}\n\n${sql}` : sql)
   }, [activeTab, setSql])
 
-  const handleSubmit = useCallback(async () => {
-    if (!input.trim() || !activeConnectionId || isStreaming) return
+  const buildContext = useCallback((): CopilotContext | undefined => {
+    if (!activeTab) return undefined
+    return { tabKind: activeTab.kind, tabName: activeTab.name, sql: activeTab.sql }
+  }, [activeTab])
 
-    const userMsg: CopilotMessage = { role: 'user', content: input.trim() }
-    const newMessages = [...messages, userMsg]
-    setMessages(newMessages)
-    setInput('')
+  const streamResponse = useCallback(async (messagesToSend: CopilotMessage[]) => {
+    if (!activeConnectionId) return
     setIsStreaming(true)
-
-    setMessages([...newMessages, { role: 'assistant', content: '' }])
+    setMessages([...messagesToSend, { role: 'assistant', content: '' }])
 
     try {
       let fullText = ''
-      const ctx: CopilotContext | undefined = activeTab ? {
-        tabKind: activeTab.kind,
-        tabName: activeTab.name,
-        sql: activeTab.sql,
-      } : undefined
-      for await (const chunk of streamCopilot(activeConnectionId, newMessages, ctx)) {
+      for await (const chunk of streamCopilot(activeConnectionId, messagesToSend, buildContext())) {
         if (chunk.type === 'text') {
           fullText += chunk.text
           setMessages((prev) => {
@@ -186,7 +194,22 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
     } finally {
       setIsStreaming(false)
     }
-  }, [input, activeConnectionId, isStreaming, messages])
+  }, [activeConnectionId, buildContext, setMessages, t])
+
+  const handleSubmit = useCallback(async () => {
+    if (!input.trim() || !activeConnectionId || isStreaming) return
+    const userMsg: CopilotMessage = { role: 'user', content: input.trim() }
+    const newMessages = [...messages, userMsg]
+    setInput('')
+    await streamResponse(newMessages)
+  }, [input, activeConnectionId, isStreaming, messages, streamResponse])
+
+  const handleRegenerate = useCallback(async () => {
+    if (isStreaming || messages.length < 2) return
+    // Remove last assistant message, keep everything up to the last user message
+    const withoutLastAssistant = messages.slice(0, -1)
+    await streamResponse(withoutLastAssistant)
+  }, [isStreaming, messages, streamResponse])
 
   if (!activeConnectionId) {
     return (
@@ -214,6 +237,12 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
           )}
         </span>
         <div className="flex-1" />
+        {messages.length > 0 && (
+          <Button variant="ghost" size="sm" className="h-5 w-5 p-0" title={t('copilot.clear')}
+            onClick={() => activeConnectionId && clearConversation(activeConnectionId)}>
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
         <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={onClose}>
           <X className="h-3 w-3" />
         </Button>
@@ -266,6 +295,16 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
                   <MessageContent content={msg.content} onInsertSql={handleInsertSql} t={t} />
                   {isStreaming && i === messages.length - 1 && (
                     <span className="inline-block w-1.5 h-4 bg-primary/60 animate-pulse rounded-sm ml-0.5" />
+                  )}
+                  {!isStreaming && i === messages.length - 1 && messages.length >= 2 && (
+                    <button
+                      onClick={handleRegenerate}
+                      className="flex items-center gap-1 mt-1.5 text-[11px] text-text-muted hover:text-foreground transition-colors"
+                      title={t('copilot.regenerate')}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      {t('copilot.regenerate')}
+                    </button>
                   )}
                 </>
               ) : (
