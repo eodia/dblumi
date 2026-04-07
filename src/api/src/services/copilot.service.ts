@@ -227,3 +227,75 @@ export async function* streamCopilotResponse(
   const apiKey = await resolveAnthropicKey(userId)
   yield* streamAnthropic(apiKey, systemPrompt, messages)
 }
+
+// ── Column mapping (non-streaming) ────────────
+
+export type ColumnMapping = {
+  sourceColumn: string
+  targetColumn: string | null
+}
+
+export async function mapColumnsWithAI(
+  userId: string,
+  sourceColumns: string[],
+  targetColumns: Array<{ name: string; dataType: string }>,
+): Promise<ColumnMapping[]> {
+  const provider = getActiveProvider()
+
+  const systemPrompt = `You are a data mapping assistant. Given source columns from an imported file and target columns from a database table, match each source column to the best target column based on name similarity and semantics.
+
+Rules:
+- Return ONLY a JSON array, no explanation, no markdown fences.
+- Each element: {"sourceColumn": "...", "targetColumn": "..." or null}
+- Every source column must appear exactly once.
+- targetColumn is null if no reasonable match exists.
+- A target column can be matched at most once.
+- Be smart about abbreviations, casing, underscores vs camelCase, and translations (e.g. "nom" → "name", "prenom" → "first_name").`
+
+  const userMessage = `Source columns: ${JSON.stringify(sourceColumns)}
+
+Target columns: ${JSON.stringify(targetColumns.map((c) => ({ name: c.name, type: c.dataType })))}`
+
+  const messages = [{ role: 'user' as const, content: userMessage }]
+
+  let responseText = ''
+
+  if (provider === 'openai') {
+    const client = new OpenAI({ apiKey: config.OPENAI_API_KEY! })
+    const model = config.OPENAI_MODEL ?? 'gpt-4o'
+    const res = await client.chat.completions.create({
+      model,
+      max_tokens: 2048,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    })
+    responseText = res.choices[0]?.message?.content ?? '[]'
+  } else if (provider === 'azure-openai') {
+    const client = new AzureOpenAI({
+      apiKey: config.AZURE_OPENAI_API_KEY!,
+      endpoint: config.AZURE_OPENAI_ENDPOINT!,
+      deployment: config.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o',
+      apiVersion: '2024-08-01-preview',
+    })
+    const model = config.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o'
+    const res = await client.chat.completions.create({
+      model,
+      max_tokens: 2048,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    })
+    responseText = res.choices[0]?.message?.content ?? '[]'
+  } else {
+    const apiKey = await resolveAnthropicKey(userId)
+    const client = new Anthropic({ apiKey })
+    const res = await client.messages.create({
+      model: config.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages,
+    })
+    responseText = res.content[0]?.type === 'text' ? res.content[0].text : '[]'
+  }
+
+  // Parse — strip markdown fences if present
+  const cleaned = responseText.replace(/^```(?:json)?\s*/m, '').replace(/\s*```$/m, '').trim()
+  return JSON.parse(cleaned) as ColumnMapping[]
+}

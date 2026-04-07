@@ -46,6 +46,7 @@ import {
   Braces,
   Settings2,
   Upload,
+  FileUp,
   KeyRound,
   Sun,
   Moon,
@@ -128,6 +129,7 @@ import { AdminPage } from '@/components/admin/AdminPage'
 import { OverviewPage } from '@/components/overview/OverviewPage'
 import { TableStructureEditor } from '@/components/schema/TableStructureEditor'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
+import { ImportDialog } from '@/components/import/ImportDialog'
 import {
   Sheet,
   SheetContent,
@@ -164,7 +166,7 @@ function EnvBadge({ env }: { env: string }) {
 }
 
 // ── Schema tree (shown inline in sidebar when Tables is selected) ───────
-function SchemaNav({ connectionId }: { connectionId: string }) {
+function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport: () => void }) {
   const { openTable, openFunction, activeConnectionId, executeQuery, setSql, setPendingCsvImport } = useEditorStore()
   const { isMobile, setOpenMobile } = useSidebar()
   const { t } = useI18n()
@@ -276,19 +278,25 @@ function SchemaNav({ connectionId }: { connectionId: string }) {
                     )}
                   </div>
                 </ContextMenuTrigger>
-                <ContextMenuContent className="w-44">
+                <ContextMenuContent className="w-48">
                   <ContextMenuItem className="gap-2 text-xs" onClick={() => { void openTable(item.name); if (isMobile) setOpenMobile(false) }}>
                     <Table2 className="h-3.5 w-3.5" />
                     {t('sq.open')}
                   </ContextMenuItem>
                   {!isView && (<>
+                    <ContextMenuSeparator />
                     <ContextMenuItem className="gap-2 text-xs" onClick={() => setStructureTable(item)}>
                       <Settings2 className="h-3.5 w-3.5" />
                       {t('table.modifyStructure')}
                     </ContextMenuItem>
+                    <ContextMenuSeparator />
                     <ContextMenuItem className="gap-2 text-xs" onClick={() => { void openTable(item.name); setPendingCsvImport(item.name) }}>
                       <Upload className="h-3.5 w-3.5" />
                       {t('table.importCsv')}
+                    </ContextMenuItem>
+                    <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
+                      <FileUp className="h-3.5 w-3.5" />
+                      {t('import.title')}
                     </ContextMenuItem>
                   </>)}
                   <ContextMenuSeparator />
@@ -1002,6 +1010,7 @@ function AppShellInner({
   const preference = useThemeStore((s) => s.preference)
   const setTheme = useThemeStore((s) => s.setTheme)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const qc = useQueryClient()
 
   const logout = useCallback(async () => {
@@ -1200,7 +1209,7 @@ function AppShellInner({
                 {t('common.schema')}
               </SidebarGroupLabel>
               <SidebarGroupContent className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                <SchemaNav connectionId={activeConnectionId} />
+                <SchemaNav connectionId={activeConnectionId} onImport={() => setImportOpen(true)} />
               </SidebarGroupContent>
             </SidebarGroup>
           )}
@@ -1349,6 +1358,7 @@ function AppShellInner({
           onSaveNew={() => setSaveOpen(true)}
           onSaveAs={() => setSaveOpen(true)}
           onNewConnection={() => setConnModalOpen(true)}
+          onImport={() => setImportOpen(true)}
           setPage={setPage}
         />
 
@@ -1361,6 +1371,16 @@ function AppShellInner({
           onClose={() => { setConnModalOpen(false); setEditingConn(undefined) }}
           editing={editingConn}
         />
+        {activeConnectionId && (
+          <ImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            connectionId={activeConnectionId}
+            onComplete={() => {
+              qc.invalidateQueries({ queryKey: ['schema', activeConnectionId] })
+            }}
+          />
+        )}
 
         {/* Delete connection confirmation */}
         <Dialog open={deleteConfirmConn !== null} onOpenChange={(o) => { if (!o) setDeleteConfirmConn(null) }}>

@@ -16,6 +16,8 @@ import {
   Trash2,
   Unplug,
   Copy,
+  Upload,
+  FileUp,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -45,6 +47,7 @@ import { Button } from '@/components/ui/button'
 import { connectionsApi, type Connection, type SchemaTable } from '@/api/connections'
 import { useEditorStore } from '@/stores/editor.store'
 import { ConnectionModal } from '@/components/connections/ConnectionModal'
+import { ImportDialog } from '@/components/import/ImportDialog'
 import { cn } from '@/lib/utils'
 
 type Props = { connections: Connection[] }
@@ -60,6 +63,7 @@ export function SchemaSidebar({ connections }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingConn, setEditingConn] = useState<Connection | undefined>()
   const [deleteTarget, setDeleteTarget] = useState<Connection | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => connectionsApi.delete(id),
@@ -339,6 +343,17 @@ export function SchemaSidebar({ connections }: Props) {
         )}
 
         <ConnectionModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editingConn} />
+
+        {activeConnectionId && (
+          <ImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            connectionId={activeConnectionId}
+            onComplete={() => {
+              qc.invalidateQueries({ queryKey: ['schema', activeConnectionId] })
+            }}
+          />
+        )}
 
         {/* ── Delete confirmation dialog ────── */}
         <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
