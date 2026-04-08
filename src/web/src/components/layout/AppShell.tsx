@@ -944,13 +944,13 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
                 </ResizablePanel>
                 <ResizableHandle withHandle />
                 <ResizablePanel defaultSize={50} minSize={15} id="results">
-                  <ResultsTable />
+                  <ResultsTable onOpenCopilot={() => { setCopilotOpen(true); setChatOpen(false) }} />
                 </ResizablePanel>
               </ResizablePanelGroup>
             )}
 
             {activeTab?.kind === 'table' && (
-              <ResultsTable />
+              <ResultsTable onOpenCopilot={() => { setCopilotOpen(true); setChatOpen(false) }} />
             )}
 
             {activeTab?.kind === 'function' && (
@@ -960,7 +960,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
                 </ResizablePanel>
                 <ResizableHandle withHandle />
                 <ResizablePanel defaultSize={50} minSize={15} id="fn-results">
-                  <ResultsTable />
+                  <ResultsTable onOpenCopilot={() => { setCopilotOpen(true); setChatOpen(false) }} />
                 </ResizablePanel>
               </ResizablePanelGroup>
             )}
