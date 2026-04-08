@@ -297,6 +297,12 @@ export const fr = {
   'copilot.regenerate': 'Régénérer',
   'copilot.clear': 'Effacer la conversation',
 
+  // ── Dump ──
+  'dump.table': 'Dumper la table',
+  'dump.allTables': 'Dumper toutes les tables',
+  'dump.structureOnly': 'Structure uniquement',
+  'dump.structureAndData': 'Structure + Données',
+
   // ── Command palette ──
   'cmd.placeholder': 'Rechercher une action, une table, une requête...',
   'cmd.noResults': 'Aucun résultat.',

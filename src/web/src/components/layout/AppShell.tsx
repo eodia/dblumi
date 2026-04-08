@@ -51,6 +51,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Download,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -86,6 +87,9 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import {
@@ -185,6 +189,19 @@ function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport:
     staleTime: 5 * 60 * 1000,
     retry: 1,
   })
+
+  const handleDump = useCallback(async (tables: string[], includeData: boolean) => {
+    try {
+      const sql = await connectionsApi.dump(connectionId, tables, includeData)
+      const blob = new Blob([sql], { type: 'text/sql' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = tables.length === 1 ? `${tables[0]}.sql` : 'dump.sql'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch { /* toast could go here */ }
+  }, [connectionId])
 
   const lc = tableSearch.toLowerCase()
   const tables: SchemaTable[] | undefined = data?.tables.filter(
@@ -300,6 +317,21 @@ function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport:
                     </ContextMenuItem>
                   </>)}
                   <ContextMenuSeparator />
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger className="gap-2 text-xs">
+                      <Download className="h-3.5 w-3.5" />
+                      {t('dump.table')}
+                    </ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="w-44">
+                      <ContextMenuItem className="text-xs" onClick={() => void handleDump([item.name], false)}>
+                        {t('dump.structureOnly')}
+                      </ContextMenuItem>
+                      <ContextMenuItem className="text-xs" onClick={() => void handleDump([item.name], true)}>
+                        {t('dump.structureAndData')}
+                      </ContextMenuItem>
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
+                  <ContextMenuSeparator />
                   <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive"
                     onClick={() => setDropTarget({ name: item.name, type: isView ? 'view' : 'table' })}>
                     <Trash2 className="h-3.5 w-3.5" />
@@ -316,27 +348,58 @@ function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport:
           return (
             <>
               {/* Tables accordion */}
-              <div>
-                <div className="flex items-center gap-0 px-2 pt-2 pb-1">
-                  <button onClick={() => toggleSection('tables')}
-                    className="flex-1 flex items-center gap-1.5 hover:bg-sidebar-accent rounded-md transition-colors py-0.5">
-                    {sectionsOpen.tables ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}
-                    <Table2 className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-primary/50')} />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Tables</span>
-                    <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyTables.length}</span>
-                  </button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}
-                        className="p-1 rounded text-text-muted hover:text-foreground hover:bg-sidebar-accent transition-colors">
-                        <Plus className="h-3 w-3" />
+              <ContextMenu>
+                <ContextMenuTrigger asChild>
+                  <div>
+                    <div className="flex items-center gap-0 px-2 pt-2 pb-1">
+                      <button onClick={() => toggleSection('tables')}
+                        className="flex-1 flex items-center gap-1.5 hover:bg-sidebar-accent rounded-md transition-colors py-0.5">
+                        {sectionsOpen.tables ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}
+                        <Table2 className={cn('h-3 w-3', isProd ? 'text-destructive/50' : 'text-primary/50')} />
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Tables</span>
+                        <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyTables.length}</span>
                       </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{t('table.newTable')}</TooltipContent>
-                  </Tooltip>
-                </div>
-                {sectionsOpen.tables && onlyTables.map(renderItem)}
-              </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}
+                            className="p-1 rounded text-text-muted hover:text-foreground hover:bg-sidebar-accent transition-colors">
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{t('table.newTable')}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    {sectionsOpen.tables && onlyTables.map(renderItem)}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-48">
+                  <ContextMenuItem className="gap-2 text-xs" onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}>
+                    <Plus className="h-3.5 w-3.5" />
+                    {t('table.newTable')}
+                  </ContextMenuItem>
+                  <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
+                    <FileUp className="h-3.5 w-3.5" />
+                    {t('import.title')}
+                  </ContextMenuItem>
+                  {onlyTables.length > 0 && (<>
+                    <ContextMenuSeparator />
+                    <ContextMenuSub>
+                      <ContextMenuSubTrigger className="gap-2 text-xs">
+                        <Download className="h-3.5 w-3.5" />
+                        {t('dump.allTables')}
+                      </ContextMenuSubTrigger>
+                      <ContextMenuSubContent className="w-44">
+                        <ContextMenuItem className="text-xs" onClick={() => void handleDump(onlyTables.map((t) => t.name), false)}>
+                          {t('dump.structureOnly')}
+                        </ContextMenuItem>
+                        <ContextMenuItem className="text-xs" onClick={() => void handleDump(onlyTables.map((t) => t.name), true)}>
+                          {t('dump.structureAndData')}
+                        </ContextMenuItem>
+                      </ContextMenuSubContent>
+                    </ContextMenuSub>
+                  </>)}
+                </ContextMenuContent>
+              </ContextMenu>
 
               {/* Views accordion */}
               {onlyViews.length > 0 && (

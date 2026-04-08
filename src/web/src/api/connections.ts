@@ -86,4 +86,14 @@ export const connectionsApi = {
     api.get<{ groups: Array<{ id: string; name: string; color: string | null }>; users: Array<{ id: string; name: string; email: string }> }>(`/connections/${id}/shares`),
   setConnectionShares: (id: string, groupIds: string[], userIds: string[]) =>
     api.put<{ groupIds: string[]; userIds: string[] }>(`/connections/${id}/shares`, { groupIds, userIds }),
+  dump: async (id: string, tables: string[], includeData: boolean) => {
+    const res = await fetch(`/api/v1/connections/${id}/dump`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ tables, includeData }),
+    })
+    if (!res.ok) throw new Error('Dump failed')
+    return res.text()
+  },
 }

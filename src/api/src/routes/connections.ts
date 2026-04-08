@@ -955,4 +955,170 @@ connectionsRouter.get('/:id/stats', async (c) => {
   }
 })
 
+// ──────────────────────────────────────────────
+// Dump tables (structure and/or data)
+// ──────────────────────────────────────────────
+
+const DumpSchema = z.object({
+  tables: z.array(z.string().min(1)).min(1),
+  includeData: z.boolean().default(false),
+})
+
+connectionsRouter.post(
+  '/:id/dump',
+  zValidator('json', DumpSchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const connectionId = c.req.param('id')
+    const { tables, includeData } = c.req.valid('json')
+
+    let poolOpts
+    try {
+      poolOpts = await getPoolOptions(connectionId, userId)
+    } catch {
+      return c.json(problem(404, 'Connection not found.'), 404)
+    }
+
+    const pool = await connectionManager.getPool(connectionId, poolOpts)
+
+    try {
+      const parts: string[] = []
+      for (const table of tables) {
+        parts.push(await dumpTable(pool, poolOpts.driver, table, includeData))
+      }
+      const sql = parts.join('\n\n')
+      c.header('Content-Type', 'text/sql; charset=utf-8')
+      c.header('Content-Disposition', `attachment; filename="dump.sql"`)
+      return c.text(sql)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Dump failed'
+      return c.json(problem(502, message), 502)
+    }
+  },
+)
+
+async function dumpTable(
+  pool: PgPool | MySQLPool | OraclePool,
+  driver: string,
+  table: string,
+  includeData: boolean,
+): Promise<string> {
+  if (driver === 'mysql') {
+    return dumpMySQL(pool as MySQLPool, table, includeData)
+  } else if (driver === 'postgresql') {
+    return dumpPg(pool as PgPool, table, includeData)
+  } else {
+    return dumpOracle(pool as OraclePool, table, includeData)
+  }
+}
+
+async function dumpMySQL(pool: MySQLPool, table: string, includeData: boolean): Promise<string> {
+  const conn = await pool.getConnection()
+  try {
+    const [ddlRows] = await conn.query(`SHOW CREATE TABLE \`${table}\``)
+    const ddl = (ddlRows as Record<string, string>[])[0]?.['Create Table'] ?? ''
+    let result = `-- Table: ${table}\n${ddl};\n`
+
+    if (includeData) {
+      const [rows] = await conn.query(`SELECT * FROM \`${table}\``)
+      const data = rows as Record<string, unknown>[]
+      if (data.length > 0) {
+        const cols = Object.keys(data[0]!)
+        const colList = cols.map((c) => `\`${c}\``).join(', ')
+        for (const row of data) {
+          const vals = cols.map((c) => escapeValue(row[c])).join(', ')
+          result += `INSERT INTO \`${table}\` (${colList}) VALUES (${vals});\n`
+        }
+      }
+    }
+    return result
+  } finally {
+    conn.release()
+  }
+}
+
+async function dumpPg(pool: PgPool, table: string, includeData: boolean): Promise<string> {
+  const client = await pool.connect()
+  try {
+    // Build CREATE TABLE from information_schema
+    const colRes = await client.query(
+      `SELECT column_name, data_type, is_nullable, column_default, character_maximum_length
+       FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
+      [table],
+    )
+    const pkRes = await client.query(
+      `SELECT kcu.column_name
+       FROM information_schema.table_constraints tc
+       JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+       WHERE tc.table_name = $1 AND tc.constraint_type = 'PRIMARY KEY'`,
+      [table],
+    )
+    const pkCols = new Set(pkRes.rows.map((r: Record<string, string>) => r.column_name))
+
+    const colDefs = colRes.rows.map((r: Record<string, unknown>) => {
+      let def = `  "${r.column_name}" ${r.data_type}`
+      if (r.character_maximum_length) def += `(${r.character_maximum_length})`
+      if (r.column_default) def += ` DEFAULT ${r.column_default}`
+      if (r.is_nullable === 'NO') def += ' NOT NULL'
+      return def
+    })
+    if (pkCols.size > 0) {
+      colDefs.push(`  PRIMARY KEY (${[...pkCols].map((c) => `"${c}"`).join(', ')})`)
+    }
+
+    let result = `-- Table: ${table}\nCREATE TABLE "${table}" (\n${colDefs.join(',\n')}\n);\n`
+
+    if (includeData) {
+      const dataRes = await client.query(`SELECT * FROM "${table}"`)
+      if (dataRes.rows.length > 0) {
+        const cols = dataRes.fields.map((f) => f.name)
+        const colList = cols.map((c) => `"${c}"`).join(', ')
+        for (const row of dataRes.rows as Record<string, unknown>[]) {
+          const vals = cols.map((c) => escapeValue(row[c])).join(', ')
+          result += `INSERT INTO "${table}" (${colList}) VALUES (${vals});\n`
+        }
+      }
+    }
+    return result
+  } finally {
+    client.release()
+  }
+}
+
+async function dumpOracle(pool: OraclePool, table: string, includeData: boolean): Promise<string> {
+  const conn = await pool.getConnection()
+  try {
+    const ddlRes = await conn.execute<[string]>(
+      `SELECT DBMS_METADATA.GET_DDL('TABLE', :t) FROM DUAL`,
+      [table],
+    )
+    const ddl = ddlRes.rows?.[0]?.[0] ?? ''
+    let result = `-- Table: ${table}\n${ddl};\n`
+
+    if (includeData) {
+      const dataRes = await conn.execute(`SELECT * FROM "${table}"`, [], { outFormat: 4002 })
+      const rows = (dataRes.rows ?? []) as Record<string, unknown>[]
+      if (rows.length > 0) {
+        const cols = (dataRes.metaData ?? []).map((m) => m.name)
+        const colList = cols.map((c) => `"${c}"`).join(', ')
+        for (const row of rows) {
+          const vals = cols.map((c) => escapeValue(row[c])).join(', ')
+          result += `INSERT INTO "${table}" (${colList}) VALUES (${vals});\n`
+        }
+      }
+    }
+    return result
+  } finally {
+    await conn.close()
+  }
+}
+
+function escapeValue(v: unknown): string {
+  if (v === null || v === undefined) return 'NULL'
+  if (typeof v === 'number' || typeof v === 'bigint') return String(v)
+  if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'
+  if (v instanceof Date) return `'${v.toISOString()}'`
+  return `'${String(v).replace(/'/g, "''")}'`
+}
+
 export { connectionsRouter }
