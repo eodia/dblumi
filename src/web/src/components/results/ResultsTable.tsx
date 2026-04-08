@@ -21,7 +21,7 @@ import {
   RefreshCw, ArrowUp, ArrowDown, ArrowUpDown, GripVertical,
   Filter, ArrowDownUp, Plus, Trash2, Copy, Download, X,
   ChevronDown, Pencil, ClipboardCopy, CalendarIcon, ListPlus,
-  Upload, ScanSearch, Pin, PinOff, EyeOff, Eye, ArrowLeftRight, RefreshCcw,
+  Upload, ScanSearch, Pin, PinOff, EyeOff, Eye, ArrowLeftRight, RefreshCcw, Sparkles,
 } from 'lucide-react'
 import {
   ContextMenu,
@@ -43,6 +43,7 @@ import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { readSSE } from '@/api/client'
 import { useEditorStore, type QueryColumn, type SortBy, type SortEntry, type FilterRow } from '@/stores/editor.store'
+import { explainError } from '@/stores/copilot.store'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -722,7 +723,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
 }
 
 // ── Main component ───────────────────────────────
-export function ResultsTable() {
+export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
   const { t } = useI18n()
   const { tabs, activeTabId, activeConnectionId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, executeSql, pendingCsvImport, setPendingCsvImport, setTabFilters } = useEditorStore()
   const tab = tabs.find((t) => t.id === activeTabId)
@@ -1223,7 +1224,28 @@ export function ResultsTable() {
     return (<div className="flex items-center justify-center h-full gap-2 text-muted-foreground bg-background"><Loader2 className="h-4 w-4 animate-spin text-primary" /><span className="text-xs">{t('editor.running')}</span></div>)
   }
   if (status === 'error') {
-    return (<div className="flex items-center justify-center h-full gap-2 px-6 bg-background"><AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" /><span className="text-xs text-destructive">{error ?? t('results.error')}</span></div>)
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 px-6 bg-background">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+          <span className="text-xs text-destructive">{error ?? t('results.error')}</span>
+        </div>
+        {activeConnectionId && error && (
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-primary hover:bg-primary/10 transition-colors border border-primary/20"
+            onClick={() => {
+              const sql = result?.executedSql ?? tab?.sql ?? ''
+              const message = t('copilot.explainError.prompt', { sql, error })
+              explainError(activeConnectionId, message)
+              onOpenCopilot?.()
+            }}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {t('copilot.explainError.button')}
+          </button>
+        )}
+      </div>
+    )
   }
 
   // INSERT / UPDATE / DELETE success — no columns/rows returned
