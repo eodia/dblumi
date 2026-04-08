@@ -325,11 +325,15 @@ function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport:
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Tables</span>
                     <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyTables.length}</span>
                   </button>
-                  <button onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}
-                    className="p-1 rounded text-text-muted hover:text-foreground hover:bg-sidebar-accent transition-colors"
-                    title={t('table.newTable')}>
-                    <Plus className="h-3 w-3" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}
+                        className="p-1 rounded text-text-muted hover:text-foreground hover:bg-sidebar-accent transition-colors">
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{t('table.newTable')}</TooltipContent>
+                  </Tooltip>
                 </div>
                 {sectionsOpen.tables && onlyTables.map(renderItem)}
               </div>
@@ -1231,8 +1235,19 @@ function AppShellInner({
           {/* ── SQL Editor: saved queries inline ── */}
           {page === 'sql-editor' && (
             <SidebarGroup className="flex-1 min-h-0 overflow-hidden">
-              <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+              <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden flex items-center justify-between">
                 {t('sq.title')}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => useEditorStore.getState().addTab()}
+                      className="h-4 w-4 flex items-center justify-center rounded hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{t('tab.new')}</TooltipContent>
+                </Tooltip>
               </SidebarGroupLabel>
               <SidebarGroupContent className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 <SavedQueriesPanel />
