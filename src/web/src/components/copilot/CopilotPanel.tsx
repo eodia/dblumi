@@ -5,7 +5,7 @@ import { Bot, Send, Copy, Play, Loader2, X, Sparkles, RefreshCw, Trash2 } from '
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/stores/editor.store'
-import { useCopilotStore } from '@/stores/copilot.store'
+import { useCopilotStore, setCopilotMessages, clearCopilotConversation } from '@/stores/copilot.store'
 import { streamCopilot, type CopilotContext } from '@/api/copilot'
 import type { CopilotMessage } from '@/stores/copilot.store'
 import { SqlHighlight } from './SqlHighlight'
@@ -130,16 +130,18 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
     staleTime: Infinity,
   })
 
-  const messages = useCopilotStore((s) => s.conversations[activeConnectionId ?? ''] ?? emptyMessages)
+  const connId = activeConnectionId ?? ''
+  const messages = useCopilotStore((s) => s.conversations[connId] ?? emptyMessages)
+
   const setMessages = useCallback(
     (msgs: CopilotMessage[] | ((prev: CopilotMessage[]) => CopilotMessage[])) => {
       if (!activeConnectionId) return
-      const next = typeof msgs === 'function' ? msgs(useCopilotStore.getState().getMessages(activeConnectionId)) : msgs
-      useCopilotStore.getState().setMessages(activeConnectionId, next)
+      const prev = useCopilotStore.getState().conversations[activeConnectionId] ?? emptyMessages
+      const next = typeof msgs === 'function' ? msgs(prev) : msgs
+      setCopilotMessages(activeConnectionId, next)
     },
     [activeConnectionId],
   )
-  const clearConversation = useCopilotStore((s) => s.clearConversation)
 
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -239,7 +241,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
         <div className="flex-1" />
         {messages.length > 0 && (
           <Button variant="ghost" size="sm" className="h-5 w-5 p-0" title={t('copilot.clear')}
-            onClick={() => activeConnectionId && clearConversation(activeConnectionId)}>
+            onClick={() => activeConnectionId && clearCopilotConversation(activeConnectionId)}>
             <Trash2 className="h-3 w-3" />
           </Button>
         )}
