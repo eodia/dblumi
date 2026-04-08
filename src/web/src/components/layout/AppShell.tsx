@@ -52,6 +52,7 @@ import {
   Moon,
   Monitor,
   Download,
+  ArrowLeftRight,
 } from 'lucide-react'
 import {
   SidebarProvider,
@@ -134,6 +135,7 @@ import { OverviewPage } from '@/components/overview/OverviewPage'
 import { TableStructureEditor } from '@/components/schema/TableStructureEditor'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import { ImportDialog } from '@/components/import/ImportDialog'
+import { SyncDialog } from '@/components/sync/SyncDialog'
 import {
   Sheet,
   SheetContent,
@@ -170,7 +172,7 @@ function EnvBadge({ env }: { env: string }) {
 }
 
 // ── Schema tree (shown inline in sidebar when Tables is selected) ───────
-function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport: () => void }) {
+function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; onImport: () => void; onSync: () => void }) {
   const { openTable, openFunction, activeConnectionId, executeQuery, setSql, setPendingCsvImport } = useEditorStore()
   const { isMobile, setOpenMobile } = useSidebar()
   const { t } = useI18n()
@@ -380,6 +382,11 @@ function SchemaNav({ connectionId, onImport }: { connectionId: string; onImport:
                   <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
                     <FileUp className="h-3.5 w-3.5" />
                     {t('import.title')}
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem className="gap-2 text-xs" onClick={onSync}>
+                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                    {t('sync.title')}
                   </ContextMenuItem>
                   {onlyTables.length > 0 && (<>
                     <ContextMenuSeparator />
@@ -1086,6 +1093,7 @@ function AppShellInner({
   const setTheme = useThemeStore((s) => s.setTheme)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [syncOpen, setSyncOpen] = useState(false)
   const qc = useQueryClient()
 
   const logout = useCallback(async () => {
@@ -1284,7 +1292,7 @@ function AppShellInner({
                 {t('common.schema')}
               </SidebarGroupLabel>
               <SidebarGroupContent className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                <SchemaNav connectionId={activeConnectionId} onImport={() => setImportOpen(true)} />
+                <SchemaNav connectionId={activeConnectionId} onImport={() => setImportOpen(true)} onSync={() => setSyncOpen(true)} />
               </SidebarGroupContent>
             </SidebarGroup>
           )}
@@ -1445,6 +1453,7 @@ function AppShellInner({
           onSaveAs={() => setSaveOpen(true)}
           onNewConnection={() => setConnModalOpen(true)}
           onImport={() => setImportOpen(true)}
+          onSync={() => setSyncOpen(true)}
           setPage={setPage}
         />
 
@@ -1467,6 +1476,7 @@ function AppShellInner({
             }}
           />
         )}
+        <SyncDialog open={syncOpen} onOpenChange={setSyncOpen} />
 
         {/* Delete connection confirmation */}
         <Dialog open={deleteConfirmConn !== null} onOpenChange={(o) => { if (!o) setDeleteConfirmConn(null) }}>

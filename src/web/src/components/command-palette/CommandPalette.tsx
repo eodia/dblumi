@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/command'
 import {
   TerminalSquare, Table2, Plus, Save, Play,
-  Database, LogOut, RefreshCw, Download, FileUp,
+  Database, LogOut, RefreshCw, Download, FileUp, ArrowLeftRight,
 } from 'lucide-react'
 import { useEditorStore } from '@/stores/editor.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -27,10 +27,11 @@ type Props = {
   onSaveAs: () => void
   onNewConnection: () => void
   onImport: () => void
+  onSync: () => void
   setPage: (p: 'overview' | 'tables' | 'sql-editor') => void
 }
 
-export function CommandPalette({ connections, onSaveNew, onSaveAs, onNewConnection, onImport, setPage }: Props) {
+export function CommandPalette({ connections, onSaveNew, onSaveAs, onNewConnection, onImport, onSync, setPage }: Props) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const { activeConnectionId, setActiveConnection, addTab, tabs, activeTabId, executeQuery, executeSelection, selection, reloadTab } = useEditorStore()
@@ -112,6 +113,10 @@ export function CommandPalette({ connections, onSaveNew, onSaveAs, onNewConnecti
               {t('import.title')}
             </CommandItem>
           )}
+          <CommandItem onSelect={() => run(onSync)}>
+            <ArrowLeftRight className="h-4 w-4" />
+            {t('sync.title')}
+          </CommandItem>
         </CommandGroup>
 
         <CommandSeparator />
