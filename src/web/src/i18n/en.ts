@@ -298,6 +298,8 @@ export const en = {
   'copilot.subtitleAzure': 'Azure OpenAI',
   'copilot.regenerate': 'Regenerate',
   'copilot.clear': 'Clear conversation',
+  'copilot.explainError.button': 'Explain with Copilot',
+  'copilot.explainError.prompt': 'I ran this SQL query and got an error. Help me understand and fix it.\n\n**Query:**\n```sql\n{sql}\n```\n\n**Error:**\n{error}',
 
   // ── Dump ──
   'dump.table': 'Dump table',
