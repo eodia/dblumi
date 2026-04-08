@@ -568,7 +568,15 @@ function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onS
     <div className="flex items-stretch h-9 border-b border-border-subtle bg-surface flex-shrink-0">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
-          <div className="flex items-stretch min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
+          <div
+            className="flex items-stretch min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
+            onWheel={(e) => {
+              if (e.deltaY !== 0) {
+                e.currentTarget.scrollLeft += e.deltaY
+                e.preventDefault()
+              }
+            }}
+          >
             {tabs.map((tab) => (
               <SortableTab
                 key={tab.id}
