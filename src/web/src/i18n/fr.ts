@@ -121,6 +121,8 @@ export const fr = {
   'conn.username': 'Utilisateur',
   'conn.password': 'Mot de passe',
   'conn.passwordUnchanged': '(inchangé)',
+  'conn.filePath': 'Chemin du fichier',
+  'conn.filePathPlaceholder': '/données/app.db ou :memory:',
   'conn.test': 'Tester',
   'conn.testFail': 'Échec de connexion',
   'conn.cancel': 'Annuler',

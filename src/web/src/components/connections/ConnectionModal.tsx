@@ -91,6 +91,7 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
     database: editing?.database ?? '',
     username: editing?.username ?? '',
     password: '',
+    filePath: editing?.filePath ?? '',
     ssl: editing?.ssl ?? false,
     color: editing?.color ?? COLORS[0] ?? '#41cd2a',
     environment: editing?.environment ?? '',
@@ -185,6 +186,8 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
     try {
       const r = editing
         ? await connectionsApi.test(editing.id)
+        : form.driver === 'sqlite'
+        ? await connectionsApi.testRaw({ driver: 'sqlite', filePath: form.filePath, ssl: false })
         : await connectionsApi.testRaw({
             driver: form.driver,
             host: form.host,
@@ -338,14 +341,18 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
           {/* SSL + Color dots */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Switch
-                id="ssl-toggle"
-                checked={form.ssl}
-                onCheckedChange={(checked) => set('ssl', checked)}
-              />
-              <Label htmlFor="ssl-toggle" className="text-sm text-muted-foreground cursor-pointer">
-                SSL
-              </Label>
+              {form.driver !== 'sqlite' && (
+                <>
+                  <Switch
+                    id="ssl-toggle"
+                    checked={form.ssl}
+                    onCheckedChange={(checked) => set('ssl', checked)}
+                  />
+                  <Label htmlFor="ssl-toggle" className="text-sm text-muted-foreground cursor-pointer">
+                    SSL
+                  </Label>
+                </>
+              )}
             </div>
 
             <div className="flex gap-1.5">
@@ -388,7 +395,7 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
           <Separator />
 
           <DialogFooter className="flex-row justify-between sm:justify-between">
-            <Button type="button" variant="ghost" size="sm" onClick={handleTest} disabled={testing || !form.host}>
+            <Button type="button" variant="ghost" size="sm" onClick={handleTest} disabled={testing || (form.driver === 'sqlite' ? !form.filePath : !form.host)}>
               {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {t('conn.test')}
             </Button>
@@ -420,74 +427,91 @@ function ManualFields({
   editing: boolean
   t: (key: string) => string
 }) {
+  const isSQLite = form.driver === 'sqlite'
+
   return (
     <>
       {/* Driver toggle */}
       <div className="space-y-1.5">
         <Label>{t('conn.parsedDriver')}</Label>
         <div className="inline-flex w-full rounded-md border border-border-strong overflow-hidden">
-          {(['postgresql', 'mysql', 'oracle'] as const).map((d) => (
+          {(['postgresql', 'mysql', 'oracle', 'sqlite'] as const).map((d, i, arr) => (
             <button
               key={d}
               type="button"
               onClick={() => {
                 set('driver', d)
-                set('port', d === 'postgresql' ? 5432 : d === 'mysql' ? 3306 : 1521)
+                if (d !== 'sqlite') set('port', d === 'postgresql' ? 5432 : d === 'mysql' ? 3306 : 1521)
               }}
               className={cn(
                 'flex-1 h-9 text-xs font-medium transition-colors',
                 form.driver === d
                   ? 'bg-surface-overlay text-foreground'
                   : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-raised',
-                d !== 'oracle' && 'border-r border-border-strong',
+                i < arr.length - 1 && 'border-r border-border-strong',
               )}
             >
               <DriverIcon driver={d} className="h-3.5 w-3.5 inline-block mr-1" />
-              {d === 'postgresql' ? 'PostgreSQL' : d === 'mysql' ? 'MySQL' : 'Oracle'}
+              {d === 'postgresql' ? 'PostgreSQL' : d === 'mysql' ? 'MySQL' : d === 'oracle' ? 'Oracle' : 'SQLite'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Host + Port */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="col-span-2 space-y-1.5">
-          <Label>{t('conn.host')}</Label>
-          <Input value={form.host} onChange={(e) => set('host', e.target.value)} required />
-        </div>
+      {isSQLite ? (
+        /* SQLite — file path only */
         <div className="space-y-1.5">
-          <Label>{t('conn.port')}</Label>
+          <Label>{t('conn.filePath')}</Label>
           <Input
-            type="number"
-            value={form.port}
-            onChange={(e) => set('port', Number(e.target.value))}
+            value={form.filePath ?? ''}
+            onChange={(e) => set('filePath', e.target.value)}
+            placeholder={t('conn.filePathPlaceholder')}
             required
           />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Host + Port */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-1.5">
+              <Label>{t('conn.host')}</Label>
+              <Input value={form.host ?? ''} onChange={(e) => set('host', e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('conn.port')}</Label>
+              <Input
+                type="number"
+                value={form.port ?? ''}
+                onChange={(e) => set('port', Number(e.target.value))}
+                required
+              />
+            </div>
+          </div>
 
-      {/* Database */}
-      <div className="space-y-1.5">
-        <Label>{t('conn.database')} <span className="text-text-muted font-normal text-xs">{t('conn.databaseHint')}</span></Label>
-        <Input value={form.database} onChange={(e) => set('database', e.target.value)} placeholder={t('conn.databasePlaceholder')} />
-      </div>
+          {/* Database */}
+          <div className="space-y-1.5">
+            <Label>{t('conn.database')} <span className="text-text-muted font-normal text-xs">{t('conn.databaseHint')}</span></Label>
+            <Input value={form.database ?? ''} onChange={(e) => set('database', e.target.value)} placeholder={t('conn.databasePlaceholder')} />
+          </div>
 
-      {/* Username + Password */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>{t('conn.username')}</Label>
-          <Input value={form.username} onChange={(e) => set('username', e.target.value)} required />
-        </div>
-        <div className="space-y-1.5">
-          <Label>{t('conn.password')}</Label>
-          <Input
-            type="password"
-            value={form.password}
-            onChange={(e) => set('password', e.target.value)}
-            placeholder={editing ? t('conn.passwordUnchanged') : ''}
-          />
-        </div>
-      </div>
+          {/* Username + Password */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>{t('conn.username')}</Label>
+              <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t('conn.password')}</Label>
+              <Input
+                type="password"
+                value={form.password ?? ''}
+                onChange={(e) => set('password', e.target.value)}
+                placeholder={editing ? t('conn.passwordUnchanged') : ''}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }

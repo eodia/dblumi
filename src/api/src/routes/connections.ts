@@ -21,6 +21,7 @@ import type { AuthVariables } from '../middleware/auth.js'
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
 import type { Pool as OraclePool } from 'oracledb'
+import type { Client as LibSQLClient } from '@libsql/client'
 
 const connectionsRouter = new Hono<AuthVariables>()
 
@@ -33,18 +34,39 @@ connectionsRouter.use('*', authMiddleware)
 
 const CreateSchema = z.object({
   name: z.string().min(1).max(100),
-  driver: z.enum(['postgresql', 'mysql', 'oracle']),
-  host: z.string().min(1),
-  port: z.number().int().min(1).max(65535),
-  database: z.string().default(''),
-  username: z.string().min(1),
-  password: z.string(),
+  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite']),
+  host: z.string().min(1).optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  database: z.string().optional(),
+  username: z.string().min(1).optional(),
+  password: z.string().optional(),
+  filePath: z.string().min(1).optional(),
   ssl: z.boolean().default(false),
   color: z.string().optional(),
   environment: z.string().max(50).optional(),
+}).superRefine((val, ctx) => {
+  if (val.driver === 'sqlite') {
+    if (!val.filePath) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'filePath requis pour SQLite', path: ['filePath'] })
+  } else {
+    if (!val.host) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'host requis', path: ['host'] })
+    if (!val.port) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'port requis', path: ['port'] })
+    if (!val.username) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'username requis', path: ['username'] })
+  }
 })
 
-const UpdateSchema = CreateSchema.partial()
+const UpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite']).optional(),
+  host: z.string().min(1).optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  database: z.string().optional(),
+  username: z.string().min(1).optional(),
+  password: z.string().optional(),
+  filePath: z.string().min(1).optional(),
+  ssl: z.boolean().optional(),
+  color: z.string().optional(),
+  environment: z.string().max(50).optional(),
+})
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -54,13 +76,6 @@ function problem(status: number, title: string, detail?: string) {
   return { type: `https://dblumi.dev/errors/${status}`, title, status, detail }
 }
 
-function handleError(e: unknown, c: Parameters<typeof problem>[0]) {
-  if (e instanceof ConnectionError) {
-    const status = e.code === 'NOT_FOUND' ? 404 : 400
-    return { status, body: problem(status, e.message) }
-  }
-  throw e
-}
 
 // ──────────────────────────────────────────────
 // GET /connections
@@ -98,7 +113,7 @@ connectionsRouter.post(
   async (c) => {
     const userId = c.get('userId')
     const body = c.req.valid('json')
-    const conn = await createConnection({ ...body, color: body.color ?? null, environment: body.environment ?? null }, userId)
+    const conn = await createConnection({ ...body, color: body.color ?? null, environment: body.environment ?? null } as Parameters<typeof createConnection>[0], userId)
     return c.json({ connection: conn }, 201)
   }
 )
@@ -164,12 +179,13 @@ connectionsRouter.post('/:id/test', async (c) => {
 // ──────────────────────────────────────────────
 
 const TestRawSchema = z.object({
-  driver: z.enum(['postgresql', 'mysql', 'oracle']),
-  host: z.string().min(1),
-  port: z.number().int(),
-  database: z.string().default(''),
-  username: z.string().min(1),
-  password: z.string(),
+  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite']),
+  host: z.string().min(1).optional(),
+  port: z.number().int().optional(),
+  database: z.string().optional(),
+  username: z.string().min(1).optional(),
+  password: z.string().optional(),
+  filePath: z.string().min(1).optional(),
   ssl: z.boolean().default(false),
 })
 
@@ -182,7 +198,7 @@ connectionsRouter.post(
     const start = Date.now()
 
     try {
-      const pool = await connectionManager.getPool(tempId, opts)
+      const pool = await connectionManager.getPool(tempId, opts as Parameters<typeof connectionManager.getPool>[1])
 
       if (opts.driver === 'postgresql') {
         const pgPool = pool as import('pg').Pool
@@ -194,6 +210,9 @@ connectionsRouter.post(
         const conn = await mysqlPool.getConnection()
         await conn.query('SELECT 1')
         conn.release()
+      } else if (opts.driver === 'sqlite') {
+        const client = pool as import('@libsql/client').Client
+        await client.execute('SELECT 1')
       } else {
         const oraclePool = pool as OraclePool
         const conn = await oraclePool.getConnection()
@@ -450,6 +469,65 @@ async function getMySQLSchema(pool: MySQLPool) {
   }
 }
 
+async function getSQLiteSchema(client: LibSQLClient) {
+  const tablesResult = await client.execute(
+    `SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name`
+  )
+
+  const tables: SchemaItem[] = []
+
+  for (const tableRow of tablesResult.rows) {
+    const tableName = String(tableRow[0])
+    const tableType = tableRow[1] === 'view' ? 'view' : ('table' as const)
+
+    // PRAGMA table_info: cid, name, type, notnull, dflt_value, pk
+    const colsResult = await client.execute(`PRAGMA table_info(${JSON.stringify(tableName)})`)
+    const columns = colsResult.rows.map((r) => ({
+      name: String(r[1]),
+      dataType: String(r[2] || 'text').toLowerCase(),
+      nullable: r[3] === 0,
+      primaryKey: Number(r[5]) > 0,
+    }))
+
+    // PRAGMA index_list: seq, name, unique, origin, partial
+    const idxListResult = await client.execute(`PRAGMA index_list(${JSON.stringify(tableName)})`)
+    const indexes: SchemaIndex[] = []
+    for (const idxRow of idxListResult.rows) {
+      const idxName = String(idxRow[1])
+      const isUnique = Number(idxRow[2]) === 1
+      const idxInfoResult = await client.execute(`PRAGMA index_info(${JSON.stringify(idxName)})`)
+      const idxColumns = idxInfoResult.rows.map((r) => String(r[2]))
+      indexes.push({ name: idxName, columns: idxColumns, unique: isUnique })
+    }
+
+    // PRAGMA foreign_key_list: id, seq, table, from, to, on_delete, on_update, match
+    const fkResult = await client.execute(`PRAGMA foreign_key_list(${JSON.stringify(tableName)})`)
+    const fkMap = new Map<number, { referencedTable: string; fields: string[]; referencedFields: string[]; onDelete: string; onUpdate: string }>()
+    for (const fkRow of fkResult.rows) {
+      const fkId = Number(fkRow[0])
+      if (!fkMap.has(fkId)) {
+        fkMap.set(fkId, { referencedTable: String(fkRow[2]), fields: [], referencedFields: [], onDelete: String(fkRow[5]), onUpdate: String(fkRow[6]) })
+      }
+      const entry = fkMap.get(fkId)!
+      entry.fields.push(String(fkRow[3]))
+      entry.referencedFields.push(String(fkRow[4]))
+    }
+    const foreignKeys: SchemaFK[] = Array.from(fkMap.entries()).map(([fkId, fk]) => ({
+      name: `fk_${tableName}_${fkId}`,
+      fields: fk.fields,
+      referencedDatabase: '',
+      referencedTable: fk.referencedTable,
+      referencedFields: fk.referencedFields,
+      onDelete: fk.onDelete,
+      onUpdate: fk.onUpdate,
+    }))
+
+    tables.push({ name: tableName, type: tableType, comment: '', columns, indexes, foreignKeys })
+  }
+
+  return { tables, functions: [] as FunctionRow[] }
+}
+
 async function getOracleSchema(pool: OraclePool) {
   const conn = await pool.getConnection()
   try {
@@ -543,6 +621,8 @@ connectionsRouter.get('/:id/schema', async (c) => {
         ? await getPgSchema(pool as PgPool)
         : poolOpts.driver === 'mysql'
         ? await getMySQLSchema(pool as MySQLPool)
+        : poolOpts.driver === 'sqlite'
+        ? await getSQLiteSchema(pool as LibSQLClient)
         : await getOracleSchema(pool as OraclePool)
     return c.json(schema)
   } catch (err) {
@@ -593,6 +673,9 @@ connectionsRouter.post(
         } finally {
           conn.release()
         }
+      } else if (poolOpts.driver === 'sqlite') {
+        const result = await (pool as import('@libsql/client').Client).execute(`SELECT COUNT(*) AS count FROM ${JSON.stringify(table)}`)
+        count = Number(result.rows[0]?.[0] ?? 0)
       } else {
         const conn = await (pool as OraclePool).getConnection()
         try {
@@ -917,7 +1000,12 @@ connectionsRouter.put(
   },
 )
 
-async function getDbStats(pool: PgPool | MySQLPool | OraclePool, driver: string) {
+async function getDbStats(pool: PgPool | MySQLPool | OraclePool | LibSQLClient, driver: string) {
+  if (driver === 'sqlite') {
+    const client = pool as LibSQLClient
+    const r = await client.execute('SELECT sqlite_version() AS v')
+    return { version: `SQLite ${String(r.rows[0]?.[0] ?? '')}`, encoding: 'UTF-8', timezone: null, sizePretty: null, sizeBytes: null }
+  }
   let version: string | null = null
   let encoding: string | null = null
   let timezone: string | null = null
@@ -1056,18 +1144,47 @@ connectionsRouter.post(
 )
 
 async function dumpTable(
-  pool: PgPool | MySQLPool | OraclePool,
+  pool: PgPool | MySQLPool | OraclePool | LibSQLClient,
   driver: string,
   table: string,
   includeData: boolean,
 ): Promise<string> {
-  if (driver === 'mysql') {
+  if (driver === 'sqlite') {
+    return dumpSQLite(pool as LibSQLClient, table, includeData)
+  } else if (driver === 'mysql') {
     return dumpMySQL(pool as MySQLPool, table, includeData)
   } else if (driver === 'postgresql') {
     return dumpPg(pool as PgPool, table, includeData)
   } else {
     return dumpOracle(pool as OraclePool, table, includeData)
   }
+}
+
+async function dumpSQLite(client: LibSQLClient, table: string, includeData: boolean): Promise<string> {
+  const parts: string[] = []
+  // Get CREATE TABLE statement from sqlite_master
+  const ddlResult = await client.execute(
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name=${JSON.stringify(table)}`
+  )
+  const ddl = String(ddlResult.rows[0]?.[0] ?? '')
+  if (ddl) parts.push(`${ddl};`)
+  if (includeData) {
+    const rows = await client.execute(`SELECT * FROM ${JSON.stringify(table)}`)
+    if (rows.rows.length > 0) {
+      const colNames = rows.columns.map((name) => `"${name}"`).join(', ')
+      const inserts = rows.rows.map((row) => {
+        const vals = rows.columns.map((_name, i) => {
+          const v = row[i]
+          if (v === null) return 'NULL'
+          if (typeof v === 'number' || typeof v === 'bigint') return String(v)
+          return `'${String(v).replace(/'/g, "''")}'`
+        }).join(', ')
+        return `INSERT INTO "${table}" (${colNames}) VALUES (${vals});`
+      })
+      parts.push(inserts.join('\n'))
+    }
+  }
+  return parts.join('\n')
 }
 
 async function dumpMySQL(pool: MySQLPool, table: string, includeData: boolean): Promise<string> {

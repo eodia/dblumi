@@ -4,6 +4,7 @@ import { connections, userGroups, connectionGroups, connectionUsers } from '../d
 import { encrypt, decrypt } from '../lib/crypto.js'
 import { connectionManager } from '../lib/connection-manager.js'
 import type { DbDriver } from '@dblumi/shared'
+import type { PoolOptions } from '../lib/connection-manager.js'
 
 // ──────────────────────────────────────────────
 // Types
@@ -13,10 +14,11 @@ export type ConnectionView = {
   id: string
   name: string
   driver: DbDriver
-  host: string
-  port: number
-  database: string
-  username: string
+  host: string | null
+  port: number | null
+  database: string | null
+  username: string | null
+  filePath: string | null
   ssl: boolean
   color: string | null
   environment: string | null
@@ -25,8 +27,20 @@ export type ConnectionView = {
   updatedAt: string
 }
 
-export type CreateConnectionInput = Omit<ConnectionView, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'> & {
-  password: string
+export type CreateConnectionInput = {
+  name: string
+  driver: DbDriver
+  // Server-based drivers
+  host?: string
+  port?: number
+  database?: string
+  username?: string
+  password?: string
+  ssl?: boolean
+  // SQLite
+  filePath?: string
+  color?: string | null
+  environment?: string | null
 }
 
 export type UpdateConnectionInput = Partial<CreateConnectionInput>
@@ -39,11 +53,12 @@ function toView(row: typeof connections.$inferSelect): ConnectionView {
   return {
     id: row.id,
     name: row.name,
-    driver: row.driver,
+    driver: row.driver as DbDriver,
     host: row.host,
     port: row.port,
     database: row.database,
     username: row.username,
+    filePath: row.filePath,
     ssl: row.ssl,
     color: row.color,
     environment: row.environment,
@@ -152,18 +167,21 @@ export async function createConnection(
 ): Promise<ConnectionView> {
   const id = crypto.randomUUID()
   const now = new Date().toISOString()
-  const passwordEncrypted = encrypt(input.password)
+
+  const passwordEncrypted =
+    input.driver === 'sqlite' ? null : encrypt(input.password ?? '')
 
   await db.insert(connections).values({
     id,
     name: input.name,
     driver: input.driver,
-    host: input.host,
-    port: input.port,
-    database: input.database,
-    username: input.username,
+    host: input.host ?? null,
+    port: input.port ?? null,
+    database: input.database ?? null,
+    username: input.username ?? null,
     passwordEncrypted,
-    ssl: input.ssl,
+    filePath: input.filePath ?? null,
+    ssl: input.ssl ?? false,
     color: input.color ?? null,
     environment: input.environment ?? null,
     createdBy: userId,
@@ -200,10 +218,11 @@ export async function updateConnection(
   if (input.port !== undefined) updates.port = input.port
   if (input.database !== undefined) updates.database = input.database
   if (input.username !== undefined) updates.username = input.username
+  if (input.filePath !== undefined) updates.filePath = input.filePath
   if (input.ssl !== undefined) updates.ssl = input.ssl
   if (input.color !== undefined) updates.color = input.color
   if (input.environment !== undefined) updates.environment = input.environment
-  if (input.password !== undefined && input.password !== '') {
+  if (input.password !== undefined && input.password !== '' && input.driver !== 'sqlite') {
     updates.passwordEncrypted = encrypt(input.password)
   }
 
@@ -254,19 +273,12 @@ export async function testConnection(
 
   if (!row) throw new ConnectionError('NOT_FOUND', 'Connexion introuvable.')
 
-  const password = decrypt(row.passwordEncrypted as Buffer)
+  const password = row.passwordEncrypted ? decrypt(row.passwordEncrypted as Buffer) : ''
   const start = Date.now()
 
   try {
-    const pool = await connectionManager.getPool(id, {
-      driver: row.driver,
-      host: row.host,
-      port: row.port,
-      database: row.database,
-      username: row.username,
-      password,
-      ssl: row.ssl,
-    })
+    const opts = buildPoolOptions(row, password)
+    const pool = await connectionManager.getPool(id, opts)
 
     if (row.driver === 'postgresql') {
       const pgPool = pool as import('pg').Pool
@@ -278,11 +290,15 @@ export async function testConnection(
       const conn = await mysqlPool.getConnection()
       await conn.query('SELECT 1')
       conn.release()
-    } else {
+    } else if (row.driver === 'oracle') {
       const oraclePool = pool as import('oracledb').Pool
       const conn = await oraclePool.getConnection()
       await conn.execute('SELECT 1 FROM dual')
       await conn.close()
+    } else {
+      // SQLite
+      const client = pool as import('@libsql/client').Client
+      await client.execute('SELECT 1')
     }
 
     return { ok: true, latencyMs: Date.now() - start }
@@ -299,7 +315,7 @@ export async function testConnection(
 export async function getPoolOptions(
   id: string,
   userId: string
-) {
+): Promise<PoolOptions> {
   // Verify access using the same logic as getConnection (own + user-shared + group)
   await getConnection(id, userId)
 
@@ -307,16 +323,22 @@ export async function getPoolOptions(
   const row = await db.select().from(connections).where(eq(connections.id, id)).get()
   if (!row) throw new ConnectionError('NOT_FOUND', 'Connexion introuvable.')
 
-  const password = decrypt(row.passwordEncrypted as Buffer)
-  return {
-    driver: row.driver,
-    host: row.host,
-    port: row.port,
-    database: row.database,
-    username: row.username,
-    password,
-    ssl: row.ssl,
-  }
+  const password = row.passwordEncrypted ? decrypt(row.passwordEncrypted as Buffer) : ''
+  return buildPoolOptions(row, password)
+}
+
+function buildPoolOptions(
+  row: typeof connections.$inferSelect,
+  password: string
+): PoolOptions {
+  const opts: PoolOptions = { driver: row.driver as PoolOptions['driver'], ssl: row.ssl }
+  if (row.host !== null) opts.host = row.host
+  if (row.port !== null) opts.port = row.port
+  if (row.database !== null) opts.database = row.database
+  if (row.username !== null) opts.username = row.username
+  if (row.filePath !== null) opts.filePath = row.filePath
+  if (row.driver !== 'sqlite') opts.password = password
+  return opts
 }
 
 // ──────────────────────────────────────────────

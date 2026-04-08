@@ -43,6 +43,10 @@ dataSyncRouter.post(
       return c.json({ type: 'error', message: 'Target connection not found.' }, 404)
     }
 
+    if (sourceOpts.driver === 'sqlite' || targetOpts.driver === 'sqlite') {
+      return c.json({ type: 'error', message: 'Sync non supporté pour SQLite.' }, 400)
+    }
+
     const sourcePool = await connectionManager.getPool(sourceConnectionId, sourceOpts)
     const targetPool = await connectionManager.getPool(targetConnectionId, targetOpts)
 
@@ -52,8 +56,8 @@ dataSyncRouter.post(
 
       try {
         await executeSync(
-          sourcePool, sourceOpts.driver,
-          targetPool, targetOpts.driver,
+          sourcePool as Parameters<typeof executeSync>[0], sourceOpts.driver as Parameters<typeof executeSync>[1],
+          targetPool as Parameters<typeof executeSync>[2], targetOpts.driver as Parameters<typeof executeSync>[3],
           tables,
           { includeConstraints, includeData },
           async (progress) => { await send('progress', progress) },

@@ -78,6 +78,13 @@
       "when": 1775482872681,
       "tag": "0010_parched_wind_dancer",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1775683857875,
+      "tag": "0011_empty_sunfire",
+      "breakpoints": true
     }
   ]
 }

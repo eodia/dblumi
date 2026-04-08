@@ -175,7 +175,7 @@ copilotRouter.post(
           schema,
           functions,
           poolOpts.driver,
-          poolOpts.database,
+          poolOpts.database ?? '',
           lang,
           context,
         )) {

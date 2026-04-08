@@ -1,6 +1,7 @@
 import type { Pool as PgPool, QueryResult } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
 import type { Pool as OraclePool } from 'oracledb'
+import type { Client as LibSQLClient } from '@libsql/client'
 import type { QueryColumn } from '@dblumi/shared'
 
 export type ExecutionResult = {
@@ -117,6 +118,46 @@ export async function executeOracle(
   } finally {
     await conn.close()
   }
+}
+
+// ──────────────────────────────────────────────
+// SQLite execution
+// ──────────────────────────────────────────────
+
+export async function executeSQLite(
+  client: LibSQLClient,
+  sql: string,
+  limit: number,
+  offset = 0,
+): Promise<ExecutionResult> {
+  const start = Date.now()
+  const wrappedSql = injectLimit(sql, limit, offset)
+  const result = await client.execute(wrappedSql)
+
+  const columns: QueryColumn[] = result.columns.map((name, i) => ({
+    name,
+    dataType: sqliteAffinityToType(result.columnTypes[i] ?? ''),
+  }))
+
+  const rows: Record<string, unknown>[] = result.rows.map((row) =>
+    Object.fromEntries(columns.map((col, i) => [col.name, row[i] ?? null]))
+  )
+
+  return {
+    columns,
+    rows,
+    rowCount: rows.length,
+    durationMs: Date.now() - start,
+  }
+}
+
+function sqliteAffinityToType(affinity: string): string {
+  const upper = affinity.toUpperCase()
+  if (upper === 'INTEGER' || upper === 'INT') return 'integer'
+  if (upper === 'REAL' || upper === 'FLOAT' || upper === 'DOUBLE') return 'real'
+  if (upper === 'BLOB') return 'blob'
+  if (upper === 'NULL') return 'null'
+  return 'text'
 }
 
 // ──────────────────────────────────────────────

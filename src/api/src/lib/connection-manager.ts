@@ -1,27 +1,31 @@
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
 import type { Pool as OraclePool } from 'oracledb'
+import type { Client as LibSQLClient } from '@libsql/client'
 import { logger } from '../logger.js'
 
 type PoolEntry =
   | { driver: 'postgresql'; pool: PgPool }
   | { driver: 'mysql'; pool: MySQLPool }
   | { driver: 'oracle'; pool: OraclePool }
+  | { driver: 'sqlite'; client: LibSQLClient }
 
 /**
- * Singleton manager — one pool per active connection ID.
+ * Singleton manager — one pool/client per active connection ID.
  * Pools are created on first use and destroyed on disconnect.
  */
 class ConnectionManager {
   private readonly pools = new Map<string, PoolEntry>()
 
-  async getPool(id: string, opts: PoolOptions): Promise<PgPool | MySQLPool | OraclePool> {
+  async getPool(id: string, opts: PoolOptions): Promise<PgPool | MySQLPool | OraclePool | LibSQLClient> {
     const existing = this.pools.get(id)
-    if (existing) return existing.pool
+    if (existing) {
+      return existing.driver === 'sqlite' ? existing.client : existing.pool
+    }
 
     const entry = await this.createPool(id, opts)
     this.pools.set(id, entry)
-    return entry.pool
+    return entry.driver === 'sqlite' ? entry.client : entry.pool
   }
 
   async release(id: string): Promise<void> {
@@ -29,7 +33,9 @@ class ConnectionManager {
     if (!entry) return
 
     try {
-      if (entry.driver === 'oracle') {
+      if (entry.driver === 'sqlite') {
+        entry.client.close()
+      } else if (entry.driver === 'oracle') {
         await (entry.pool as OraclePool).close(0)
       } else {
         await entry.pool.end()
@@ -75,18 +81,18 @@ class ConnectionManager {
     } else if (opts.driver === 'mysql') {
       const mysql = await import('mysql2/promise')
       const pool = mysql.createPool({
-        host: opts.host,
-        port: opts.port,
+        ...(opts.host ? { host: opts.host } : {}),
+        ...(opts.port ? { port: opts.port } : {}),
         ...(opts.database ? { database: opts.database } : {}),
-        user: opts.username,
-        password: opts.password,
+        ...(opts.username ? { user: opts.username } : {}),
+        ...(opts.password ? { password: opts.password } : {}),
         ...(opts.ssl ? { ssl: {} } : {}),
         connectionLimit: 5,
         connectTimeout: 10_000,
       })
       logger.info({ connectionId: id, driver: 'mysql' }, 'Pool created')
       return { driver: 'mysql', pool }
-    } else {
+    } else if (opts.driver === 'oracle') {
       const oracledb = await import('oracledb')
       const connectString = opts.database
         ? `${opts.host}:${opts.port}/${opts.database}`
@@ -102,18 +108,29 @@ class ConnectionManager {
       })
       logger.info({ connectionId: id, driver: 'oracle' }, 'Pool created')
       return { driver: 'oracle', pool }
+    } else {
+      // SQLite via @libsql/client
+      const { createClient } = await import('@libsql/client')
+      const filePath = opts.filePath ?? ''
+      const url = filePath === ':memory:' ? ':memory:' : `file:${filePath}`
+      const client = createClient({ url })
+      logger.info({ connectionId: id, driver: 'sqlite', filePath }, 'SQLite client created')
+      return { driver: 'sqlite', client }
     }
   }
 }
 
 export type PoolOptions = {
-  driver: 'postgresql' | 'mysql' | 'oracle'
-  host: string
-  port: number
-  database: string
-  username: string
-  password: string
-  ssl: boolean
+  driver: 'postgresql' | 'mysql' | 'oracle' | 'sqlite'
+  // PostgreSQL / MySQL / Oracle
+  host?: string | undefined
+  port?: number | undefined
+  database?: string | undefined
+  username?: string | undefined
+  password?: string | undefined
+  ssl?: boolean | undefined
+  // SQLite
+  filePath?: string | undefined
 }
 
 export const connectionManager = new ConnectionManager()

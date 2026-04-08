@@ -44,6 +44,10 @@ dataImportRouter.post(
       )
     }
 
+    if (poolOpts.driver === 'sqlite') {
+      return c.json({ type: 'error', message: 'Import non supporté pour SQLite.' }, 400)
+    }
+
     const pool = await connectionManager.getPool(connectionId, poolOpts)
 
     return streamSSE(c, async (stream) => {
@@ -52,8 +56,8 @@ dataImportRouter.post(
 
       try {
         await executeImport(
-          pool,
-          poolOpts.driver,
+          pool as Parameters<typeof executeImport>[0],
+          poolOpts.driver as Parameters<typeof executeImport>[1],
           { tableName, createTable, ifExists, columns, rows },
           async (progress) => {
             await send('progress', progress)

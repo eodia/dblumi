@@ -31,12 +31,13 @@ export const users = sqliteTable('users', {
 export const connections = sqliteTable('connections', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  driver: text('driver', { enum: ['postgresql', 'mysql', 'oracle'] }).notNull(),
-  host: text('host').notNull(),
-  port: integer('port').notNull(),
-  database: text('database').notNull(),
-  username: text('username').notNull(),
-  passwordEncrypted: blob('password_encrypted').notNull(),   // AES-256-GCM
+  driver: text('driver', { enum: ['postgresql', 'mysql', 'oracle', 'sqlite'] }).notNull(),
+  host: text('host'),
+  port: integer('port'),
+  database: text('database'),
+  username: text('username'),
+  passwordEncrypted: blob('password_encrypted'),             // AES-256-GCM, null for SQLite
+  filePath: text('file_path'),                               // SQLite only
   ssl: integer('ssl', { mode: 'boolean' }).notNull().default(false),
   color: text('color'),
   environment: text('environment'),

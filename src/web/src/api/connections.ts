@@ -1,15 +1,16 @@
 import { api } from './client'
 
-export type DbDriver = 'postgresql' | 'mysql' | 'oracle'
+export type DbDriver = 'postgresql' | 'mysql' | 'oracle' | 'sqlite'
 
 export type Connection = {
   id: string
   name: string
   driver: DbDriver
-  host: string
-  port: number
-  database: string
-  username: string
+  host: string | null
+  port: number | null
+  database: string | null
+  username: string | null
+  filePath: string | null
   ssl: boolean
   color: string | null
   environment: string | null
@@ -21,11 +22,12 @@ export type Connection = {
 export type CreateConnectionInput = {
   name: string
   driver: DbDriver
-  host: string
-  port: number
-  database: string
-  username: string
-  password: string
+  host?: string
+  port?: number
+  database?: string
+  username?: string
+  password?: string
+  filePath?: string
   ssl: boolean
   color?: string
   environment?: string
@@ -71,7 +73,7 @@ export const connectionsApi = {
   delete: (id: string) => api.del<void>(`/connections/${id}`),
   test: (id: string) =>
     api.post<{ ok: boolean; latencyMs?: number; error?: string }>(`/connections/${id}/test`),
-  testRaw: (data: { driver: DbDriver; host: string; port: number; database: string; username: string; password: string; ssl: boolean }) =>
+  testRaw: (data: { driver: DbDriver; host?: string; port?: number; database?: string; username?: string; password?: string; filePath?: string; ssl: boolean }) =>
     api.post<{ ok: boolean; latencyMs?: number; error?: string }>('/connections/test-raw', data),
   schema: (id: string) =>
     api.get<{ tables: SchemaTable[]; functions?: SchemaFunction[] }>(`/connections/${id}/schema`),
