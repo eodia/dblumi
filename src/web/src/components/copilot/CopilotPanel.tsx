@@ -5,7 +5,7 @@ import { Bot, Send, Copy, Play, Loader2, X, Sparkles, RefreshCw, Trash2 } from '
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/stores/editor.store'
-import { useCopilotStore, setCopilotMessages, clearCopilotConversation } from '@/stores/copilot.store'
+import { useCopilotStore, setCopilotMessages, clearCopilotConversation, clearPendingExplain } from '@/stores/copilot.store'
 import { streamCopilot, type CopilotContext } from '@/api/copilot'
 import type { CopilotMessage } from '@/stores/copilot.store'
 import { SqlHighlight } from './SqlHighlight'
@@ -132,6 +132,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
 
   const connId = activeConnectionId ?? ''
   const messages = useCopilotStore((s) => s.conversations[connId] ?? emptyMessages)
+  const pendingExplain = useCopilotStore((s) => s.pendingExplain)
 
   const setMessages = useCallback(
     (msgs: CopilotMessage[] | ((prev: CopilotMessage[]) => CopilotMessage[])) => {
@@ -197,6 +198,13 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
       setIsStreaming(false)
     }
   }, [activeConnectionId, buildContext, setMessages, t])
+
+  useEffect(() => {
+    if (!pendingExplain || isStreaming || !activeConnectionId) return
+    clearPendingExplain()
+    const msgs = useCopilotStore.getState().conversations[activeConnectionId] ?? []
+    streamResponse(msgs)
+  }, [pendingExplain, isStreaming, activeConnectionId, streamResponse])
 
   const handleSubmit = useCallback(async () => {
     if (!input.trim() || !activeConnectionId || isStreaming) return
