@@ -1,5 +1,5 @@
 // src/web/src/components/overview/ErdDiagram.tsx
-import { useMemo, useCallback, useState } from 'react'
+import { useMemo, useCallback, useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   ReactFlow,
@@ -96,6 +96,8 @@ function buildNodesAndEdges(
   return { nodes, edges }
 }
 
+const EMPTY_TABLES: SchemaTable[] = []
+
 export function ErdDiagram({ connectionId, onNavigate }: Props) {
   const { t } = useI18n()
 
@@ -121,7 +123,7 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
     onNavigate('sql-editor')
   }, [openTable, onNavigate])
 
-  const allTables = schema?.tables ?? []
+  const allTables = schema?.tables ?? EMPTY_TABLES
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => buildNodesAndEdges(allTables, expandedNodes, toggleExpand, handleClickTable),
@@ -132,7 +134,7 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   // Sync when data changes (expand/collapse, new schema)
-  useMemo(() => {
+  useEffect(() => {
     setNodes(initialNodes)
     setEdges(initialEdges)
   }, [initialNodes, initialEdges, setNodes, setEdges])

@@ -417,6 +417,7 @@ export const fr = {
   'table.columnDefault': 'Défaut',
   'table.deleteColumn': 'Supprimer la colonne',
   'table.slideToApply': 'Glisser pour appliquer',
+  'table.tableNameRequired': 'Le nom de la table est obligatoire',
   'table.renameColumn': 'Renommer la colonne',
   'table.newTable': 'Nouvelle table',
   'table.tableName': 'Nom de la table',
@@ -506,4 +507,10 @@ export const fr = {
   'import.unknownColumns': 'Certaines colonnes n\'existent pas dans la table cible',
   'import.unknownError': 'Une erreur inconnue est survenue.',
   'import.close': 'Fermer',
+  'db.createTooltip': 'Nouvelle database',
+  'db.createTitle': 'Créer une database',
+  'db.createPlaceholder': 'nom_de_la_base',
+  'db.createConfirm': 'Créer',
+  'db.createSuccess': 'Database "{name}" créée',
+  'db.createError': 'Erreur lors de la création',
 } as const

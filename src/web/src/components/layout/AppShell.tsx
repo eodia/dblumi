@@ -1000,6 +1000,8 @@ function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
   const qc = useQueryClient()
   const [selectedDb, setSelectedDb] = useState<string>('')
   const [dbSearch, setDbSearch] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newDbName, setNewDbName] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['databases', connectionId],
@@ -1015,6 +1017,20 @@ function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
     qc.invalidateQueries({ queryKey: ['schema', connectionId] })
   }
 
+  const createMutation = useMutation({
+    mutationFn: (name: string) => connectionsApi.createDatabase(connectionId, name),
+    onSuccess: async (data) => {
+      await qc.invalidateQueries({ queryKey: ['databases', connectionId] })
+      await handleSwitch(data.name)
+      toast.success(t('db.createSuccess', { name: data.name }))
+      setCreateOpen(false)
+      setNewDbName('')
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : t('db.createError'))
+    },
+  })
+
   const databases = data?.databases ?? []
   const displayDb = selectedDb || databases[0] || 'default'
   const lc = dbSearch.toLowerCase()
@@ -1027,7 +1043,7 @@ function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
           <button className="w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors">
             <Database className="h-3 w-3 flex-shrink-0 opacity-50" />
             <span className="font-mono truncate">{displayDb}</span>
-            <ChevronDown className="h-3 w-3 ml-auto opacity-50" />
+            <ChevronDown className="h-3 w-3 ml-auto flex-shrink-0 opacity-50" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56">
@@ -1060,8 +1076,47 @@ function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
               <div className="px-2 py-2 text-xs text-muted-foreground text-center">{t('table.noResults')}</div>
             )}
           </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="gap-2 text-xs cursor-pointer"
+            onClick={() => { setNewDbName(''); setCreateOpen(true) }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('db.createTooltip')}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-xs bg-card border-border-subtle">
+          <DialogHeader>
+            <DialogTitle className="text-base">{t('db.createTitle')}</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              value={newDbName}
+              onChange={(e) => setNewDbName(e.target.value)}
+              placeholder={t('db.createPlaceholder')}
+              className="text-sm font-mono"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newDbName.trim()) createMutation.mutate(newDbName.trim())
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
+            <Button
+              size="sm"
+              disabled={!newDbName.trim() || createMutation.isPending}
+              onClick={() => createMutation.mutate(newDbName.trim())}
+            >
+              {createMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              {t('db.createConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

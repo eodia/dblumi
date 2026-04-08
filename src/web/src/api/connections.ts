@@ -81,6 +81,8 @@ export const connectionsApi = {
     api.get<{ databases: string[] }>(`/connections/${id}/databases`),
   switchDatabase: (id: string, database: string) =>
     api.post<{ database: string }>(`/connections/${id}/switch-database`, { database }),
+  createDatabase: (id: string, name: string) =>
+    api.post<{ name: string }>(`/connections/${id}/create-database`, { name }),
   stats: (id: string) => api.get<DbStats>(`/connections/${id}/stats`),
   getConnectionShares: (id: string) =>
     api.get<{ groups: Array<{ id: string; name: string; color: string | null }>; users: Array<{ id: string; name: string; email: string }> }>(`/connections/${id}/shares`),

@@ -20,6 +20,7 @@ import {
   Key,
   Trash2,
   Plus,
+  Code2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -870,6 +871,7 @@ export function TableStructureEditor({ table, connectionId, driver, onClose }: P
   }, [columns, indexes, foreignKeys, driver, table, tableName, tableComment])
 
   const [error, setError] = useState<string | null>(null)
+  const [showSqlPreview, setShowSqlPreview] = useState(false)
 
   const applyChanges = useCallback(async () => {
     setError(null)
@@ -900,20 +902,26 @@ export function TableStructureEditor({ table, connectionId, driver, onClose }: P
   return (
     <div className="flex flex-col h-full bg-card">
       {/* ── Header: table name + comment ──────────── */}
-      <div className="flex flex-col gap-2 px-4 py-3 border-b border-border-subtle">
-        <Input
-          value={tableName}
-          onChange={(e) => setTableName(e.target.value)}
-          placeholder="table_name"
-          className="h-8 font-mono text-sm max-w-[240px]"
-        />
-        <textarea
-          value={tableComment}
-          onChange={(e) => setTableComment(e.target.value)}
-          placeholder="Comment"
-          rows={2}
-          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-        />
+      <div className="flex gap-4 px-4 py-3 border-b border-border-subtle">
+        <div className="flex flex-col gap-1 flex-shrink-0">
+          <label className="text-xs font-medium text-text-muted">{t('table.tableName')}</label>
+          <Input
+            value={tableName}
+            onChange={(e) => setTableName(e.target.value)}
+            placeholder="table_name"
+            className="h-8 font-mono text-sm w-[200px]"
+          />
+        </div>
+        <div className="flex flex-col gap-1 flex-1">
+          <label className="text-xs font-medium text-text-muted">{t('table.comment')}</label>
+          <textarea
+            value={tableComment}
+            onChange={(e) => setTableComment(e.target.value)}
+            placeholder="…"
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+          />
+        </div>
       </div>
 
       {/* ── Tabs ──────────────────────────────────── */}
@@ -1084,6 +1092,18 @@ export function TableStructureEditor({ table, connectionId, driver, onClose }: P
         )}
       </div>
 
+      {/* ── SQL Preview ───────────────────────────── */}
+      {showSqlPreview && (
+        <div className="mx-4 mb-2 rounded-md border border-border-subtle bg-surface-raised">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-subtle">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">SQL</span>
+          </div>
+          <pre className="px-3 py-2 text-xs font-mono text-foreground whitespace-pre-wrap overflow-auto max-h-48">
+            {generateSQL().join(';\n\n') || '-- Aucune modification'}
+          </pre>
+        </div>
+      )}
+
       {/* ── Error ─────────────────────────────────── */}
       {error && (
         <div className="mx-4 mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive whitespace-pre-wrap">
@@ -1093,10 +1113,24 @@ export function TableStructureEditor({ table, connectionId, driver, onClose }: P
 
       {/* ── Footer ────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border-subtle">
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          {t('common.cancel')}
-        </Button>
-        {hasChanges && (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={showSqlPreview ? 'text-foreground' : 'text-text-muted'}
+            onClick={() => setShowSqlPreview((v) => !v)}
+          >
+            <Code2 className="h-3.5 w-3.5 mr-1.5" />
+            SQL
+          </Button>
+        </div>
+        {hasChanges && !tableName.trim() && (
+          <span className="text-xs text-destructive">{t('table.tableNameRequired')}</span>
+        )}
+        {hasChanges && tableName.trim() && (
           <div className="w-64">
             <SlideToConfirm
               variant="default"

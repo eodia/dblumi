@@ -21,7 +21,7 @@ import {
   RefreshCw, ArrowUp, ArrowDown, ArrowUpDown, GripVertical,
   Filter, ArrowDownUp, Plus, Trash2, Copy, Download, X,
   ChevronDown, Pencil, ClipboardCopy, CalendarIcon, ListPlus,
-  Upload, ScanSearch, Pin, PinOff, EyeOff, Eye, ArrowLeftRight,
+  Upload, ScanSearch, Pin, PinOff, EyeOff, Eye, ArrowLeftRight, RefreshCcw,
 } from 'lucide-react'
 import {
   ContextMenu,
@@ -498,6 +498,9 @@ function isTextType(dt: string) {
   const l = dt.toLowerCase()
   return l === 'text' || l === 'clob' || l.startsWith('tinytext') || l.startsWith('mediumtext') || l.startsWith('longtext') || l.startsWith('varchar') || l.startsWith('character varying') || l.startsWith('nvarchar')
 }
+function isUuidType(dt: string) {
+  return dt.toLowerCase() === 'uuid'
+}
 
 function TypedField({ col, value, onChange }: { col: QueryColumn; value: string; onChange: (v: string) => void }) {
   const { t } = useI18n()
@@ -569,6 +572,17 @@ function TypedField({ col, value, onChange }: { col: QueryColumn; value: string;
     )
   }
 
+  if (isUuidType(dt)) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="NULL" className="h-8 text-xs font-mono flex-1" />
+        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0 text-text-muted hover:text-foreground" onClick={() => onChange(crypto.randomUUID())} title="Générer un UUID">
+          <RefreshCcw className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    )
+  }
+
   if (isNumericType(dt)) {
     return <Input type="number" value={value} onChange={(e) => onChange(e.target.value)} placeholder="NULL" className="h-8 text-xs" />
   }
@@ -590,8 +604,13 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
 }) {
   const { t } = useI18n()
   const initialValues = useMemo(() => {
-    if (mode !== 'edit' || !editRow) return {}
-    return Object.fromEntries(columns.map((c) => [c.name, editRow[c.name] === null || editRow[c.name] === undefined ? '' : String(editRow[c.name])]))
+    if (mode === 'edit' && editRow) {
+      return Object.fromEntries(columns.map((c) => [c.name, editRow[c.name] === null || editRow[c.name] === undefined ? '' : String(editRow[c.name])]))
+    }
+    if (mode === 'row') {
+      return Object.fromEntries(columns.filter((c) => isUuidType(c.dataType)).map((c) => [c.name, crypto.randomUUID()]))
+    }
+    return {}
   }, [mode, editRow, columns])
 
   const [rowValues, setRowValues] = useState<Record<string, string>>(initialValues)

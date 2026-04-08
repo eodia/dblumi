@@ -811,6 +811,64 @@ connectionsRouter.post(
 )
 
 // ──────────────────────────────────────────────
+// POST /connections/:id/create-database
+// ──────────────────────────────────────────────
+
+connectionsRouter.post(
+  '/:id/create-database',
+  zValidator('json', z.object({ name: z.string().min(1).max(63) })),
+  async (c) => {
+    const userId = c.get('userId')
+    const connectionId = c.req.param('id')
+    const { name } = c.req.valid('json')
+
+    let poolOpts
+    try {
+      poolOpts = await getPoolOptions(connectionId, userId)
+    } catch {
+      return c.json(problem(404, 'Connexion introuvable.'), 404)
+    }
+
+    const pool = await connectionManager.getPool(connectionId, poolOpts)
+
+    try {
+      if (poolOpts.driver === 'postgresql') {
+        // CREATE DATABASE cannot run inside a transaction — use a direct client
+        const pgPool = pool as PgPool
+        const client = await pgPool.connect()
+        try {
+          // Sanitize: only allow alphanumeric, underscore and hyphen
+          if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+            return c.json(problem(400, 'Nom invalide. Utilisez uniquement des lettres, chiffres, _ ou -.'), 400)
+          }
+          await client.query(`CREATE DATABASE "${name}"`)
+        } finally {
+          client.release()
+        }
+      } else if (poolOpts.driver === 'mysql') {
+        if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+          return c.json(problem(400, 'Nom invalide. Utilisez uniquement des lettres, chiffres, _ ou -.'), 400)
+        }
+        const mysqlPool = pool as MySQLPool
+        const conn = await mysqlPool.getConnection()
+        try {
+          await conn.query(`CREATE DATABASE \`${name}\``)
+        } finally {
+          conn.release()
+        }
+      } else {
+        return c.json(problem(400, 'Création de base non supportée pour ce driver.'), 400)
+      }
+
+      return c.json({ name }, 201)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create database'
+      return c.json(problem(502, message), 502)
+    }
+  }
+)
+
+// ──────────────────────────────────────────────
 // GET /connections/:id/shares
 // ──────────────────────────────────────────────
 

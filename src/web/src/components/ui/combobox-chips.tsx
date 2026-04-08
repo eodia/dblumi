@@ -28,8 +28,10 @@ function ComboboxChips({
 }: ComboboxChipsProps) {
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -38,6 +40,7 @@ function ComboboxChips({
         !containerRef.current.contains(e.target as Node)
       ) {
         setOpen(false)
+        setActiveIndex(-1)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -56,14 +59,57 @@ function ComboboxChips({
 
   const selectedOptions = options.filter((opt) => selectedSet.has(opt.id))
 
+  useEffect(() => {
+    setActiveIndex(-1)
+  }, [filteredOptions.length, open])
+
+  useEffect(() => {
+    if (activeIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll('[data-combobox-item]')
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [activeIndex])
+
   function handleSelect(id: string) {
     onChange([...selected, id])
     setQuery("")
+    setActiveIndex(-1)
     inputRef.current?.focus()
   }
 
   function handleRemove(id: string) {
     onChange(selected.filter((s) => s !== id))
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!open || filteredOptions.length === 0) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        setOpen(true)
+        e.preventDefault()
+      }
+      return
+    }
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setActiveIndex((i) => (i + 1) % filteredOptions.length)
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setActiveIndex((i) => (i <= 0 ? filteredOptions.length - 1 : i - 1))
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (activeIndex >= 0 && activeIndex < filteredOptions.length) {
+          handleSelect(filteredOptions[activeIndex]!.id)
+        }
+        break
+      case 'Escape':
+        setOpen(false)
+        setActiveIndex(-1)
+        inputRef.current?.blur()
+        break
+    }
   }
 
   return (
@@ -126,17 +172,26 @@ function ComboboxChips({
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
         />
       </div>
 
       {open && filteredOptions.length > 0 && (
-        <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border-subtle bg-popover py-1 shadow-md">
-          {filteredOptions.map((opt) => (
+        <div ref={listRef} className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border-subtle bg-popover py-1 shadow-md">
+          {filteredOptions.map((opt, i) => (
             <button
               key={opt.id}
               type="button"
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-surface-overlay"
-              onClick={() => handleSelect(opt.id)}
+              data-combobox-item
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-surface-overlay",
+                i === activeIndex && "bg-accent text-accent-foreground",
+              )}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                handleSelect(opt.id)
+              }}
+              onMouseEnter={() => setActiveIndex(i)}
             >
               {opt.color && (
                 <span
