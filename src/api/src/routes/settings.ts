@@ -20,7 +20,9 @@ settingsRouter.get('/auth-providers', (c) => {
 // Protected routes
 settingsRouter.get('/copilot-info', authMiddleware, (c) => {
   const provider = getActiveProvider()
-  const model = provider === 'openai'
+  const model = provider === 'ollama'
+    ? (config.OLLAMA_MODEL ?? 'llama3.2')
+    : provider === 'openai'
     ? (config.OPENAI_MODEL ?? 'gpt-4o')
     : provider === 'azure-openai'
     ? (config.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o')
