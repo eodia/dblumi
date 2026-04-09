@@ -24,19 +24,21 @@ export class CopilotError extends Error {
 }
 
 /** Détecte le provider actif depuis les variables d'environnement. */
-export function getActiveProvider(): 'anthropic' | 'openai' | 'azure-openai' {
-  const hasOpenai = !!config.OPENAI_API_KEY
+export function getActiveProvider(): 'ollama' | 'anthropic' | 'openai' | 'azure-openai' {
+  const hasOllama = !!config.OLLAMA_BASE_URL
+  const hasAnthropic = !!config.ANTHROPIC_API_KEY
   const hasAzure = !!(config.AZURE_OPENAI_API_KEY && config.AZURE_OPENAI_ENDPOINT)
-  const hasAnthropic = !!(config.ANTHROPIC_API_KEY)
+  const hasOpenai = !!config.OPENAI_API_KEY
 
-  const count = [hasOpenai, hasAzure, hasAnthropic].filter(Boolean).length
+  const count = [hasOllama, hasAnthropic, hasAzure, hasOpenai].filter(Boolean).length
   if (count > 1) {
-    logger.warn('Multiple AI providers configured. Priority: openai > azure-openai > anthropic.')
+    logger.warn('Multiple AI providers configured. Priority: ollama > anthropic > azure-openai > openai.')
   }
 
-  if (hasOpenai) return 'openai'
+  if (hasOllama) return 'ollama'
+  if (hasAnthropic) return 'anthropic'
   if (hasAzure) return 'azure-openai'
-  return 'anthropic'
+  return 'openai'
 }
 
 /** Résout la clé Anthropic : BYOK utilisateur → var d'env instance */
@@ -204,6 +206,16 @@ export async function* streamCopilotResponse(
   const provider = getActiveProvider()
   const systemPrompt = buildSystemPrompt(schema, functions, driver, database, lang, context)
 
+  if (provider === 'ollama') {
+    const client = new OpenAI({
+      baseURL: `${config.OLLAMA_BASE_URL}/v1`,
+      apiKey: 'ollama',
+    })
+    const model = config.OLLAMA_MODEL ?? 'llama3.2'
+    yield* streamOpenAIClient(client, model, systemPrompt, messages)
+    return
+  }
+
   if (provider === 'openai') {
     const client = new OpenAI({ apiKey: config.OPENAI_API_KEY! })
     const model = config.OPENAI_MODEL ?? 'gpt-4o'
@@ -260,7 +272,19 @@ Target columns: ${JSON.stringify(targetColumns.map((c) => ({ name: c.name, type:
 
   let responseText = ''
 
-  if (provider === 'openai') {
+  if (provider === 'ollama') {
+    const client = new OpenAI({
+      baseURL: `${config.OLLAMA_BASE_URL}/v1`,
+      apiKey: 'ollama',
+    })
+    const model = config.OLLAMA_MODEL ?? 'llama3.2'
+    const res = await client.chat.completions.create({
+      model,
+      max_tokens: 2048,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    })
+    responseText = res.choices[0]?.message?.content ?? '[]'
+  } else if (provider === 'openai') {
     const client = new OpenAI({ apiKey: config.OPENAI_API_KEY! })
     const model = config.OPENAI_MODEL ?? 'gpt-4o'
     const res = await client.chat.completions.create({
