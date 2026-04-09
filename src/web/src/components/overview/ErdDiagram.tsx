@@ -11,6 +11,7 @@ import {
   type Node,
   type Edge,
   type NodeTypes,
+  type MiniMapNodeProps,
   BackgroundVariant,
   Position,
   MarkerType,
@@ -31,6 +32,33 @@ const COL_GAP = 80
 const ROW_GAP = 60
 
 const nodeTypes: NodeTypes = { tableNode: TableNode }
+
+function MiniMapNode({ x, y, width, height, color, strokeColor }: MiniMapNodeProps) {
+  const headerH = height * 0.15
+  const lineCount = Math.max(1, Math.round((height - headerH) / (height * 0.08)))
+  const lineH = 1.5
+  const pad = width * 0.1
+  const lineW = width * 0.6
+  const gap = (height - headerH - lineCount * lineH) / (lineCount + 1)
+
+  return (
+    <g transform={`translate(${x}, ${y})`}>
+      <rect width={width} height={height} rx={2} fill={color} stroke={strokeColor} strokeWidth={1} />
+      <rect width={width} height={headerH} rx={2} fill={strokeColor} opacity={0.4} />
+      {Array.from({ length: lineCount }, (_, i) => (
+        <rect
+          key={i}
+          x={pad}
+          y={headerH + gap * (i + 1) + lineH * i}
+          width={lineW}
+          height={lineH}
+          fill={strokeColor}
+          opacity={0.5}
+        />
+      ))}
+    </g>
+  )
+}
 
 function buildNodesAndEdges(
   tables: SchemaTable[],
@@ -185,6 +213,7 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
             nodeStrokeColor="var(--color-border)"
             maskColor="rgba(0, 0, 0, 0.6)"
             className="erd-minimap"
+            nodeComponent={MiniMapNode}
           />
         </ReactFlow>
       </div>
