@@ -9,7 +9,7 @@ import { useCopilotStore, setCopilotMessages, clearCopilotConversation, clearPen
 import { streamCopilot, type CopilotContext } from '@/api/copilot'
 import type { CopilotMessage } from '@/stores/copilot.store'
 import { SqlHighlight } from './SqlHighlight'
-import { useI18n } from '@/i18n'
+import { useI18n, type TranslationKey } from '@/i18n'
 
 const emptyMessages: CopilotMessage[] = []
 
@@ -72,7 +72,7 @@ function renderMarkdown(text: string): React.ReactNode {
 }
 
 // ── Full message renderer with SQL syntax highlighting ──
-function MessageContent({ content, onInsertSql, t }: { content: string; onInsertSql: (sql: string) => void; t: (key: string) => string }) {
+function MessageContent({ content, onInsertSql, t }: { content: string; onInsertSql: (sql: string) => void; t: (key: TranslationKey, replacements?: Record<string, string | number>) => string }) {
   const parts = content.split(/(```sql[\s\S]*?```|```[\s\S]*?```)/g)
 
   return (

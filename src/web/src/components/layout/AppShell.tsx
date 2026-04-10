@@ -1190,7 +1190,7 @@ function AppShellInner({
     ? connections.filter(
         (c) =>
           c.name.toLowerCase().includes(connSearch.toLowerCase()) ||
-          c.database.toLowerCase().includes(connSearch.toLowerCase()),
+          c.database?.toLowerCase().includes(connSearch.toLowerCase()),
       )
     : connections
 

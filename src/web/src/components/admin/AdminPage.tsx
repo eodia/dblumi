@@ -305,7 +305,7 @@ export function AdminPage() {
       <Dialog open={newGroupOpen} onOpenChange={(o) => { if (!o) setNewGroupOpen(false) }}>
         <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
           <DialogHeader><DialogTitle className="text-base">{t('admin.newGroup')}</DialogTitle></DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); createGroupMut.mutate({ name: groupName, description: groupDesc || undefined, color: groupColor }) }} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); createGroupMut.mutate({ name: groupName, ...(groupDesc ? { description: groupDesc } : {}), color: groupColor }) }} className="space-y-4">
             <div className="space-y-2">
               <Label className="text-xs">{t('admin.groupName')}</Label>
               <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} className="h-8 text-sm" autoFocus />
@@ -333,7 +333,7 @@ export function AdminPage() {
       <Dialog open={editGroup !== null} onOpenChange={(o) => { if (!o) setEditGroup(null) }}>
         <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
           <DialogHeader><DialogTitle className="text-base">{t('admin.editGroup')}</DialogTitle></DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); if (editGroup) updateGroupMut.mutate({ id: editGroup.id, data: { name: groupName, description: groupDesc || undefined, color: groupColor } }) }} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); if (editGroup) updateGroupMut.mutate({ id: editGroup.id, data: { name: groupName, ...(groupDesc ? { description: groupDesc } : {}), color: groupColor } }) }} className="space-y-4">
             <div className="space-y-2">
               <Label className="text-xs">{t('admin.groupName')}</Label>
               <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} className="h-8 text-sm" autoFocus />

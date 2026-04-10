@@ -158,8 +158,8 @@ export function OverviewPage({ onNavigate }: Props) {
       <ConnectionStatusBar connectionId={activeConnectionId} />
       <StatsCards connectionId={activeConnectionId} />
       <div className="grid grid-cols-2 gap-3">
-        <QuickAccessCard connectionId={activeConnectionId} environment={activeConn?.environment} onNavigate={onNavigate} />
-        <ActivityCard connectionId={activeConnectionId} environment={activeConn?.environment} onNavigate={onNavigate} />
+        <QuickAccessCard connectionId={activeConnectionId} environment={activeConn?.environment ?? null} onNavigate={onNavigate} />
+        <ActivityCard connectionId={activeConnectionId} environment={activeConn?.environment ?? null} onNavigate={onNavigate} />
       </div>
       <ErdDiagram connectionId={activeConnectionId} onNavigate={onNavigate} />
     </div>

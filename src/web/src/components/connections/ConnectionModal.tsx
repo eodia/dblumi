@@ -19,7 +19,7 @@ import { ComboboxChips } from '@/components/ui/combobox-chips'
 import { connectionsApi, type Connection, type CreateConnectionInput, type DbDriver } from '@/api/connections'
 import { sharingApi } from '@/api/sharing'
 import { useAuthStore } from '@/stores/auth.store'
-import { useI18n } from '@/i18n'
+import { useI18n, type TranslationKey } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -187,14 +187,14 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
       const r = editing
         ? await connectionsApi.test(editing.id)
         : form.driver === 'sqlite'
-        ? await connectionsApi.testRaw({ driver: 'sqlite', filePath: form.filePath, ssl: false })
+        ? await connectionsApi.testRaw({ driver: 'sqlite', ...(form.filePath ? { filePath: form.filePath } : {}), ssl: false })
         : await connectionsApi.testRaw({
             driver: form.driver,
-            host: form.host,
-            port: form.port,
-            database: form.database,
-            username: form.username,
-            password: form.password,
+            ...(form.host ? { host: form.host } : {}),
+            ...(form.port != null ? { port: form.port } : {}),
+            ...(form.database ? { database: form.database } : {}),
+            ...(form.username ? { username: form.username } : {}),
+            ...(form.password ? { password: form.password } : {}),
             ssl: form.ssl,
           })
       setTestResult({ ok: r.ok, msg: r.ok ? `OK — ${r.latencyMs}ms` : (r.error ?? t('conn.testFail')) })
@@ -425,7 +425,7 @@ function ManualFields({
   form: CreateConnectionInput
   set: <K extends keyof CreateConnectionInput>(k: K, v: CreateConnectionInput[K]) => void
   editing: boolean
-  t: (key: string) => string
+  t: (key: TranslationKey, replacements?: Record<string, string | number>) => string
 }) {
   const isSQLite = form.driver === 'sqlite'
 

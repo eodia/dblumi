@@ -148,7 +148,7 @@ export function DbUserForm({ connectionId, driver, selectedUser, isCreating, onS
     mutationFn: () =>
       dbUsersApi.update(connectionId, selectedUser!.username, {
         host: driver === 'mysql' ? host : '%',
-        password: password || undefined,
+        ...(password ? { password } : {}),
         serverPrivileges: serverPrivs,
         tablePrivileges: tableEntries.map((e) => ({
           database: e.database,

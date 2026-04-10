@@ -339,7 +339,7 @@ export function SqlEditor({ onSave }: Props) {
   const sqlExtension = useMemo(() => {
     const dialect = getDialect(activeConnection?.driver)
     const schema = schemaData?.tables ? buildSqlSchema(schemaData.tables) : undefined
-    return sql({ dialect, schema, upperCaseKeywords: true })
+    return sql({ dialect, ...(schema ? { schema } : {}), upperCaseKeywords: true })
   }, [activeConnection?.driver, schemaData?.tables])
 
   const fnCompletionSource = useMemo(() => {
