@@ -51,6 +51,8 @@ export type FunctionParam = { name: string; type: string; value: string }
 
 export type FilterRow = { column: string; operator: string; value: string }
 
+export type PendingClose = { tabId: string; remainingIds?: string[] } | null
+
 export type QueryTab = {
   id: string
   name: string
@@ -123,6 +125,10 @@ type EditorState = {
   clearResults: () => void
   setTabFilters: (filters: FilterRow[]) => void
   markSaved: () => void
+
+  pendingClose: PendingClose
+  confirmClose: (action: 'save' | 'discard' | 'cancel') => void
+  requestBulkClose: (tabIds: string[]) => void
 
   chatOpen: boolean
   setChatOpen: (open: boolean) => void
@@ -338,6 +344,23 @@ async function fetchTotalCount(
   } catch { /* count is optional */ }
 }
 
+function isTabDirty(tab: QueryTab): boolean {
+  return tab.kind !== 'table' && tab.sql !== tab.originalSql
+}
+
+function forceCloseTab(tabs: QueryTab[], activeTabId: string, id: string): { tabs: QueryTab[]; activeTabId: string } {
+  const idx = tabs.findIndex((t) => t.id === id)
+  const next = tabs.filter((t) => t.id !== id)
+  if (next.length === 0) {
+    const fresh = makeQueryTab(1)
+    return { tabs: [fresh], activeTabId: fresh.id }
+  }
+  const newActiveId = activeTabId === id
+    ? (next[Math.max(0, idx - 1)] ?? next[0])!.id
+    : activeTabId
+  return { tabs: next, activeTabId: newActiveId }
+}
+
 // ── Store ───────────────────────────────────────
 
 type PersistedState = {
@@ -400,18 +423,14 @@ export const useEditorStore = create<EditorState>()(
   },
 
   closeTab: (id) => {
-    const { tabs, activeTabId } = get()
-    const idx = tabs.findIndex((t) => t.id === id)
-    const next = tabs.filter((t) => t.id !== id)
-    if (next.length === 0) {
-      const tab = makeQueryTab(1)
-      set({ tabs: [tab], activeTabId: tab.id })
+    const { tabs } = get()
+    const tab = tabs.find((t) => t.id === id)
+    if (tab && isTabDirty(tab)) {
+      set({ pendingClose: { tabId: id } })
       return
     }
-    const newActiveId = activeTabId === id
-      ? (next[Math.max(0, idx - 1)] ?? next[0])!.id
-      : activeTabId
-    set({ tabs: next, activeTabId: newActiveId })
+    const result = forceCloseTab(tabs, get().activeTabId, id)
+    set(result)
   },
 
   setSql: (sql) => {
@@ -498,32 +517,29 @@ export const useEditorStore = create<EditorState>()(
 
   closeOthers: (id) => {
     const { tabs } = get()
-    const keep = tabs.find((t) => t.id === id)
-    if (!keep) return
-    set({ tabs: [keep], activeTabId: id })
+    const toClose = tabs.filter((t) => t.id !== id).map((t) => t.id)
+    get().requestBulkClose(toClose)
   },
 
   closeToLeft: (id) => {
-    const { tabs, activeTabId } = get()
+    const { tabs } = get()
     const idx = tabs.findIndex((t) => t.id === id)
     if (idx <= 0) return
-    const next = tabs.slice(idx)
-    const newActiveId = next.find((t) => t.id === activeTabId) ? activeTabId : id
-    set({ tabs: next, activeTabId: newActiveId })
+    const toClose = tabs.slice(0, idx).map((t) => t.id)
+    get().requestBulkClose(toClose)
   },
 
   closeToRight: (id) => {
-    const { tabs, activeTabId } = get()
+    const { tabs } = get()
     const idx = tabs.findIndex((t) => t.id === id)
     if (idx === -1 || idx === tabs.length - 1) return
-    const next = tabs.slice(0, idx + 1)
-    const newActiveId = next.find((t) => t.id === activeTabId) ? activeTabId : id
-    set({ tabs: next, activeTabId: newActiveId })
+    const toClose = tabs.slice(idx + 1).map((t) => t.id)
+    get().requestBulkClose(toClose)
   },
 
   closeAll: () => {
-    const tab = makeQueryTab(1)
-    set({ tabs: [tab], activeTabId: tab.id })
+    const { tabs } = get()
+    get().requestBulkClose(tabs.map((t) => t.id))
   },
 
   reorderTabs: (fromId, toId) => {
@@ -692,6 +708,48 @@ export const useEditorStore = create<EditorState>()(
   markSaved: () => {
     const { tabs, activeTabId } = get()
     set({ tabs: tabs.map((t) => t.id === activeTabId ? { ...t, originalSql: t.sql } : t) })
+  },
+
+  pendingClose: null,
+
+  requestBulkClose: (tabIds) => {
+    const { tabs } = get()
+    const dirty: string[] = []
+    const clean: string[] = []
+    for (const id of tabIds) {
+      const tab = tabs.find((t) => t.id === id)
+      if (tab && isTabDirty(tab)) dirty.push(id)
+      else clean.push(id)
+    }
+    let state = get()
+    for (const id of clean) {
+      const result = forceCloseTab(state.tabs, state.activeTabId, id)
+      state = { ...state, ...result }
+    }
+    set({ tabs: state.tabs, activeTabId: state.activeTabId })
+    if (dirty.length > 0) {
+      const [first, ...rest] = dirty
+      set({ pendingClose: { tabId: first!, remainingIds: rest.length > 0 ? rest : undefined } })
+    }
+  },
+
+  confirmClose: (action) => {
+    const { pendingClose } = get()
+    if (!pendingClose) return
+    if (action === 'cancel') {
+      set({ pendingClose: null })
+      return
+    }
+    if (action === 'discard') {
+      const result = forceCloseTab(get().tabs, get().activeTabId, pendingClose.tabId)
+      const remaining = pendingClose.remainingIds
+      if (remaining && remaining.length > 0) {
+        const [next, ...rest] = remaining
+        set({ ...result, pendingClose: { tabId: next!, remainingIds: rest.length > 0 ? rest : undefined } })
+      } else {
+        set({ ...result, pendingClose: null })
+      }
+    }
   },
 
   chatOpen: false,
