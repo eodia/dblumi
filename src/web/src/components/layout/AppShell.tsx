@@ -633,7 +633,7 @@ function SortableTab({
   )
 }
 
-function UnsavedChangesDialog({ onSave }: { onSave: (tabId: string) => Promise<void> }) {
+function UnsavedChangesDialog({ onSave, onSaveNew }: { onSave: (tabId: string) => Promise<void>; onSaveNew: () => void }) {
   const { t } = useI18n()
   const { pendingClose, confirmClose, tabs } = useEditorStore()
   const [saving, setSaving] = useState(false)
@@ -643,6 +643,12 @@ function UnsavedChangesDialog({ onSave }: { onSave: (tabId: string) => Promise<v
   if (!pendingClose || !tab) return null
 
   const handleSave = async () => {
+    // New query without savedQueryId — open SaveQueryModal instead and cancel the close
+    if (tab.kind === 'query' && !tab.savedQueryId) {
+      confirmClose('cancel')
+      onSaveNew()
+      return
+    }
     setSaving(true)
     try {
       await onSave(tab.id)
@@ -654,7 +660,7 @@ function UnsavedChangesDialog({ onSave }: { onSave: (tabId: string) => Promise<v
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) confirmClose('cancel') }}>
-      <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
+      <DialogContent className="sm:max-w-md bg-card border-border-subtle">
         <DialogHeader>
           <DialogTitle className="text-base">{t('unsaved.title')}</DialogTitle>
         </DialogHeader>
@@ -1078,7 +1084,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
           )}
         </ResizablePanelGroup>
       </div>
-      <UnsavedChangesDialog onSave={saveTabById} />
+      <UnsavedChangesDialog onSave={saveTabById} onSaveNew={onSaveNew} />
     </div>
   )
 }
