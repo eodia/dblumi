@@ -16,7 +16,7 @@ Create a `docker-compose.yml` file:
 ```yaml
 services:
   dblumi:
-    image: dblumi/dblumi:latest
+    image: eodia/dblumi:latest
     ports:
       - "3000:3000"
     environment:
