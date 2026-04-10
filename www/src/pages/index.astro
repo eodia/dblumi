@@ -89,7 +89,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         </span>
         <h2>Write SQL with confidence</h2>
         <p>
-          A powerful editor with autocompletion, syntax highlighting, and multi-tab support. Built on CodeMirror for a blazing fast experience.
+          A powerful editor with autocompletion, syntax highlighting, and multi-tab support. Built for a blazing fast experience.
         </p>
         <ul class="dl-feature-list">
           <li>4 safety levels — from unrestricted to full guardrails</li>
@@ -374,6 +374,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   <section class="dl-cta-section">
     <h2>Ready to <span class="gradient">take control</span>?</h2>
     <p>Deploy dblumi in minutes. One Docker command, full control over your data.</p>
+
+    <div class="dl-docker-copy">
+      <span class="dl-docker-prompt">$</span>
+      <code class="dl-docker-cmd">docker pull dblumi/dblumi:latest</code>
+      <button class="dl-docker-btn" data-copy="docker pull dblumi/dblumi:latest" aria-label="Copy Docker command">
+        <svg class="dl-icon-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg class="dl-icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
+    </div>
+
     <div class="dl-hero-actions">
       <a href={`${base}/guides/installation/`} class="dl-btn-primary">
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -400,6 +410,17 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <li><a href={`${base}/self-hosting/configuration/`}>Self-hosting</a></li>
     </ul>
   </footer>
+
+<script>
+document.querySelectorAll('.dl-docker-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 2000);
+    });
+  });
+});
+</script>
 
 <script>
 (function() {

@@ -811,6 +811,77 @@ body {
   position: relative;
 }
 
+/* ── Docker Copy Block ─────────────────────────────── */
+
+.dl-docker-copy {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 auto 2.5rem;
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  background: var(--dl-bg-subtle);
+  border: 1px solid var(--dl-border);
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.dl-docker-copy:hover {
+  border-color: var(--dl-green);
+}
+
+.dl-docker-prompt {
+  color: var(--dl-green);
+  font-weight: 700;
+  user-select: none;
+}
+
+.dl-docker-cmd {
+  color: var(--dl-text);
+  user-select: all;
+  white-space: nowrap;
+}
+
+.dl-docker-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--dl-border);
+  border-radius: 8px;
+  background: var(--dl-surface);
+  color: var(--dl-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.dl-docker-btn:hover {
+  color: var(--dl-text);
+  border-color: var(--dl-text-muted);
+  background: var(--dl-bg-subtle);
+}
+
+.dl-docker-btn .dl-icon-check {
+  display: none;
+}
+
+.dl-docker-btn.copied {
+  color: var(--dl-green);
+  border-color: var(--dl-green);
+}
+
+.dl-docker-btn.copied .dl-icon-copy {
+  display: none;
+}
+
+.dl-docker-btn.copied .dl-icon-check {
+  display: block;
+}
+
 /* ── Planet / Globe Effect ─────────────────────────── */
 
 .dl-planet-wrapper {
