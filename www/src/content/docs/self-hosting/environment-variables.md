@@ -23,6 +23,18 @@ title: Environment variables
 | `KEYCLOAK_CLIENT_ID` | No | Keycloak client ID |
 | `KEYCLOAK_CLIENT_SECRET` | No | Keycloak client secret |
 
+## AI Copilot
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ANTHROPIC_API_KEY` | No | — | Anthropic API key for Claude models |
+| `OPENAI_API_KEY` | No | — | OpenAI API key |
+| `AZURE_OPENAI_API_KEY` | No | — | Azure OpenAI API key |
+| `AZURE_OPENAI_ENDPOINT` | No | — | Azure OpenAI endpoint URL |
+| `AZURE_OPENAI_DEPLOYMENT` | No | — | Azure OpenAI deployment name |
+| `OLLAMA_BASE_URL` | No | — | Ollama server URL (e.g. `http://localhost:11434`) |
+| `OLLAMA_MODEL` | No | — | Ollama model name (e.g. `codestral`, `llama3.1`) |
+
 ## SMTP (password reset)
 
 Required only if you want the "Forgot password?" feature. Without SMTP, users can only change their password from their profile menu (when logged in).

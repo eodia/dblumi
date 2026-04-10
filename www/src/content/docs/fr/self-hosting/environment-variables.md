@@ -23,6 +23,18 @@ title: Variables d'environnement
 | `KEYCLOAK_CLIENT_ID` | Non | ID client Keycloak |
 | `KEYCLOAK_CLIENT_SECRET` | Non | Secret client Keycloak |
 
+## Copilot IA
+
+| Variable | Obligatoire | Defaut | Description |
+|----------|-------------|--------|-------------|
+| `ANTHROPIC_API_KEY` | Non | — | Cle API Anthropic pour les modeles Claude |
+| `OPENAI_API_KEY` | Non | — | Cle API OpenAI |
+| `AZURE_OPENAI_API_KEY` | Non | — | Cle API Azure OpenAI |
+| `AZURE_OPENAI_ENDPOINT` | Non | — | URL de l'endpoint Azure OpenAI |
+| `AZURE_OPENAI_DEPLOYMENT` | Non | — | Nom du deploiement Azure OpenAI |
+| `OLLAMA_BASE_URL` | Non | — | URL du serveur Ollama (ex : `http://localhost:11434`) |
+| `OLLAMA_MODEL` | Non | — | Nom du modele Ollama (ex : `codestral`, `llama3.1`) |
+
 ## SMTP (reinitialisation de mot de passe)
 
 Requis uniquement pour la fonctionnalite "Mot de passe oublie ?". Sans SMTP, les utilisateurs peuvent changer leur mot de passe depuis le menu de leur profil (une fois connectes).

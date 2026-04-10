@@ -11,10 +11,11 @@ dblumi includes an AI assistant that can generate, explain, and optimize SQL que
 | Anthropic | All models — Claude Opus 4, Sonnet 4, Haiku, and future releases |
 | OpenAI | All models — GPT-4o, GPT-4.1, o3, o4-mini, and future releases |
 | Azure OpenAI | Any model deployed in your Azure subscription |
+| Ollama | Any locally hosted model — Llama, Mistral, Codestral, and more |
 
 Configure the model via environment variables. dblumi always uses the latest defaults (Claude Sonnet 4 for Anthropic, GPT-4o for OpenAI) but you can choose any model your provider offers.
 
-Bring your own API key — dblumi never proxies your requests.
+Bring your own API key — or run fully offline with Ollama. dblumi never proxies your requests.
 
 ## What the copilot can do
 

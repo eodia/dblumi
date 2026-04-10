@@ -126,7 +126,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
           Ask questions in natural language, generate SQL, get explanations and optimizations. The AI knows your schema and adapts to your context.
         </p>
         <ul class="dl-feature-list">
-          <li>Anthropic Claude, OpenAI, Azure OpenAI support</li>
+          <li>Anthropic Claude, OpenAI, Azure OpenAI & Ollama</li>
           <li>Schema-aware — generates queries that actually work</li>
           <li>Explain, optimize, and debug existing queries</li>
           <li>Bring your own API key — your data stays private</li>
@@ -276,7 +276,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <div class="dl-stat-label">Guardrail levels</div>
     </div>
     <div>
-      <div class="dl-stat-value">3</div>
+      <div class="dl-stat-value">4</div>
       <div class="dl-stat-label">AI providers</div>
     </div>
     <div>
@@ -311,7 +311,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         <ul class="dl-pricing-features">
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Unlimited connections & users</li>
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> SQL editor with 4 guardrail levels</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> AI Copilot (Claude, OpenAI, Azure)</li>
+          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> AI Copilot (Claude, OpenAI, Azure, Ollama)</li>
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Saved queries, folders & sharing</li>
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Schema browser & ERD</li>
           <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Groups & RBAC</li>
@@ -364,7 +364,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       </details>
       <details class="dl-faq-item">
         <summary>How does the AI copilot work?</summary>
-        <p>The copilot uses your own API key (Anthropic Claude, OpenAI, or Azure OpenAI). It reads your schema to generate accurate queries. Your data is never stored or used for training.</p>
+        <p>The copilot uses your own API key (Anthropic Claude, OpenAI, or Azure OpenAI) or runs locally with Ollama. It reads your schema to generate accurate queries. Your data is never stored or used for training.</p>
       </details>
       <details class="dl-faq-item">
         <summary>Can I use dblumi with my team?</summary>

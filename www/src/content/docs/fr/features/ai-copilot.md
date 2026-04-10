@@ -11,10 +11,11 @@ dblumi inclut un assistant IA capable de generer, expliquer et optimiser les req
 | Anthropic | Tous les modeles — Claude Opus 4, Sonnet 4, Haiku, et les futurs modeles |
 | OpenAI | Tous les modeles — GPT-4o, GPT-4.1, o3, o4-mini, et les futurs modeles |
 | Azure OpenAI | Tout modele deploye dans votre abonnement Azure |
+| Ollama | Tout modele heberge localement — Llama, Mistral, Codestral, et plus |
 
 Configurez le modele via les variables d'environnement. dblumi utilise les meilleurs modeles par defaut (Claude Sonnet 4 pour Anthropic, GPT-4o pour OpenAI) mais vous pouvez choisir n'importe quel modele propose par votre fournisseur.
 
-Utilisez votre propre cle API — dblumi ne fait jamais transiter vos requetes par un proxy.
+Utilisez votre propre cle API — ou fonctionnez entierement hors-ligne avec Ollama. dblumi ne fait jamais transiter vos requetes par un proxy.
 
 ## Ce que le copilote peut faire
 
