@@ -633,6 +633,51 @@ function SortableTab({
   )
 }
 
+function UnsavedChangesDialog({ onSave }: { onSave: (tabId: string) => Promise<void> }) {
+  const { t } = useI18n()
+  const { pendingClose, confirmClose, tabs } = useEditorStore()
+  const [saving, setSaving] = useState(false)
+
+  const tab = pendingClose ? tabs.find((t) => t.id === pendingClose.tabId) : null
+
+  if (!pendingClose || !tab) return null
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await onSave(tab.id)
+      confirmClose('discard')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) confirmClose('cancel') }}>
+      <DialogContent className="sm:max-w-sm bg-card border-border-subtle">
+        <DialogHeader>
+          <DialogTitle className="text-base">{t('unsaved.title')}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {t('unsaved.message', { name: tab.name })}
+        </p>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="ghost" onClick={() => confirmClose('cancel')}>
+            {t('unsaved.cancel')}
+          </Button>
+          <Button variant="outline" onClick={() => confirmClose('discard')}>
+            {t('unsaved.dontSave')}
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {t('unsaved.save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Unified tab bar (query + table tabs together) ────────────────────────
 function UnifiedTabBar({ onSave, onSaveAs, onToggleCopilot, copilotOpen }: { onSave: () => void; onSaveAs: () => void; onToggleCopilot: () => void; copilotOpen: boolean }) {
   const { t } = useI18n()
@@ -909,6 +954,35 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
     }
   }, [activeTab, activeConnectionId, onSaveNew])
 
+  const saveTabById = useCallback(async (tabId: string) => {
+    const tab = useEditorStore.getState().tabs.find((t) => t.id === tabId)
+    if (!tab) return
+
+    if (tab.kind === 'function') {
+      const connId = tab.connectionId ?? activeConnectionId
+      if (!connId || !tab.sql.trim()) return
+      await useEditorStore.getState().executeSql(tab.sql)
+      qcRef.current.invalidateQueries({ queryKey: ['schema', connId] })
+      toast.success(t('sq.saved'))
+      return
+    }
+
+    if (tab.kind !== 'query') return
+
+    if (tab.savedQueryId) {
+      await savedQueriesApi.update(tab.savedQueryId, { sql: tab.sql })
+      qcRef.current.invalidateQueries({ queryKey: ['saved-queries'] })
+      useEditorStore.setState((s) => ({
+        tabs: s.tabs.map((t) => t.id === tabId ? { ...t, originalSql: t.sql } : t),
+      }))
+      toast.success(t('sq.saved'))
+    } else {
+      useEditorStore.setState((s) => ({
+        tabs: s.tabs.map((t) => t.id === tabId ? { ...t, originalSql: t.sql } : t),
+      }))
+    }
+  }, [activeConnectionId])
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey
@@ -1004,6 +1078,7 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
           )}
         </ResizablePanelGroup>
       </div>
+      <UnsavedChangesDialog onSave={saveTabById} />
     </div>
   )
 }
