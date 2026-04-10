@@ -517,4 +517,11 @@ export const en = {
   'db.createConfirm': 'Create',
   'db.createSuccess': 'Database "{name}" created',
   'db.createError': 'Failed to create database',
+
+  // ── Unsaved changes ──
+  'unsaved.title': 'Unsaved changes',
+  'unsaved.message': '"{name}" has unsaved changes. Do you want to save them?',
+  'unsaved.save': 'Save',
+  'unsaved.dontSave': 'Don\'t save',
+  'unsaved.cancel': 'Cancel',
 } as const
