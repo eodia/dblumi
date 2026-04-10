@@ -427,6 +427,20 @@ export function SqlEditor({ onSave }: Props) {
             }
           }),
 
+          // Handle drop from schema sidebar (native HTML5 drag-and-drop)
+          EditorView.domEventHandlers({
+            drop(event, view) {
+              const text = event.dataTransfer?.getData('text/plain')
+              if (!text || !event.dataTransfer?.types.includes('application/x-dblumi-schema')) return false
+              event.preventDefault()
+              const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
+              if (pos == null) return false
+              view.dispatch({ changes: { from: pos, to: pos, insert: text }, selection: { anchor: pos + text.length } })
+              view.focus()
+              return true
+            },
+          }),
+
           // Line wrapping
           EditorView.lineWrapping,
 

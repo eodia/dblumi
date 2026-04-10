@@ -274,7 +274,15 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
               <ContextMenu key={item.name}>
                 <ContextMenuTrigger asChild>
                   <div>
-                    <div className="flex items-center gap-0 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', item.name)
+                        e.dataTransfer.setData('application/x-dblumi-schema', 'table')
+                        e.dataTransfer.effectAllowed = 'copy'
+                      }}
+                      className="flex items-center gap-0 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-grab active:cursor-grabbing"
+                    >
                       <button onClick={() => toggle(item.name)} className="flex items-center justify-center w-6 h-7 flex-shrink-0 rounded-l-md">
                         {isOpen ? <ChevronDown className="h-3 w-3 text-text-muted" /> : <ChevronRight className="h-3 w-3 text-text-muted" />}
                       </button>
@@ -436,6 +444,13 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                     <ContextMenu key={`${fn.kind}-${fn.name}-${idx}`}>
                       <ContextMenuTrigger asChild>
                         <button
+                          draggable
+                          onDragStart={(e) => {
+                            const args = fn.arguments ? fn.arguments.split(',').map((a) => a.trim().split(/\s+/)[0]).filter(Boolean).join(', ') : ''
+                            e.dataTransfer.setData('text/plain', `${fn.name}(${args})`)
+                            e.dataTransfer.setData('application/x-dblumi-schema', 'function')
+                            e.dataTransfer.effectAllowed = 'copy'
+                          }}
                           onClick={async () => {
                             if (!activeConnectionId) return
                             try {
@@ -443,7 +458,7 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                               openFunction(res.function.name, res.function.source ?? '', res.function.params ?? [])
                             } catch { /* ignore */ }
                           }}
-                          className="w-full flex items-center gap-1.5 px-1.5 py-[5px] ml-1 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                          className="w-full flex items-center gap-1.5 px-1.5 py-[5px] ml-1 rounded-md text-[12px] text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-grab active:cursor-grabbing"
                         >
                           <Braces className={cn('h-3 w-3 flex-shrink-0', fn.kind === 'procedure' ? 'text-purple-400/70' : isProd ? 'text-destructive/70' : 'text-orange-400/70')} />
                           <span className="truncate font-mono">{fn.name}</span>
