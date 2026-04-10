@@ -81,6 +81,7 @@ export function SchemaSidebar({ connections }: Props) {
     queryFn: () => connectionsApi.schema(activeConnectionId!),
     enabled: !!activeConnectionId,
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: 'always',
     retry: 1,
   })
 
