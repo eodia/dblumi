@@ -148,12 +148,42 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
   const [isStreaming, setIsStreaming] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const typingTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  const resizeInput = useCallback(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  }, [])
+
+  const stopTyping = useCallback(() => {
+    if (typingTimerRef.current !== null) {
+      window.clearInterval(typingTimerRef.current)
+      typingTimerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => () => stopTyping(), [stopTyping])
+
+  const typeSuggestion = useCallback((text: string) => {
+    stopTyping()
+    setInput('')
+    inputRef.current?.focus()
+    let i = 0
+    typingTimerRef.current = window.setInterval(() => {
+      i += 1
+      setInput(text.slice(0, i))
+      resizeInput()
+      if (i >= text.length) stopTyping()
+    }, 18)
+  }, [stopTyping, resizeInput])
 
   const handleInsertSql = useCallback((sql: string) => {
     const current = activeTab?.sql ?? ''
@@ -275,7 +305,7 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
               ].map((suggestion) => (
                 <button
                   key={suggestion}
-                  onClick={() => setInput(suggestion)}
+                  onClick={() => typeSuggestion(suggestion)}
                   className="px-2.5 py-1 rounded-full border border-border-subtle text-[11px] text-text-muted hover:text-foreground hover:border-primary/30 transition-colors"
                 >
                   {suggestion}
@@ -331,7 +361,10 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
           <textarea
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              stopTyping()
+              setInput(e.target.value)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
