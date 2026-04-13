@@ -41,13 +41,14 @@ const headAfter = parts[1] ?? '';
           </div>
           <div class="convo">
             <div class="user-msg">Monthly active users by country, last quarter</div>
+
             <div class="ai-msg">
-              Here's the query — I joined on <code>users.org_id</code> → <code>orgs.country</code>:
+              Joining <code>users.org_id</code> → <code>orgs.country</code> and grouping by month:
               <div class="sql-block">
                 <div class="sql-hdr">
                   <span>sql</span>
                   <span class="spacer"></span>
-                  <button class="btn">⎘ Copy</button>
+                  <button class="btn">⎘</button>
                   <button class="btn primary">▶ Insert</button>
                 </div>
 <pre><span class="kw">SELECT</span> o.country,
@@ -60,6 +61,23 @@ const headAfter = parts[1] ?? '';
  <span class="kw">ORDER BY</span> m, mau <span class="kw">DESC</span>;</pre>
               </div>
             </div>
+
+            <div class="user-msg">Exclude our internal team (@eodia.fr) and sort by MAU desc</div>
+
+            <div class="ai-msg">
+              Added a filter and flipped the sort:
+              <div class="diff-block">
+                <span class="diff-line add"><span class="mark">+</span> <code>WHERE u.email NOT LIKE '%@eodia.fr'</code></span>
+                <span class="diff-line rem"><span class="mark">−</span> <code>ORDER BY m, mau DESC;</code></span>
+                <span class="diff-line add"><span class="mark">+</span> <code>ORDER BY mau DESC, m;</code></span>
+              </div>
+              <div class="ai-foot">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Applied to the editor
+              </div>
+            </div>
+
+            <div class="user-msg">🙌 perfect, running it now</div>
           </div>
           <div class="input-bar">
             <div class="input">{strings[lang].hero.mockup.inputPlaceholder}</div>
@@ -192,13 +210,6 @@ const headAfter = parts[1] ?? '';
   .cop-mock .hdr .spark {
     color: var(--db-primary-vivid, #41cd2a);
     font-size: 14px;
-    display: inline-block;
-    animation: sparkPulse 2.8s ease-in-out infinite;
-    filter: drop-shadow(0 0 6px rgba(65, 205, 42, 0.45));
-  }
-  @keyframes sparkPulse {
-    0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
-    50% { transform: scale(1.15) rotate(6deg); opacity: 0.8; }
   }
   .cop-mock .hdr .title {
     font-size: 12px;
@@ -230,7 +241,6 @@ const headAfter = parts[1] ?? '';
     padding: 8px 12px;
     max-width: 82%;
     font-size: 12.5px;
-    animation: msgIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .cop-mock .ai-msg {
     align-self: flex-start;
@@ -242,11 +252,6 @@ const headAfter = parts[1] ?? '';
     font-size: 12px;
     line-height: 1.5;
     color: var(--db-text-soft, #3A3A42);
-    animation: msgIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
-  }
-  @keyframes msgIn {
-    from { opacity: 0; transform: translateY(10px) scale(0.96); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .cop-mock .ai-msg code {
     font-family: 'JetBrains Mono', monospace;
@@ -263,30 +268,6 @@ const headAfter = parts[1] ?? '';
     background: #fdfdfc;
     overflow: hidden;
     font-family: 'JetBrains Mono', monospace;
-    position: relative;
-  }
-  .cop-mock .ai-msg .sql-block::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(65, 205, 42, 0.7) 50%,
-      transparent 100%
-    );
-    animation: sqlScan 4s ease-in-out infinite;
-    pointer-events: none;
-    box-shadow: 0 0 12px rgba(65, 205, 42, 0.5);
-  }
-  @keyframes sqlScan {
-    0%, 100% { top: 0; opacity: 0; }
-    5% { opacity: 1; }
-    95% { opacity: 1; }
-    50% { top: calc(100% - 2px); opacity: 1; }
   }
   .cop-mock .ai-msg .sql-block .sql-hdr {
     display: flex;
@@ -320,19 +301,6 @@ const headAfter = parts[1] ?? '';
   }
   .cop-mock .ai-msg .sql-block .sql-hdr .btn.primary {
     color: var(--db-primary, #2DA31E);
-    position: relative;
-    border-radius: 5px;
-    padding: 2px 8px;
-    background: rgba(65, 205, 42, 0.08);
-    animation: insertPulse 2.4s ease-in-out infinite;
-  }
-  @keyframes insertPulse {
-    0%, 100% {
-      box-shadow: 0 0 0 0 rgba(65, 205, 42, 0.4);
-    }
-    50% {
-      box-shadow: 0 0 0 5px rgba(65, 205, 42, 0);
-    }
   }
   .cop-mock .ai-msg .sql-block pre {
     margin: 0;
@@ -343,6 +311,63 @@ const headAfter = parts[1] ?? '';
     white-space: pre;
     overflow-x: auto;
   }
+  /* Inline diff block — shows AI's edits as a unified diff */
+  .cop-mock .ai-msg .diff-block {
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--db-border-subtle, #EDEDF0);
+    background: #fdfdfc;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .cop-mock .ai-msg .diff-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.45;
+    padding: 2px 5px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cop-mock .ai-msg .diff-line .mark {
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+  .cop-mock .ai-msg .diff-line code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    border: 0;
+    font-size: 10.5px;
+  }
+  .cop-mock .ai-msg .diff-line.add {
+    background: rgba(65, 205, 42, 0.10);
+    color: #166534;
+  }
+  .cop-mock .ai-msg .diff-line.add .mark { color: var(--db-primary, #2DA31E); }
+  .cop-mock .ai-msg .diff-line.rem {
+    background: rgba(220, 38, 38, 0.07);
+    color: #991b1b;
+    text-decoration: line-through;
+    text-decoration-color: rgba(220, 38, 38, 0.4);
+  }
+  .cop-mock .ai-msg .diff-line.rem .mark { color: var(--db-destructive, #DC2626); }
+  /* Applied-to-editor confirmation line under the diff */
+  .cop-mock .ai-msg .ai-foot {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--db-primary, #2DA31E);
+  }
+  .cop-mock .ai-msg .ai-foot svg { flex-shrink: 0; }
   .cop-mock .input-bar {
     border-top: 1px solid var(--db-border-subtle, #EDEDF0);
     padding: 10px;

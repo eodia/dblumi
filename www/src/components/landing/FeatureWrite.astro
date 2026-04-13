@@ -43,7 +43,10 @@ const headAfter = parts[1] ?? '';
             </div>
             <div class="line-row">
               <span class="ln">2</span>
-              <span class="typed l2"><span class="kw">SELECT</span> u.name, u.email</span>
+              <span class="typed l2a"><span class="kw">SELECT</span> u.</span><!--
+              --><span class="typed l2b">name</span><!--
+              --><span class="typed l2c">, u.</span><!--
+              --><span class="typed l2d">email</span>
             </div>
             <div class="line-row">
               <span class="ln">3</span>
@@ -51,7 +54,9 @@ const headAfter = parts[1] ?? '';
             </div>
             <div class="line-row">
               <span class="ln">4</span>
-              <span class="typed l4"><span class="kw">WHERE</span> u.last_seen <span class="op">&gt;=</span> <span class="fn">NOW</span>() - <span class="kw">INTERVAL</span> <span class="str">'30 days'</span></span>
+              <span class="typed l4a"><span class="kw">WHERE</span> u.</span><!--
+              --><span class="typed l4b">last_seen</span><!--
+              --><span class="typed l4c"> <span class="op">&gt;=</span> <span class="fn">NOW</span>() - <span class="kw">INTERVAL</span> <span class="str">'30 days'</span></span>
               <span class="cursor-bar"></span>
             </div>
 
@@ -71,11 +76,10 @@ const headAfter = parts[1] ?? '';
                 <span class="name">email</span>
                 <span class="type">text</span>
               </div>
-              <div class="ac-item selected">
+              <div class="ac-item">
                 <span class="ic">c</span>
                 <span class="name">last_seen</span>
                 <span class="type">timestamp</span>
-                <span class="accept-hint"><kbd>↹</kbd> accept</span>
               </div>
               <div class="ac-item">
                 <span class="ic">c</span>
@@ -89,7 +93,7 @@ const headAfter = parts[1] ?? '';
               </div>
               <div class="ac-footer">
                 <span><span class="kbd">↑↓</span> navigate</span>
-                <span><span class="kbd">⏎</span> insert</span>
+                <span><span class="kbd">↹</span> accept</span>
                 <span style="margin-left:auto">6 columns · AI ranked</span>
               </div>
             </div>
@@ -262,7 +266,7 @@ const headAfter = parts[1] ?? '';
     font-size: 11px;
     flex-shrink: 0;
   }
-  /* Each line is revealed char-by-char via max-width + steps() */
+  /* Each line segment is revealed char-by-char via max-width + steps() */
   .typed {
     display: inline-block;
     overflow: hidden;
@@ -270,38 +274,72 @@ const headAfter = parts[1] ?? '';
     max-width: 0;
     vertical-align: bottom;
   }
-  /* 8s loop split into reveal segments + hold + fade-out */
-  .l1 { animation: typeL1 8s steps(36, end) infinite; }
-  .l2 { animation: typeL2 8s steps(22, end) infinite; }
-  .l3 { animation: typeL3 8s steps(12, end) infinite; }
-  .l4 { animation: typeL4 8s steps(47, end) infinite; }
+  /* 8s loop — line 1, line 2 split into 4 segments, line 3, line 4 split into 3 */
+  .l1  { animation: typeL1  8s steps(36, end) infinite; }
+  .l2a { animation: typeL2a 8s steps(9, end)  infinite; }
+  .l2b { animation: typeL2b 8s steps(1, end)  infinite; }
+  .l2c { animation: typeL2c 8s steps(4, end)  infinite; }
+  .l2d { animation: typeL2d 8s steps(1, end)  infinite; }
+  .l3  { animation: typeL3  8s steps(12, end) infinite; }
+  .l4a { animation: typeL4a 8s steps(8, end)  infinite; }
+  .l4b { animation: typeL4b 8s steps(1, end)  infinite; }
+  .l4c { animation: typeL4c 8s steps(30, end) infinite; }
 
   @keyframes typeL1 {
     0%, 2% { max-width: 0; }
-    15% { max-width: 36ch; }
-    94% { max-width: 36ch; }
-    96%, 100% { max-width: 0; }
+    10% { max-width: 36ch; }
+    96% { max-width: 36ch; }
+    98%, 100% { max-width: 0; }
   }
-  @keyframes typeL2 {
-    0%, 17% { max-width: 0; }
-    28% { max-width: 22ch; }
-    94% { max-width: 22ch; }
-    96%, 100% { max-width: 0; }
+  /* Line 2: "SELECT u." typed, then "name" accepted, then ", u.", then "email" accepted */
+  @keyframes typeL2a {
+    0%, 14% { max-width: 0; }
+    19% { max-width: 9ch; }
+    96% { max-width: 9ch; }
+    98%, 100% { max-width: 0; }
+  }
+  @keyframes typeL2b {
+    0%, 21% { max-width: 0; }
+    22% { max-width: 4ch; }
+    96% { max-width: 4ch; }
+    98%, 100% { max-width: 0; }
+  }
+  @keyframes typeL2c {
+    0%, 22% { max-width: 0; }
+    24% { max-width: 4ch; }
+    96% { max-width: 4ch; }
+    98%, 100% { max-width: 0; }
+  }
+  @keyframes typeL2d {
+    0%, 26% { max-width: 0; }
+    27% { max-width: 5ch; }
+    96% { max-width: 5ch; }
+    98%, 100% { max-width: 0; }
   }
   @keyframes typeL3 {
-    0%, 30% { max-width: 0; }
-    36% { max-width: 12ch; }
-    94% { max-width: 12ch; }
-    96%, 100% { max-width: 0; }
+    0%, 29% { max-width: 0; }
+    33% { max-width: 12ch; }
+    96% { max-width: 12ch; }
+    98%, 100% { max-width: 0; }
   }
-  @keyframes typeL4 {
-    /* Types "WHERE u." slowly, then jumps to full line after "Tab" accept */
-    0%, 38% { max-width: 0; }
-    43% { max-width: 8ch; }    /* WHERE u. */
-    48% { max-width: 8ch; }    /* pause — waiting on autocomplete */
-    52% { max-width: 47ch; }   /* accept → insert "last_seen >= NOW() - INTERVAL '30 days'" */
-    94% { max-width: 47ch; }
-    96%, 100% { max-width: 0; }
+  /* Line 4: "WHERE u." typed, then "last_seen" accepted, then " >= NOW() - INTERVAL '30 days'" typed slowly */
+  @keyframes typeL4a {
+    0%, 35% { max-width: 0; }
+    40% { max-width: 8ch; }
+    96% { max-width: 8ch; }
+    98%, 100% { max-width: 0; }
+  }
+  @keyframes typeL4b {
+    0%, 43% { max-width: 0; }
+    44% { max-width: 9ch; }
+    96% { max-width: 9ch; }
+    98%, 100% { max-width: 0; }
+  }
+  @keyframes typeL4c {
+    0%, 46% { max-width: 0; }
+    82% { max-width: 30ch; }    /* 36% of 8s = 2.88s for 30 chars — "human slow" */
+    96% { max-width: 30ch; }
+    98%, 100% { max-width: 0; }
   }
 
   /* Local caret blinks at the end of the current input */
@@ -322,7 +360,6 @@ const headAfter = parts[1] ?? '';
 
   .autocomplete {
     position: absolute;
-    top: 122px;
     left: 122px;
     background: #fff;
     border: 1px solid var(--db-border, #E2E2E6);
@@ -330,51 +367,69 @@ const headAfter = parts[1] ?? '';
     box-shadow:
       0 20px 40px -12px rgba(10, 10, 15, 0.25),
       0 8px 16px -8px rgba(10, 10, 15, 0.1);
-    width: 230px;
+    width: 220px;
     overflow: hidden;
     font-family: 'Inter', sans-serif;
     font-size: 11.5px;
     z-index: 10;
     opacity: 0;
-    transform: translateY(-4px);
-    animation: acReveal 8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    top: 72px;
+    animation: acPosition 8s ease infinite;
   }
-  /* Popup fades in as "u." is typed, highlights during "Tab accept", then fades out */
-  @keyframes acReveal {
-    0%, 38% { opacity: 0; transform: translateY(-4px); }
-    43%, 48% { opacity: 1; transform: translateY(0); }
-    52% { opacity: 1; transform: translateY(0); filter: drop-shadow(0 0 12px rgba(65, 205, 42, 0.55)); }
-    56%, 94% { opacity: 1; transform: translateY(0); filter: none; }
-    96%, 100% { opacity: 0; transform: translateY(-4px); }
+  /* Popup hops between line 2 (top 72) and line 4 (top 122) */
+  @keyframes acPosition {
+    0%, 13% { opacity: 0; top: 72px; }
+    15% { opacity: 1; top: 72px; }        /* appears near line 2 as "SELECT u." is typed */
+    28% { opacity: 1; top: 72px; }        /* hold through name + , u. + email accepts */
+    29% { opacity: 0; top: 72px; }
+    /* Jump to line 4 position */
+    34% { opacity: 0; top: 122px; }
+    36% { opacity: 1; top: 122px; }       /* appears near line 4 as "WHERE u." is typed */
+    44% { opacity: 1; top: 122px; filter: drop-shadow(0 0 10px rgba(65, 205, 42, 0.55)); }
+    48%, 80% { opacity: 1; top: 122px; filter: none; }
+    82%, 94% { opacity: 1; top: 122px; }
+    96%, 100% { opacity: 0; top: 122px; }
   }
-  .autocomplete .accept-hint {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--db-primary, #2DA31E);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    animation: acceptHintPulse 8s ease-in-out infinite;
+  /* Moving selection highlight — jumps to name → email → last_seen at the right moments */
+  .autocomplete::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 27px;
+    top: 27px;
+    background: rgba(65, 205, 42, 0.14);
+    border-left: 2px solid var(--db-primary, #2DA31E);
+    box-sizing: border-box;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1;
+    animation: acHighlight 8s ease infinite;
   }
-  .autocomplete .accept-hint kbd {
-    padding: 1px 6px;
-    border: 1px solid rgba(65, 205, 42, 0.3);
-    border-bottom-width: 2px;
-    border-radius: 4px;
-    background: rgba(65, 205, 42, 0.08);
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--db-primary, #2DA31E);
-  }
-  @keyframes acceptHintPulse {
-    0%, 43% { opacity: 0; transform: scale(0.9); }
-    46% { opacity: 1; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.1); }
-    54% { opacity: 0; transform: scale(1); }
-    100% { opacity: 0; }
+  @keyframes acHighlight {
+    /* Start: hidden, parked on "name" row (row 2, top 27) */
+    0%, 14% { top: 27px; opacity: 0; }
+    /* "SELECT u." done → highlight "name" */
+    16% { top: 27px; opacity: 1; }
+    21% { top: 27px; opacity: 1; }
+    /* Accept flash */
+    22% { top: 27px; opacity: 0.35; }
+    /* Wait for ", u." to type, then highlight "email" (row 3, top 54) */
+    23% { top: 54px; opacity: 0; }
+    25% { top: 54px; opacity: 1; }
+    26% { top: 54px; opacity: 1; }
+    /* Accept flash */
+    27% { top: 54px; opacity: 0.35; }
+    /* Hide until line 4 */
+    28%, 35% { top: 54px; opacity: 0; }
+    /* Line 4: highlight "last_seen" (row 4, top 81) */
+    37% { top: 81px; opacity: 0; }
+    41% { top: 81px; opacity: 1; }
+    43% { top: 81px; opacity: 1; }
+    /* Accept flash */
+    44% { top: 81px; opacity: 0.35; }
+    /* Stay hidden while line 4c types */
+    45%, 100% { top: 81px; opacity: 0; }
   }
   .autocomplete .ac-item {
     display: flex;
