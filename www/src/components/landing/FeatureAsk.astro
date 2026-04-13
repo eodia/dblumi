@@ -256,12 +256,21 @@ const headAfter = parts[1] ?? '';
     padding: 14px 12px;
     display: flex;
     flex-direction: column;
+    gap: 10px;
     background: #fff;
     height: 420px;
-    overflow: hidden;
-    justify-content: flex-end;
+    overflow-y: auto;
+    scroll-behavior: smooth;
     position: relative;
   }
+  /* Custom scrollbar for the convo */
+  .cop-mock .convo::-webkit-scrollbar { width: 6px; }
+  .cop-mock .convo::-webkit-scrollbar-track { background: transparent; }
+  .cop-mock .convo::-webkit-scrollbar-thumb {
+    background: rgba(10, 10, 15, 0.12);
+    border-radius: 3px;
+  }
+
   /* Empty state — covers the convo until the first message arrives */
   .cop-mock .convo .empty-state {
     position: absolute;
@@ -274,8 +283,13 @@ const headAfter = parts[1] ?? '';
     padding: 24px 20px;
     background: #fff;
     text-align: center;
-    animation: askEmptyState 22s linear infinite;
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
     z-index: 5;
+  }
+  .cop-mock .convo .empty-state.hidden {
+    opacity: 0;
+    pointer-events: none;
   }
   .cop-mock .convo .empty-state .bot-wrap {
     width: 62px;
@@ -305,20 +319,26 @@ const headAfter = parts[1] ?? '';
     color: var(--db-text, #0A0A0B);
     font-weight: 600;
   }
-  @keyframes askEmptyState {
-    0%, 12% { opacity: 1; transform: scale(1); }
-    14% { opacity: 0; transform: scale(0.96); }
-    100% { opacity: 0; transform: scale(0.96); pointer-events: none; }
-  }
 
-  /* Animated messages — all children share opacity/max-height/margin-top transitions */
+  /* Messages and typing dots start hidden; JS toggles .shown to reveal */
   .cop-mock .convo .user-msg,
   .cop-mock .convo .ai-msg,
   .cop-mock .convo .typing {
+    display: none;
     opacity: 0;
-    max-height: 0;
-    margin-top: 0;
-    overflow: hidden;
+    transform: translateY(6px);
+    transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+  }
+  .cop-mock .convo .user-msg.shown,
+  .cop-mock .convo .ai-msg.shown {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .cop-mock .convo .typing.shown {
+    display: inline-flex;
+    opacity: 1;
+    transform: translateY(0);
   }
   .cop-mock .user-msg {
     align-self: flex-end;
@@ -510,81 +530,13 @@ const headAfter = parts[1] ?? '';
     30% { opacity: 1; transform: scale(1); }
   }
 
-  /* ── 22s loop: empty state → m1 → t1 → a1 → m2 → t2 → a2 → m3 → t3 → a3 → m4 ── */
-  .cop-mock .convo .m1 { animation: askM1 22s linear infinite; }
-  .cop-mock .convo .t1 { animation: askT1 22s linear infinite; }
-  .cop-mock .convo .a1 { animation: askA1 22s linear infinite; }
-  .cop-mock .convo .m2 { animation: askM2 22s linear infinite; }
-  .cop-mock .convo .t2 { animation: askT2 22s linear infinite; }
-  .cop-mock .convo .a2 { animation: askA2 22s linear infinite; }
-  .cop-mock .convo .m3 { animation: askM3 22s linear infinite; }
-  .cop-mock .convo .t3 { animation: askT3 22s linear infinite; }
-  .cop-mock .convo .a3 { animation: askA3 22s linear infinite; }
-  .cop-mock .convo .m4 { animation: askM4 22s linear infinite; }
-
-  @keyframes askM1 {
-    0%, 14% { opacity: 0; max-height: 0; margin-top: 0; }
-    17%, 95% { opacity: 1; max-height: 44px; margin-top: 10px; }
-    97%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askT1 {
-    0%, 19% { opacity: 0; max-height: 0; margin-top: 0; }
-    21% { opacity: 1; max-height: 28px; margin-top: 10px; }
-    25% { opacity: 1; max-height: 28px; margin-top: 10px; }
-    26%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askA1 {
-    0%, 25% { opacity: 0; max-height: 0; margin-top: 0; }
-    28%, 95% { opacity: 1; max-height: 260px; margin-top: 10px; }
-    97%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askM2 {
-    0%, 34% { opacity: 0; max-height: 0; margin-top: 0; }
-    37%, 95% { opacity: 1; max-height: 50px; margin-top: 10px; }
-    97%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askT2 {
-    0%, 40% { opacity: 0; max-height: 0; margin-top: 0; }
-    42% { opacity: 1; max-height: 28px; margin-top: 10px; }
-    46% { opacity: 1; max-height: 28px; margin-top: 10px; }
-    47%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askA2 {
-    0%, 46% { opacity: 0; max-height: 0; margin-top: 0; }
-    49%, 95% { opacity: 1; max-height: 220px; margin-top: 10px; }
-    97%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askM3 {
-    0%, 55% { opacity: 0; max-height: 0; margin-top: 0; }
-    58%, 95% { opacity: 1; max-height: 44px; margin-top: 10px; }
-    97%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askT3 {
-    0%, 61% { opacity: 0; max-height: 0; margin-top: 0; }
-    63% { opacity: 1; max-height: 28px; margin-top: 10px; }
-    67% { opacity: 1; max-height: 28px; margin-top: 10px; }
-    68%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askA3 {
-    0%, 67% { opacity: 0; max-height: 0; margin-top: 0; }
-    70%, 95% { opacity: 1; max-height: 120px; margin-top: 10px; }
-    97%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-  @keyframes askM4 {
-    0%, 76% { opacity: 0; max-height: 0; margin-top: 0; }
-    79%, 95% { opacity: 1; max-height: 44px; margin-top: 10px; }
-    97%, 100% { opacity: 0; max-height: 0; margin-top: 0; }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .cop-mock .convo .empty-state { animation: none; opacity: 0; }
+    .cop-mock .convo .empty-state { display: none; }
     .cop-mock .convo .user-msg,
-    .cop-mock .convo .ai-msg,
-    .cop-mock .convo .typing {
-      animation: none;
+    .cop-mock .convo .ai-msg {
+      display: block;
       opacity: 1;
-      max-height: none;
-      margin-top: 10px;
+      transform: none;
     }
     .cop-mock .convo .typing { display: none; }
   }
@@ -605,3 +557,105 @@ const headAfter = parts[1] ?? '';
     }
   }
 </style>
+
+<script>
+  // Progressive chat simulation — drives the Ask mockup's conversation loop.
+  // Runs entirely client-side, respects prefers-reduced-motion.
+  document.querySelectorAll<HTMLElement>('.db-feat-ask .cop-mock .convo').forEach((convo) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const q = <T extends HTMLElement = HTMLElement>(sel: string) => convo.querySelector<T>(sel);
+    const empty = q('.empty-state');
+    const m1 = q('.m1');
+    const t1 = q('.t1');
+    const a1 = q('.a1');
+    const m2 = q('.m2');
+    const t2 = q('.t2');
+    const a2 = q('.a2');
+    const m3 = q('.m3');
+    const t3 = q('.t3');
+    const a3 = q('.a3');
+    const m4 = q('.m4');
+
+    const msgs = [m1, t1, a1, m2, t2, a2, m3, t3, a3, m4];
+    if (!empty || msgs.some((m) => !m)) return;
+
+    const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+    function scrollToBottom() {
+      // Auto-scroll only if the user is already near the bottom
+      const nearBottom = convo.scrollTop + convo.clientHeight >= convo.scrollHeight - 120;
+      if (nearBottom) {
+        convo.scrollTo({ top: convo.scrollHeight, behavior: 'smooth' });
+      }
+    }
+
+    function show(el: HTMLElement | null) {
+      if (!el) return;
+      el.classList.add('shown');
+      requestAnimationFrame(() => {
+        // Wait a tick for layout, then scroll
+        requestAnimationFrame(scrollToBottom);
+      });
+    }
+
+    function hide(el: HTMLElement | null) {
+      if (!el) return;
+      el.classList.remove('shown');
+    }
+
+    function reset() {
+      empty!.classList.remove('hidden');
+      msgs.forEach((m) => m!.classList.remove('shown'));
+      convo.scrollTop = 0;
+    }
+
+    async function loop() {
+      while (true) {
+        reset();
+        // Empty state visible for 3s
+        await sleep(3000);
+        empty!.classList.add('hidden');
+        await sleep(500);
+
+        show(m1);
+        await sleep(1400);
+
+        show(t1);
+        await sleep(1400);
+        hide(t1);
+        await sleep(200);
+
+        show(a1);
+        await sleep(3500);
+
+        show(m2);
+        await sleep(1400);
+
+        show(t2);
+        await sleep(1400);
+        hide(t2);
+        await sleep(200);
+
+        show(a2);
+        await sleep(3500);
+
+        show(m3);
+        await sleep(1400);
+
+        show(t3);
+        await sleep(1400);
+        hide(t3);
+        await sleep(200);
+
+        show(a3);
+        await sleep(3200);
+
+        show(m4);
+        await sleep(4500);
+      }
+    }
+
+    void loop();
+  });
+</script>
