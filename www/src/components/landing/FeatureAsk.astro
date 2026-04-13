@@ -192,6 +192,13 @@ const headAfter = parts[1] ?? '';
   .cop-mock .hdr .spark {
     color: var(--db-primary-vivid, #41cd2a);
     font-size: 14px;
+    display: inline-block;
+    animation: sparkPulse 2.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(65, 205, 42, 0.45));
+  }
+  @keyframes sparkPulse {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    50% { transform: scale(1.15) rotate(6deg); opacity: 0.8; }
   }
   .cop-mock .hdr .title {
     font-size: 12px;
@@ -223,6 +230,7 @@ const headAfter = parts[1] ?? '';
     padding: 8px 12px;
     max-width: 82%;
     font-size: 12.5px;
+    animation: msgIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .cop-mock .ai-msg {
     align-self: flex-start;
@@ -234,6 +242,11 @@ const headAfter = parts[1] ?? '';
     font-size: 12px;
     line-height: 1.5;
     color: var(--db-text-soft, #3A3A42);
+    animation: msgIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .cop-mock .ai-msg code {
     font-family: 'JetBrains Mono', monospace;
@@ -250,6 +263,30 @@ const headAfter = parts[1] ?? '';
     background: #fdfdfc;
     overflow: hidden;
     font-family: 'JetBrains Mono', monospace;
+    position: relative;
+  }
+  .cop-mock .ai-msg .sql-block::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(65, 205, 42, 0.7) 50%,
+      transparent 100%
+    );
+    animation: sqlScan 4s ease-in-out infinite;
+    pointer-events: none;
+    box-shadow: 0 0 12px rgba(65, 205, 42, 0.5);
+  }
+  @keyframes sqlScan {
+    0%, 100% { top: 0; opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    50% { top: calc(100% - 2px); opacity: 1; }
   }
   .cop-mock .ai-msg .sql-block .sql-hdr {
     display: flex;
@@ -283,6 +320,19 @@ const headAfter = parts[1] ?? '';
   }
   .cop-mock .ai-msg .sql-block .sql-hdr .btn.primary {
     color: var(--db-primary, #2DA31E);
+    position: relative;
+    border-radius: 5px;
+    padding: 2px 8px;
+    background: rgba(65, 205, 42, 0.08);
+    animation: insertPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes insertPulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(65, 205, 42, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 5px rgba(65, 205, 42, 0);
+    }
   }
   .cop-mock .ai-msg .sql-block pre {
     margin: 0;

@@ -278,8 +278,31 @@ const headAfter = parts[1] ?? '';
     position: relative;
     margin: 0 1px 0 2px;
   }
-  .ghost.sarah { background: #EC4899; }
-  .ghost.julien { background: #6366F1; }
+  .ghost.sarah {
+    background: #EC4899;
+    animation: ghostBlinkSarah 1.1s step-end infinite;
+  }
+  .ghost.julien {
+    background: #6366F1;
+    animation: ghostBlinkJulien 1.3s step-end infinite;
+  }
+  @keyframes ghostBlinkSarah {
+    0%, 55% { opacity: 1; }
+    55.01%, 100% { opacity: 0.15; }
+  }
+  @keyframes ghostBlinkJulien {
+    0%, 48% { opacity: 1; }
+    48.01%, 100% { opacity: 0.15; }
+  }
+  .ghost .tag {
+    animation: tagBob 3.5s ease-in-out infinite;
+  }
+  .ghost.sarah .tag { animation-delay: 0.2s; }
+  .ghost.julien .tag { animation-delay: 0.8s; }
+  @keyframes tagBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
   .ghost .tag {
     position: absolute;
     top: -17px;
@@ -364,6 +387,33 @@ const headAfter = parts[1] ?? '';
   .autocomplete .ac-item.selected {
     background: rgba(65, 205, 42, 0.10);
     color: var(--db-primary, #2DA31E);
+    position: relative;
+    overflow: hidden;
+  }
+  .autocomplete .ac-item.selected::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(65, 205, 42, 0.18) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: acSweep 2.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes acSweep {
+    0% { transform: translateX(-100%); }
+    55%, 100% { transform: translateX(100%); }
+  }
+  .autocomplete {
+    animation: acAppear 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes acAppear {
+    from { opacity: 0; transform: translateY(8px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .autocomplete .ac-item .ic {
     width: 14px;
