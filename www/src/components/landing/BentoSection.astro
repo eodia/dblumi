@@ -451,42 +451,50 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
   .lvl .bar .seg.fill-4 { background: var(--db-destructive); }
   .lvl .name { flex: 1; font-weight: 500; }
   .lvl.active {
-    background: rgba(220,38,38,0.06);
-    border-color: rgba(220,38,38,0.22);
-    color: var(--db-destructive); font-weight: 600;
+    background: rgba(220, 38, 38, 0.06);
+    border-color: rgba(220, 38, 38, 0.22);
+    color: var(--db-destructive);
+    font-weight: 600;
     position: relative;
-    z-index: 0;
-    isolation: isolate;
+    overflow: hidden;
     transition: background 0.3s ease, border-color 0.3s ease;
   }
   .lvl.active::before {
     content: "";
     position: absolute;
-    inset: -3px;
-    border-radius: 7px;
+    inset: 0;
+    border-radius: 4px;
+    padding: 2px;
     background: conic-gradient(
       from 0deg,
-      transparent 0deg,
-      #DC2626 30deg,
-      #ef4444 65deg,
-      transparent 100deg,
-      transparent 180deg,
-      #DC2626 210deg,
-      #ef4444 245deg,
-      transparent 280deg,
-      transparent 360deg
+      transparent 0%,
+      #DC2626 12%,
+      #ff3b3b 22%,
+      transparent 34%,
+      transparent 50%,
+      #DC2626 62%,
+      #ff3b3b 72%,
+      transparent 84%,
+      transparent 100%
     );
-    z-index: -1;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+            mask-composite: exclude;
     opacity: 0;
-    filter: blur(1px);
     transition: opacity 0.3s ease;
+    pointer-events: none;
   }
   .bcard:hover .lvl.active {
     background: rgba(220, 38, 38, 0.10);
-    border-color: rgba(220, 38, 38, 0.4);
+    border-color: transparent;
   }
   .bcard:hover .lvl.active::before {
-    opacity: 0.9;
+    opacity: 1;
     animation: alarmSpin 1.4s linear infinite;
   }
   @keyframes alarmSpin {
