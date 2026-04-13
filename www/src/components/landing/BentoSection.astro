@@ -1,0 +1,407 @@
+---
+// www/src/components/landing/BentoSection.astro
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].bento;
+
+function accent(s: string): [string, string] {
+  const parts = s.split('{{accent}}');
+  return [parts[0] ?? '', parts[1] ?? ''];
+}
+
+const [headBefore, headAfter] = accent(t.headline);
+const [restBefore, restAfter] = accent(t.cards.rest.title);
+const [mcpBefore, mcpAfter] = accent(t.cards.mcp.title);
+const [shBefore, shAfter] = accent(t.cards.selfHosted.title);
+const [drvBefore, drvAfter] = accent(t.cards.drivers.title);
+const [erdBefore, erdAfter] = accent(t.cards.erd.title);
+const [safetyBefore, safetyAfter] = accent(t.cards.safety.title);
+const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
+---
+
+<section class="bento-section">
+  <div class="header">
+    <span class="eyebrow">{t.eyebrow}</span>
+    <h2>{headBefore}<span class="kalam">{headAfter}</span></h2>
+    <p class="lead">{t.lead}</p>
+  </div>
+
+  <div class="bento">
+
+    <!-- Row 1: REST API (span 4, light) + MCP (span 2, dark) -->
+    <div class="bcard span-4">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        {t.cards.rest.label}
+      </span>
+      <h3>{restBefore}<span class="accent">{restAfter}</span></h3>
+      <p>{t.cards.rest.desc}</p>
+      <div class="visual">
+        <div class="mini-term">
+<span class="prompt">$</span> <span class="kw">curl</span> <span class="url">https://api.eodia.net/q/regions_by_revenue</span> <span class="dim">\</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">-H</span> <span class="str">"X-API-Key: sk_live_a7f…"</span>
+<br><br>{"{"} <span class="key">"rows"</span>: [<br>&nbsp;&nbsp;&nbsp;{"{"}<span class="key">"region"</span>: <span class="str">"North America"</span>, <span class="key">"revenue"</span>: <span class="num">1245320</span>{"}"}<span class="dim">,</span><br>&nbsp;&nbsp;&nbsp;{"{"}<span class="key">"region"</span>: <span class="str">"Europe"</span>, <span class="key">"revenue"</span>: <span class="num">987410</span>{"}"}<br>] {"}"}
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard dark span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
+        {t.cards.mcp.label}
+      </span>
+      <h3>{mcpBefore}<span class="accent">{mcpAfter}</span></h3>
+      <p>{t.cards.mcp.desc}</p>
+      <div class="visual">
+        <div class="mini-term">
+<span class="dim">// claude_desktop_config.json</span><br>
+{"{"}<br>
+&nbsp;&nbsp;<span class="key">"mcpServers"</span>: {"{"}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"dblumi"</span>: {"{"}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"command"</span>: <span class="str">"npx"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"args"</span>: [<span class="str">"@dblumi/mcp"</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br>
+&nbsp;&nbsp;{"}"}<br>
+{"}"}
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Self-hosted (span 3, dark) + Multi-driver (span 3, light) -->
+    <div class="bcard dark span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        {t.cards.selfHosted.label}
+      </span>
+      <h3>{shBefore}<span class="accent">{shAfter}</span></h3>
+      <p>{t.cards.selfHosted.desc}</p>
+      <div class="visual">
+        <div class="mini-term">
+<span class="prompt">$</span> <span class="kw">docker</span> compose up -d<br>
+<span class="tick">✓</span> <span class="dim">Pulled</span> eodia/dblumi:latest<br>
+<span class="tick">✓</span> <span class="dim">Created</span> dblumi-api<br>
+<span class="tick">✓</span> <span class="dim">Started</span> dblumi <span class="dim">(3s)</span><br>
+<span class="dim">→</span> <span class="url">http://localhost:5173</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+        {t.cards.drivers.label}
+      </span>
+      <h3>{drvBefore}<span class="accent">{drvAfter}</span></h3>
+      <p>{t.cards.drivers.desc}</p>
+      <div class="visual">
+        <div class="drv-grid">
+          <div class="drv"><span class="logo l-pg">PG</span><span class="name">Postgres</span></div>
+          <div class="drv"><span class="logo l-my">My</span><span class="name">MySQL</span></div>
+          <div class="drv"><span class="logo l-or">O</span><span class="name">Oracle</span></div>
+          <div class="drv"><span class="logo l-sq">SL</span><span class="name">SQLite</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Schema ERD (span 2) + Guardrails (span 2) + i18n (span 2) -->
+    <div class="bcard span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/></svg>
+        {t.cards.erd.label}
+      </span>
+      <h3>{erdBefore}<span class="accent">{erdAfter}</span></h3>
+      <p>{t.cards.erd.desc}</p>
+      <div class="visual">
+        <div class="erd">
+          <svg class="erd-lines" viewBox="0 0 280 100" preserveAspectRatio="none">
+            <path d="M 70 24 Q 140 20 210 24" fill="none" stroke="rgba(65,205,42,0.5)" stroke-width="1.3" stroke-dasharray="3 3"/>
+            <path d="M 70 34 Q 90 70 140 82" fill="none" stroke="rgba(65,205,42,0.4)" stroke-width="1.3" stroke-dasharray="3 3"/>
+            <path d="M 210 34 Q 200 70 140 82" fill="none" stroke="rgba(65,205,42,0.4)" stroke-width="1.3" stroke-dasharray="3 3"/>
+          </svg>
+          <div class="erd-box users"><span class="tbl">users</span><span class="col">id</span></div>
+          <div class="erd-box orgs"><span class="tbl">orgs</span><span class="col">id</span></div>
+          <div class="erd-box orders"><span class="tbl">orders</span><span class="col">id</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        {t.cards.safety.label}
+      </span>
+      <h3>{safetyBefore}<span class="accent">{safetyAfter}</span></h3>
+      <p>{t.cards.safety.desc}</p>
+      <div class="visual">
+        <div class="levels">
+          {t.cards.safety.levels.map((lvl, i) => {
+            const isActive = lvl === t.cards.safety.levelActive;
+            const fillClass = `fill-${i + 1}`;
+            return (
+              <div class={`lvl${isActive ? ' active' : ''}`}>
+                <div class="bar">
+                  <span class={`seg${i >= 0 ? ` ${fillClass}` : ''}`}></span>
+                  <span class={`seg${i >= 1 ? ` ${fillClass}` : ''}`}></span>
+                  <span class={`seg${i >= 2 ? ` ${fillClass}` : ''}`}></span>
+                  <span class={`seg${i >= 3 ? ` ${fillClass}` : ''}`}></span>
+                </div>
+                <span class="name">{lvl}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        {t.cards.i18n.label}
+      </span>
+      <h3>{i18nBefore}<span class="accent">{i18nAfter}</span></h3>
+      <p>{t.cards.i18n.desc}</p>
+      <div class="visual">
+        <div class="langs">
+          <div class="lang"><div class="code">EN</div><span class="lb">English</span></div>
+          <div class="lang active"><div class="code">FR</div><span class="lb">Français</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<style>
+  /* ── Bento section ── */
+  .bento-section {
+    background: var(--db-alt-bg);
+    padding: 88px 40px 96px;
+    border-radius: 20px;
+  }
+  .bento-section .header {
+    max-width: 900px;
+    margin: 0 auto 48px;
+    text-align: center;
+  }
+  .bento-section .eyebrow {
+    display: inline-block;
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--db-primary);
+    padding: 5px 12px;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.07);
+    margin-bottom: 18px;
+  }
+  .bento-section h2 {
+    font-size: 44px; font-weight: 800; line-height: 1.0;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    color: var(--db-text);
+  }
+  .bento-section h2 .kalam {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    color: var(--db-primary-vivid);
+  }
+  .bento-section .lead {
+    font-size: 15px; color: var(--db-muted-fg); line-height: 1.55;
+    max-width: 52ch; margin: 0 auto;
+  }
+
+  /* ── Bento grid ── */
+  .bento {
+    max-width: 1100px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+  .bcard {
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 20px;
+    padding: 26px 24px 24px;
+    display: flex; flex-direction: column;
+    min-height: 240px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bcard.dark { background: #0a0a0b; color: #fff; border-color: #0a0a0b; }
+  .bcard .c-label {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--db-primary);
+    margin-bottom: 10px;
+  }
+  .bcard.dark .c-label { color: var(--db-primary-vivid); }
+  .bcard h3 {
+    font-size: 22px; font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0 0 8px;
+    line-height: 1.05;
+    color: inherit;
+  }
+  .bcard h3 .accent { color: var(--db-primary-vivid); }
+  .bcard p {
+    font-size: 12.5px; color: var(--db-muted-fg);
+    line-height: 1.5; margin: 0;
+    max-width: 38ch;
+  }
+  .bcard.dark p { color: #9a9aa0; }
+  .bcard .visual { margin-top: auto; padding-top: 20px; }
+
+  /* Bento spans */
+  .bcard.span-2 { grid-column: span 2; }
+  .bcard.span-3 { grid-column: span 3; }
+  .bcard.span-4 { grid-column: span 4; }
+
+  /* ── Terminal style (REST, Self-hosted, MCP) ── */
+  .mini-term {
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.65;
+    color: var(--db-text-soft);
+    overflow: hidden;
+  }
+  .dark .mini-term {
+    background: #000;
+    border-color: #1a1a1e;
+    color: #e5e5ea;
+  }
+  .mini-term .prompt { color: #b0b0b6; }
+  .dark .mini-term .prompt { color: #5a5a64; }
+  .mini-term .tick { color: var(--db-primary); }
+  .dark .mini-term .tick { color: var(--db-primary-vivid); }
+  .mini-term .kw { color: var(--db-primary); }
+  .dark .mini-term .kw { color: var(--db-primary-vivid); }
+  .mini-term .url { color: #1e40af; }
+  .dark .mini-term .url { color: #60a5fa; }
+  .mini-term .str { color: var(--db-primary); }
+  .mini-term .key { color: #8b5cf6; }
+  .mini-term .num { color: #d97706; }
+  .mini-term .dim { color: #9a9aa0; }
+  .dark .mini-term .dim { color: #5a5a64; }
+
+  /* ── Drivers card ── */
+  .drv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .drv {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 10px;
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 8px;
+  }
+  .drv .logo {
+    width: 18px; height: 18px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .drv .l-pg { background: #336791; }
+  .drv .l-my { background: #f29111; }
+  .drv .l-or { background: #c74634; }
+  .drv .l-sq { background: #003b57; }
+  .drv .name { font-size: 10.5px; font-weight: 600; color: var(--db-text); }
+
+  /* ── ERD card ── */
+  .erd {
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 9px;
+    padding: 18px 14px;
+    position: relative;
+    min-height: 110px;
+  }
+  .erd-box {
+    position: absolute;
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 5px;
+    padding: 4px 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--db-text-soft);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  .erd-box.users { top: 10px; left: 12px; }
+  .erd-box.orgs { top: 10px; right: 12px; }
+  .erd-box.orders { bottom: 12px; left: 50%; transform: translateX(-50%); }
+  .erd-box .tbl { font-weight: 700; color: var(--db-primary); display: block; }
+  .erd-box .col { color: #9a9aa0; font-size: 8px; display: block; }
+  .erd-lines { position: absolute; inset: 0; pointer-events: none; }
+
+  /* ── Guardrails card ── */
+  .levels { display: flex; flex-direction: column; gap: 5px; }
+  .lvl {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 10.5px; color: var(--db-text-soft);
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+  }
+  .lvl .bar { display: flex; gap: 2px; }
+  .lvl .bar .seg { width: 7px; height: 9px; border-radius: 2px; background: var(--db-border); }
+  .lvl .bar .seg.fill-1 { background: var(--db-primary-vivid); }
+  .lvl .bar .seg.fill-2 { background: var(--db-warning); }
+  .lvl .bar .seg.fill-3 { background: #fb923c; }
+  .lvl .bar .seg.fill-4 { background: var(--db-destructive); }
+  .lvl .name { flex: 1; font-weight: 500; }
+  .lvl.active {
+    background: rgba(220,38,38,0.06);
+    border-color: rgba(220,38,38,0.22);
+    color: var(--db-destructive); font-weight: 600;
+  }
+
+  /* ── i18n card ── */
+  .langs { display: flex; gap: 8px; }
+  .lang {
+    flex: 1; padding: 12px 10px;
+    border-radius: 9px;
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+    text-align: center;
+  }
+  .lang.active {
+    background: rgba(65,205,42,0.08);
+    border-color: rgba(65,205,42,0.3);
+    color: var(--db-primary);
+  }
+  .lang .code { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; color: inherit; }
+  .lang .lb { display: block; margin-top: 2px; font-size: 9px; color: var(--db-muted-fg); font-weight: 500; }
+  .lang.active .lb { color: var(--db-primary); }
+
+  /* ── Responsive ── */
+  @media (max-width: 1000px) {
+    .bento {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .bcard.span-4 { grid-column: span 4; }
+    .bcard.span-3 { grid-column: span 2; }
+    .bcard.span-2 { grid-column: span 2; }
+  }
+
+  @media (max-width: 600px) {
+    .bento-section {
+      padding: 56px 20px 64px;
+    }
+    .bento-section h2 {
+      font-size: 32px;
+    }
+    .bento {
+      grid-template-columns: 1fr;
+    }
+    .bcard.span-2,
+    .bcard.span-3,
+    .bcard.span-4 {
+      grid-column: span 1;
+    }
+  }
+</style>
