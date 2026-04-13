@@ -1026,3 +1026,19 @@ const m = t.mockup;
     .below-tabs { grid-template-columns: 1fr 180px; }
   }
 </style>
+
+<script>
+  import { startHeroAnimation } from '../landing-mock/hero-animation';
+  import { strings } from '../../content/landing-strings';
+
+  // Detect which language the page is running in by checking the URL path
+  const lang = window.location.pathname.startsWith('/fr/') || window.location.pathname === '/fr' ? 'fr' : 'en';
+  const m = strings[lang].hero.mockup;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    startHeroAnimation({
+      question: m.animUserQuestion,
+      aiIntro: m.animAiIntro,
+    });
+  });
+</script>
