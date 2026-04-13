@@ -265,8 +265,8 @@ const en: LandingStrings = {
       },
       i18n: {
         label: "i18n",
-        title: "Français {{accent}}/ English.",
-        desc: "Every string, both languages, shipped.",
+        title: "Français, {{accent}}English…",
+        desc: "Both languages shipped. More coming soon.",
       },
     },
   },
@@ -506,8 +506,8 @@ const fr: LandingStrings = {
       },
       i18n: {
         label: "i18n",
-        title: "Français {{accent}}/ English.",
-        desc: "Chaque string, dans les deux langues, livrée.",
+        title: "Français, {{accent}}English…",
+        desc: "Les deux langues sont livrées. D'autres arrivent bientôt.",
       },
     },
   },
