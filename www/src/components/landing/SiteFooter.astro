@@ -1,0 +1,103 @@
+---
+// www/src/components/landing/SiteFooter.astro
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].footer;
+---
+
+<footer class="db-footer">
+  <div class="db-footer-grid">
+    <div class="db-footer-brand">
+      <div class="db-footer-logo">
+        <span class="mark">d</span>
+        <span>dblumi</span>
+      </div>
+      <p class="tagline">{t.tagline}</p>
+    </div>
+    {Object.entries(t.columns).map(([, col]) => (
+      <div class="db-footer-col">
+        <h4>{col.title}</h4>
+        <ul>
+          {col.links.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+        </ul>
+      </div>
+    ))}
+  </div>
+  <div class="db-footer-bar">
+    <span>{t.copyright}</span>
+    <div class="socials">
+      <a href="https://github.com/eodia/dblumi">GitHub</a>
+      <a href="https://twitter.com/dblumi">Twitter</a>
+      <a href="https://discord.gg/2uTk5X9B">Discord</a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .db-footer {
+    padding: 64px 40px 40px;
+    background: #0a0a0b;
+    color: #9a9aa0;
+    border-radius: 20px;
+    margin-top: 40px;
+  }
+  .db-footer-grid {
+    display: grid;
+    grid-template-columns: 1.4fr repeat(4, 1fr);
+    gap: 32px;
+    max-width: 1100px;
+    margin: 0 auto 40px;
+  }
+  .db-footer-logo {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 17px; font-weight: 800; color: #fff;
+    letter-spacing: -0.01em;
+  }
+  .db-footer-logo .mark {
+    width: 22px; height: 22px;
+    background: var(--db-primary);
+    border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; font-weight: 900;
+  }
+  .db-footer-brand .tagline {
+    font-size: 12px; margin-top: 10px;
+    max-width: 28ch; line-height: 1.55;
+    color: #6b6b76;
+  }
+  .db-footer-col h4 {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: #e5e5ea;
+    margin: 0 0 12px;
+  }
+  .db-footer-col ul {
+    list-style: none;
+    padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .db-footer-col li a {
+    font-size: 12.5px; color: #9a9aa0;
+  }
+  .db-footer-col li a:hover { color: #fff; }
+  .db-footer-bar {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-top: 24px;
+    border-top: 1px solid #1a1a1e;
+    display: flex; align-items: center;
+    font-size: 11.5px; color: #6b6b76;
+  }
+  .db-footer-bar .socials {
+    margin-left: auto;
+    display: flex; gap: 12px;
+  }
+  .db-footer-bar .socials a { color: #6b6b76; }
+  .db-footer-bar .socials a:hover { color: #fff; }
+
+  @media (max-width: 800px) {
+    .db-footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
