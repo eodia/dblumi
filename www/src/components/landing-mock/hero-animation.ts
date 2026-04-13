@@ -65,7 +65,9 @@ export function startHeroAnimation(strings: AnimStrings): void {
 
   function resetAll(): void {
     editor!.classList.remove('has-content');
-    editor!.innerHTML = '<div class="editor-empty">// Start typing or ask the copilot…</div>';
+    // Remove only dynamically-added lines and stray cursors; keep .editor-empty intact
+    editor!.querySelectorAll('.line').forEach((l) => l.remove());
+    editor!.querySelectorAll('.cursor').forEach((c) => c.remove());
     results!.classList.remove('open');
     userMsg!.classList.remove('show');
     userMsg!.textContent = '';
@@ -110,7 +112,9 @@ export function startHeroAnimation(strings: AnimStrings): void {
   }
 
   async function writeSQL(): Promise<void> {
-    editor!.innerHTML = '';
+    // Remove any existing lines/cursors but keep .editor-empty
+    editor!.querySelectorAll('.line').forEach((l) => l.remove());
+    editor!.querySelectorAll('.cursor').forEach((c) => c.remove());
     editor!.classList.add('has-content');
     for (let i = 0; i < SQL_LINES.length; i++) {
       const div = document.createElement('div');
