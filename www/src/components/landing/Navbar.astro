@@ -15,28 +15,28 @@ function formatStars(n: number): string {
   return String(n);
 }
 
-const langHref = lang === 'en' ? '/fr/' : '/';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const langHref = lang === 'en' ? `${base}/fr/` : `${base}/`;
 const langLabel = lang === 'en' ? 'FR' : 'EN';
 ---
 
 <nav class="db-nav" aria-label="Main navigation">
-  <a href={lang === 'fr' ? '/fr/' : '/'} class="db-nav-logo">
-    <span class="db-nav-mark">d</span>
-    <span>dblumi</span>
+  <a href={lang === 'fr' ? `${base}/fr/` : `${base}/`} class="db-nav-logo" aria-label="dblumi home">
+    <img src={`${base}/logo-dblumi.svg`} alt="dblumi" />
   </a>
   <div class="db-nav-links">
-    <a href={lang === 'fr' ? '/fr/#features' : '/#features'}>{t.features}</a>
-    <a href={lang === 'fr' ? '/fr/guides/introduction/' : '/guides/introduction/'}>{t.docs}</a>
-    <a href={lang === 'fr' ? '/fr/#pricing' : '/#pricing'}>{t.pricing}</a>
-    <a href={lang === 'fr' ? '/fr/blog/' : '/blog/'}>{t.blog}</a>
+    <a href={lang === 'fr' ? `${base}/fr/#features` : `${base}/#features`}>{t.features}</a>
+    <a href={lang === 'fr' ? `${base}/fr/guides/introduction/` : `${base}/guides/introduction/`}>{t.docs}</a>
+    <a href={lang === 'fr' ? `${base}/fr/#pricing` : `${base}/#pricing`}>{t.pricing}</a>
+    <a href={lang === 'fr' ? `${base}/fr/blog/` : `${base}/blog/`}>{t.blog}</a>
   </div>
   <a href="https://github.com/eodia/dblumi" class="db-nav-stars" aria-label={`GitHub ${formatStars(stars)} ${t.stars}`}>
     <svg width="12" height="12" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     <span class="num">{formatStars(stars)}</span> {t.stars}
   </a>
   <a href={langHref} class="db-nav-lang" aria-label={langLabel}>{langLabel}</a>
-  <a href={lang === 'fr' ? '/fr/guides/installation/' : '/guides/installation/'} class="db-nav-login">{t.login}</a>
-  <a href={lang === 'fr' ? '/fr/guides/installation/' : '/guides/installation/'} class="db-nav-cta">{t.cta}</a>
+  <a href={lang === 'fr' ? `${base}/fr/guides/installation/` : `${base}/guides/installation/`} class="db-nav-login">{t.login}</a>
+  <a href={lang === 'fr' ? `${base}/fr/guides/installation/` : `${base}/guides/installation/`} class="db-nav-cta">{t.cta}</a>
 </nav>
 
 <style>
@@ -56,17 +56,14 @@ const langLabel = lang === 'en' ? 'FR' : 'EN';
     box-shadow: 0 2px 8px rgba(10, 10, 15, 0.04);
   }
   .db-nav-logo {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 17px; font-weight: 800;
-    color: var(--db-text);
-    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
   }
-  .db-nav-mark {
-    width: 22px; height: 22px;
-    background: var(--db-primary);
-    border-radius: 6px;
-    display: inline-flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 13px; font-weight: 900;
+  .db-nav-logo img {
+    height: 26px;
+    width: auto;
+    display: block;
   }
   .db-nav-links { display: flex; gap: 26px; flex: 1; }
   .db-nav-links a {

@@ -5,6 +5,7 @@ interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const t = strings[lang].hero;
 const m = t.mockup;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <section class="db-hero">
@@ -26,11 +27,11 @@ const m = t.mockup;
       {t.dockerCmd}
     </div>
     <div class="btns">
-      <a href={lang === 'fr' ? '/fr/guides/installation/' : '/guides/installation/'} class="btn-p">
+      <a href={lang === 'fr' ? `${base}/fr/guides/installation/` : `${base}/guides/installation/`} class="btn-p">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         {t.ctaPrimary}
       </a>
-      <a href={lang === 'fr' ? '/fr/demo/' : '/demo/'} class="btn-s">
+      <a href={lang === 'fr' ? `${base}/fr/demo/` : `${base}/demo/`} class="btn-s">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
         {t.ctaSecondary}
       </a>
@@ -343,14 +344,13 @@ const m = t.mockup;
   .db-hero {
     font-family: 'Inter', system-ui, sans-serif;
     background: #fff;
-    border: 1px solid var(--db-border);
-    border-radius: 20px;
-    padding: 52px 44px 48px;
-    margin: 20px 0;
+    padding: 48px 48px 56px;
+    margin: 0 auto;
     display: grid;
     grid-template-columns: 0.85fr 1.25fr;
-    gap: 44px;
+    gap: 52px;
     align-items: center;
+    max-width: 1400px;
   }
 
   .db-hero .badge {

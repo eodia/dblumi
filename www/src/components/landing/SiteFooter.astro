@@ -5,6 +5,7 @@ import { strings, type Lang } from '../../content/landing-strings';
 interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const t = strings[lang].footer;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <footer class="db-footer">
@@ -20,7 +21,11 @@ const t = strings[lang].footer;
       <div class="db-footer-col">
         <h4>{col.title}</h4>
         <ul>
-          {col.links.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+          {col.links.map((link) => {
+            const isExternal = link.href.startsWith('http') || link.href.startsWith('mailto:');
+            const href = isExternal ? link.href : `${base}${link.href}`;
+            return <li><a href={href}>{link.label}</a></li>;
+          })}
         </ul>
       </div>
     ))}
