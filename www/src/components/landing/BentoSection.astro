@@ -96,11 +96,22 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
       <h3>{drvBefore}<span class="accent">{drvAfter}</span></h3>
       <p>{t.cards.drivers.desc}</p>
       <div class="visual">
-        <div class="drv-grid">
-          <div class="drv"><span class="logo l-pg">PG</span><span class="name">Postgres</span></div>
-          <div class="drv"><span class="logo l-my">My</span><span class="name">MySQL</span></div>
-          <div class="drv"><span class="logo l-or">O</span><span class="name">Oracle</span></div>
-          <div class="drv"><span class="logo l-sq">SL</span><span class="name">SQLite</span></div>
+        <div class="magnetic">
+          <div class="core">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+          </div>
+          <div class="chip-orbit" style="--angle: 45deg; --delay: 0s;">
+            <div class="chip"><span class="logo l-pg">PG</span><span class="name">Postgres</span></div>
+          </div>
+          <div class="chip-orbit" style="--angle: 135deg; --delay: 0.3s;">
+            <div class="chip"><span class="logo l-my">My</span><span class="name">MySQL</span></div>
+          </div>
+          <div class="chip-orbit" style="--angle: 225deg; --delay: 0.6s;">
+            <div class="chip"><span class="logo l-or">O</span><span class="name">Oracle</span></div>
+          </div>
+          <div class="chip-orbit" style="--angle: 315deg; --delay: 0.9s;">
+            <div class="chip"><span class="logo l-sq">SL</span><span class="name">SQLite</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -290,26 +301,84 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
   .mini-term .dim { color: #9a9aa0; }
   .dark .mini-term .dim { color: #5a5a64; }
 
-  /* ── Drivers card ── */
-  .drv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .drv {
-    display: flex; align-items: center; gap: 7px;
-    padding: 7px 10px;
-    background: #fdfdfc;
-    border: 1px solid var(--db-border-subtle);
-    border-radius: 8px;
+  /* ── Drivers card — magnetic orbit ── */
+  .magnetic {
+    position: relative;
+    width: 100%;
+    height: 170px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .drv .logo {
+  .magnetic .core {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 56px; height: 56px;
+    margin: -28px 0 0 -28px;
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(65, 205, 42, 0.35), transparent 70%),
+      linear-gradient(135deg, #ffffff 0%, #f5f7f4 100%);
+    border: 1px solid rgba(65, 205, 42, 0.35);
+    box-shadow:
+      0 12px 32px -10px rgba(65, 205, 42, 0.45),
+      0 0 0 6px rgba(65, 205, 42, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    color: var(--db-primary-vivid);
+    animation: coreFloat 4s ease-in-out infinite;
+  }
+  @keyframes coreFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  .magnetic .chip-orbit {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateX(92px) rotate(calc(-1 * var(--angle)));
+    transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 1;
+  }
+  .magnetic:hover .chip-orbit {
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateX(42px) rotate(calc(-1 * var(--angle)));
+  }
+  .magnetic .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 11px;
+    background: #ffffff;
+    border: 1px solid var(--db-border);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px -6px rgba(10, 10, 15, 0.14);
+    white-space: nowrap;
+    animation: chipBob 3.5s ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes chipBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .magnetic .chip .logo {
     width: 18px; height: 18px; border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
     font-family: 'JetBrains Mono', monospace;
     font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0;
   }
-  .drv .l-pg { background: #336791; }
-  .drv .l-my { background: #f29111; }
-  .drv .l-or { background: #c74634; }
-  .drv .l-sq { background: #003b57; }
-  .drv .name { font-size: 10.5px; font-weight: 600; color: var(--db-text); }
+  .magnetic .chip .l-pg { background: #336791; }
+  .magnetic .chip .l-my { background: #f29111; }
+  .magnetic .chip .l-or { background: #c74634; }
+  .magnetic .chip .l-sq { background: #003b57; }
+  .magnetic .chip .name { font-size: 10.5px; font-weight: 600; color: var(--db-text); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .magnetic .core,
+    .magnetic .chip { animation: none; }
+  }
 
   /* ── ERD card ── */
   .erd {
