@@ -1,0 +1,329 @@
+---
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].collab;
+
+const parts = t.headline.split('{{accent}}');
+const headBefore = parts[0] ?? '';
+const headAfter = parts[1] ?? '';
+---
+
+<section class="db-feat-collab">
+  <div class="wrap">
+    <div class="row">
+      <div class="text">
+        <span class="label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          {t.label}
+        </span>
+        <h2>{headBefore}<span class="kalam">{headAfter}</span></h2>
+        <p class="lead" set:html={t.lead}></p>
+        <ul class="bullets">
+          {t.bullets.map((b) => (
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="visual">
+        <div class="collab-mock">
+          <div class="sq-head">
+            <span class="title">Team queries</span>
+            <div class="team-avatars">
+              <div class="av a1">M</div>
+              <div class="av a2">J</div>
+              <div class="av a3">S</div>
+              <div class="av a4">+4</div>
+            </div>
+          </div>
+          <div class="sq-list">
+            <div class="sq-item live">
+              <svg class="code-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <div class="info">
+                <div class="name">regions_by_revenue</div>
+                <div class="meta">
+                  <span class="dot-live"></span>
+                  <span>2 people editing now</span>
+                  <span>·</span>
+                  <span>v12</span>
+                </div>
+              </div>
+              <div class="avatars">
+                <div class="av" style="background:#2DA31E">M</div>
+                <div class="av" style="background:#6366F1">J</div>
+              </div>
+            </div>
+
+            <div class="sq-item">
+              <svg class="code-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <div class="info">
+                <div class="name">churn_cohort</div>
+                <div class="meta">
+                  <span>Edited 2 min ago by Sarah</span>
+                  <span>·</span>
+                  <span>v7</span>
+                </div>
+              </div>
+              <div class="avatars">
+                <div class="av" style="background:#EC4899">S</div>
+              </div>
+            </div>
+
+            <div class="sq-item">
+              <svg class="code-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <div class="info">
+                <div class="name">daily_mrr</div>
+                <div class="meta">
+                  <span>Edited yesterday by Julien</span>
+                  <span>·</span>
+                  <span>v23</span>
+                </div>
+              </div>
+              <div class="avatars">
+                <div class="av" style="background:#6366F1">J</div>
+              </div>
+            </div>
+
+            <div class="sq-item">
+              <svg class="code-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <div class="info">
+                <div class="name">top_customers</div>
+                <div class="meta">
+                  <span>Edited last week by Marc</span>
+                  <span>·</span>
+                  <span>v4</span>
+                </div>
+              </div>
+              <div class="avatars">
+                <div class="av" style="background:#2DA31E">M</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  .db-feat-collab {
+    padding: 96px 56px;
+    background: #fff;
+    margin: 0;
+  }
+  .db-feat-collab .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .db-feat-collab .row {
+    display: grid;
+    grid-template-columns: 0.9fr 1.2fr;
+    gap: 72px;
+    align-items: center;
+  }
+
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--db-primary, #2DA31E);
+    padding: 5px 10px;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.07);
+    margin-bottom: 22px;
+  }
+  h2 {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.025em;
+    margin: 0 0 20px;
+    color: var(--db-text, #0A0A0B);
+    max-width: 14ch;
+  }
+  h2 .kalam {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    color: var(--db-primary-vivid, #41cd2a);
+  }
+  p.lead {
+    font-size: 16px;
+    color: var(--db-muted-fg, #6B6B76);
+    line-height: 1.6;
+    max-width: 44ch;
+    margin: 0 0 24px;
+  }
+  p.lead :global(strong) {
+    color: var(--db-text, #0A0A0B);
+    font-weight: 600;
+  }
+  ul.bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  ul.bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    line-height: 1.45;
+  }
+  ul.bullets li svg {
+    flex-shrink: 0;
+    color: var(--db-primary, #2DA31E);
+    margin-top: 2px;
+  }
+
+  /* Collab mockup */
+  .collab-mock {
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 12px;
+    background: var(--db-card, #FFFFFF);
+    overflow: hidden;
+    box-shadow:
+      0 40px 80px -24px rgba(10, 10, 15, 0.20),
+      0 16px 32px -16px rgba(10, 10, 15, 0.12);
+    font-family: 'Inter', sans-serif;
+  }
+  .collab-mock .sq-head {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    background: #fdfdfc;
+  }
+  .collab-mock .sq-head .title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--db-text, #0A0A0B);
+    flex: 1;
+  }
+  .collab-mock .sq-head .team-avatars {
+    display: flex;
+  }
+  .collab-mock .sq-head .team-avatars .av {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    margin-left: -6px;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+  .collab-mock .sq-head .team-avatars .av:first-child {
+    margin-left: 0;
+  }
+  .collab-mock .sq-head .team-avatars .a1 { background: #2DA31E; }
+  .collab-mock .sq-head .team-avatars .a2 { background: #6366F1; }
+  .collab-mock .sq-head .team-avatars .a3 { background: #EC4899; }
+  .collab-mock .sq-head .team-avatars .a4 { background: #F59E0B; }
+
+  .collab-mock .sq-list {
+    padding: 6px;
+  }
+  .collab-mock .sq-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+  }
+  .collab-mock .sq-item.live {
+    background: rgba(65, 205, 42, 0.08);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+  }
+  .collab-mock .sq-item .code-ic {
+    color: var(--db-primary, #2DA31E);
+    flex-shrink: 0;
+  }
+  .collab-mock .sq-item .info {
+    flex: 1;
+    min-width: 0;
+  }
+  .collab-mock .sq-item .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--db-text, #0A0A0B);
+  }
+  .collab-mock .sq-item .meta {
+    font-size: 10px;
+    color: var(--db-muted-fg, #6B6B76);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .collab-mock .sq-item .meta .dot-live {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--db-primary-vivid, #41cd2a);
+    animation: livepulse 1.4s ease-in-out infinite;
+  }
+  @keyframes livepulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(65, 205, 42, 0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(65, 205, 42, 0); }
+  }
+  .collab-mock .sq-item .tag {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--db-primary, #2DA31E);
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(65, 205, 42, 0.12);
+  }
+  .collab-mock .sq-item .avatars {
+    display: flex;
+  }
+  .collab-mock .sq-item .avatars .av {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    margin-left: -6px;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+  .collab-mock .sq-item .avatars .av:first-child {
+    margin-left: 0;
+  }
+
+  @media (max-width: 980px) {
+    .db-feat-collab {
+      padding: 56px 24px;
+    }
+    .db-feat-collab .row {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+  }
+</style>
