@@ -156,7 +156,7 @@ const en: LandingStrings = {
   hero: {
     badge: "Open source · Self-hosted · Team-ready",
     headline: { line1: "Query,", line2: "Explore,", line3: "Ship.", accent: "Without friction." },
-    lead: "The modern SQL client built for developer teams. Write safer queries, get AI-powered suggestions, and share everything with your team.",
+    lead: "The <strong>modern SQL client</strong> built for developer teams. Write safer queries, get <strong>AI-powered suggestions</strong>, and <strong>share</strong> everything with your team.",
     ctaPrimary: "Self-host now",
     ctaSecondary: "Live demo",
     dockerCmd: "docker run -d -p 5173:5173 eodia/dblumi:latest",
@@ -407,7 +407,7 @@ const fr: LandingStrings = {
   hero: {
     badge: "Open source · Auto-hébergé · Prêt pour les équipes",
     headline: { line1: "Query,", line2: "Explore,", line3: "Ship.", accent: "Sans friction." },
-    lead: "Le client SQL moderne pensé pour les équipes de développement. Écris des requêtes plus sûres, profite des suggestions de l'IA, et partage tout avec ton équipe.",
+    lead: "Le <strong>client SQL moderne</strong> pensé pour les équipes de développement. Écris des requêtes plus sûres, profite des <strong>suggestions de l'IA</strong>, et <strong>partage</strong> tout avec ton équipe.",
     ctaPrimary: "Héberger maintenant",
     ctaSecondary: "Démo live",
     dockerCmd: "docker run -d -p 5173:5173 eodia/dblumi:latest",
