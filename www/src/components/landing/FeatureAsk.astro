@@ -136,6 +136,11 @@ const headAfter = parts[1] ?? '';
   p.lead :global(strong) {
     color: var(--db-text, #0A0A0B);
     font-weight: 600;
+    background: linear-gradient(180deg, transparent 58%, rgba(65, 205, 42, 0.28) 58%);
+    padding: 0 2px;
+    border-radius: 2px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
   ul.bullets {
     list-style: none;

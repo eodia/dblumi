@@ -3,7 +3,6 @@
 import '../../styles/landing.css';
 import Navbar from '../../components/landing/Navbar.astro';
 import Hero from '../../components/landing/Hero.astro';
-import TrustBar from '../../components/landing/TrustBar.astro';
 import FeatureWrite from '../../components/landing/FeatureWrite.astro';
 import FeatureAsk from '../../components/landing/FeatureAsk.astro';
 import FeatureCollab from '../../components/landing/FeatureCollab.astro';
@@ -41,7 +40,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <Navbar lang="fr" stars={githubStars} />
     <Hero lang="fr" />
     <main class="landing-page">
-      <TrustBar lang="fr" stars={githubStars} />
       <div id="features">
         <FeatureWrite lang="fr" />
         <FeatureAsk lang="fr" />
