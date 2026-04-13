@@ -287,7 +287,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
             </div>
           </div>
 
-          <aside class="copilot">
+          <aside class="cop-panel">
             <div class="hdr">
               <svg class="spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
               <span class="title">{m.tabCopilot}</span>
@@ -757,15 +757,18 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   .editor {
     flex: 1 1 auto;
     min-height: 120px;
-    padding: 12px 0;
+    padding: 10px 0;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; line-height: 1.75;
+    font-size: 12px;
+    line-height: 1.8;
     color: var(--db-text-soft);
     position: relative;
     overflow: hidden;
+    background: linear-gradient(to right, #fafaf9 0 44px, transparent 44px);
   }
   .editor-empty {
-    position: absolute; inset: 12px 12px auto 12px;
+    position: absolute;
+    inset: 12px 12px auto 58px;
     color: #c5c5ca;
     font-style: italic;
     font-family: 'Inter', sans-serif;
@@ -773,19 +776,45 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     transition: opacity 0.3s;
   }
   .editor.has-content .editor-empty { opacity: 0; pointer-events: none; }
-  .line { display: flex; padding: 0 12px; white-space: nowrap; }
-  .ln { color: #c5c5ca; display: inline-block; width: 18px; text-align: right; margin-right: 14px; flex-shrink: 0; user-select: none; font-size: 11px; }
+  .line {
+    display: flex;
+    align-items: center;
+    padding: 0 16px 0 0;
+    white-space: nowrap;
+    min-height: 22px;
+    position: relative;
+  }
+  .line:hover { background: rgba(65, 205, 42, 0.04); }
+  .ln {
+    color: #b0b0b6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 30px;
+    padding: 0 8px 0 0;
+    margin-right: 8px;
+    flex-shrink: 0;
+    user-select: none;
+    font-size: 10.5px;
+    font-weight: 500;
+    border-right: 1px solid var(--db-border-subtle);
+    min-height: 22px;
+    box-sizing: border-box;
+  }
   .code { flex: 1; position: relative; }
-  .kw { color: #1e40af; font-weight: 500; }
-  .fn { color: #8b5cf6; }
-  .str { color: var(--db-primary); }
-  .cm { color: #a0a0a0; font-style: italic; }
+  .kw { color: #c026d3; font-weight: 600; }
+  .fn { color: #8b5cf6; font-weight: 500; }
+  .str { color: #059669; }
+  .cm { color: #94a3b8; font-style: italic; }
   .cursor {
     display: inline-block;
-    width: 1.5px; height: 14px;
+    width: 2px;
+    height: 15px;
     background: var(--db-primary-vivid);
-    vertical-align: -2px;
+    vertical-align: -3px;
+    margin-left: 1px;
     animation: blink 1s step-end infinite;
+    box-shadow: 0 0 4px rgba(65, 205, 42, 0.4);
   }
   @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 
@@ -850,28 +879,28 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   .results-pagination .page.active { background: var(--db-primary); color: #fff; }
 
   /* Copilot */
-  .copilot { background: #fff; display: flex; flex-direction: column; font-size: 11px; min-height: 0; }
-  .copilot .hdr {
+  .cop-panel { background: #fff; display: flex; flex-direction: column; font-size: 11px; min-height: 0; }
+  .cop-panel .hdr {
     background: #0a0a0b;
     color: #fff;
     padding: 9px 12px;
     display: flex; align-items: center; gap: 7px;
     flex-shrink: 0;
   }
-  .copilot .hdr .spark { color: var(--db-primary-vivid); }
-  .copilot .hdr .title { font-size: 11px; font-weight: 600; }
-  .copilot .hdr .subtitle { font-size: 9px; color: #9a9aa0; margin-left: 2px; }
-  .copilot .hdr .spacer { flex: 1; }
-  .copilot .hdr .close { color: #9a9aa0; font-size: 13px; }
+  .cop-panel .hdr .spark { color: var(--db-primary-vivid); }
+  .cop-panel .hdr .title { font-size: 11px; font-weight: 600; }
+  .cop-panel .hdr .subtitle { font-size: 9px; color: #9a9aa0; margin-left: 2px; }
+  .cop-panel .hdr .spacer { flex: 1; }
+  .cop-panel .hdr .close { color: #9a9aa0; font-size: 13px; }
 
-  .copilot .content {
+  .cop-panel .content {
     flex: 1;
     display: flex; flex-direction: column;
     min-height: 0;
   }
 
   /* Empty state (before user asks) */
-  .copilot .empty-state {
+  .cop-panel .empty-state {
     flex: 1;
     min-height: 0;
     display: flex; flex-direction: column;
@@ -880,23 +909,23 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     padding: 20px 14px;
     text-align: center;
   }
-  .copilot .empty-state.hidden { display: none; }
-  .copilot .empty-state .bot-icon {
+  .cop-panel .empty-state.hidden { display: none; }
+  .cop-panel .empty-state .bot-icon {
     color: #b5b5bd;
     opacity: 0.65;
   }
-  .copilot .empty-state .prompt {
+  .cop-panel .empty-state .prompt {
     font-size: 10.5px;
     color: var(--db-muted-fg);
     line-height: 1.5;
     max-width: 180px;
     margin: 0;
   }
-  .copilot .empty-state .pills {
+  .cop-panel .empty-state .pills {
     display: flex; flex-direction: column; gap: 6px;
     width: 100%;
   }
-  .copilot .empty-state .pill {
+  .cop-panel .empty-state .pill {
     padding: 5px 10px;
     border: 1px solid var(--db-border);
     border-radius: 100px;
@@ -906,7 +935,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     text-align: center;
   }
 
-  .copilot .convo {
+  .cop-panel .convo {
     padding: 12px 10px 8px;
     flex: 1;
     display: none;
@@ -914,8 +943,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     min-height: 0;
     overflow: hidden;
   }
-  .copilot .convo.show { display: flex; }
-  .copilot .user-msg {
+  .cop-panel .convo.show { display: flex; }
+  .cop-panel .user-msg {
     align-self: flex-end;
     background: var(--db-primary);
     color: #fff;
@@ -926,9 +955,9 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     opacity: 0; transform: translateY(6px);
     display: none;
   }
-  .copilot .user-msg.show { display: block; animation: fade-in 0.35s ease-out forwards; }
+  .cop-panel .user-msg.show { display: block; animation: fade-in 0.35s ease-out forwards; }
 
-  .copilot .typing {
+  .cop-panel .typing {
     display: none;
     gap: 3px;
     padding: 6px 8px;
@@ -937,17 +966,17 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     border-radius: 10px;
     align-self: flex-start;
   }
-  .copilot .typing.show { display: inline-flex; animation: fade-in 0.2s forwards; }
-  .copilot .typing span {
+  .cop-panel .typing.show { display: inline-flex; animation: fade-in 0.2s forwards; }
+  .cop-panel .typing span {
     width: 4px; height: 4px; border-radius: 50%; background: var(--db-muted-fg);
     animation: dots 1.2s ease-in-out infinite;
   }
-  .copilot .typing span:nth-child(2) { animation-delay: 0.15s; }
-  .copilot .typing span:nth-child(3) { animation-delay: 0.30s; }
+  .cop-panel .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .cop-panel .typing span:nth-child(3) { animation-delay: 0.30s; }
   @keyframes dots { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
   @keyframes fade-in { to { opacity: 1; transform: translateY(0); } }
 
-  .copilot .ai-msg {
+  .cop-panel .ai-msg {
     background: #fff;
     border: 1px solid var(--db-border-subtle);
     border-radius: 10px 10px 10px 2px;
@@ -960,8 +989,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     opacity: 0; transform: translateY(6px);
     display: none;
   }
-  .copilot .ai-msg.show { display: block; animation: fade-in 0.35s ease-out forwards; }
-  .copilot .ai-msg .bot-row {
+  .cop-panel .ai-msg.show { display: block; animation: fade-in 0.35s ease-out forwards; }
+  .cop-panel .ai-msg .bot-row {
     display: flex; align-items: center; gap: 5px;
     margin-bottom: 4px;
     font-size: 9px; font-weight: 600;
@@ -969,14 +998,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     text-transform: uppercase; letter-spacing: 0.05em;
   }
 
-  .copilot .input-bar {
+  .cop-panel .input-bar {
     border-top: 1px solid var(--db-border-subtle);
     padding: 8px;
     display: flex; gap: 6px;
     background: #fdfdfc;
     flex-shrink: 0;
   }
-  .copilot .input-bar .input {
+  .cop-panel .input-bar .input {
     flex: 1; background: #fff;
     border: 1px solid var(--db-border); border-radius: 6px;
     padding: 5px 8px; font-size: 10px; color: var(--db-text);
@@ -985,11 +1014,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     font-family: inherit;
     white-space: nowrap; overflow: hidden;
   }
-  .copilot .input-bar .input:empty::before {
+  .cop-panel .input-bar .input:empty::before {
     content: attr(data-placeholder);
     color: #b0b0b6;
   }
-  .copilot .input-bar .input .caret {
+  .cop-panel .input-bar .input .caret {
     display: inline-block;
     width: 1.2px; height: 10px;
     background: var(--db-primary-vivid);
@@ -997,7 +1026,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     margin-left: 1px;
     animation: blink 1s step-end infinite;
   }
-  .copilot .input-bar .send {
+  .cop-panel .input-bar .send {
     width: 24px; height: 24px;
     background: var(--db-primary); border-radius: 6px;
     display: inline-flex; align-items: center; justify-content: center;
