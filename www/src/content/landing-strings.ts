@@ -157,7 +157,7 @@ const en: LandingStrings = {
     lead: "The modern SQL client built for developer teams. Write safer queries, get AI-powered suggestions, and share everything with your team.",
     ctaPrimary: "Self-host now",
     ctaSecondary: "Live demo",
-    dockerCmd: "docker pull eodia/dblumi:latest",
+    dockerCmd: "docker run -d -p 5173:5173 eodia/dblumi:latest",
     mockup: {
       envProd: "prod",
       filterTables: "Filter tables…",
@@ -398,7 +398,7 @@ const fr: LandingStrings = {
     lead: "Le client SQL moderne pensé pour les équipes de développement. Écris des requêtes plus sûres, profite des suggestions de l'IA, et partage tout avec ton équipe.",
     ctaPrimary: "Héberger maintenant",
     ctaSecondary: "Démo live",
-    dockerCmd: "docker pull eodia/dblumi:latest",
+    dockerCmd: "docker run -d -p 5173:5173 eodia/dblumi:latest",
     mockup: {
       envProd: "prod",
       filterTables: "Filtrer les tables…",
