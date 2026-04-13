@@ -35,11 +35,17 @@ const headAfter = parts[1] ?? '';
           <div class="chrome">
             <div class="d d1"></div><div class="d d2"></div><div class="d d3"></div>
             <span class="path">eodia / active_users.sql</span>
+            <div class="presence" aria-label="3 teammates editing">
+              <div class="av av-marc" title="Marc">M</div>
+              <div class="av av-sarah" title="Sarah">S</div>
+              <div class="av av-julien" title="Julien">J</div>
+              <span class="presence-count">3 editing</span>
+            </div>
           </div>
           <div class="editor">
             <div><span class="ln">1</span><span class="cm">-- Active users in the last 30 days</span></div>
-            <div><span class="ln">2</span><span class="kw">SELECT</span> u.name, u.email</div>
-            <div><span class="ln">3</span><span class="kw">FROM</span> users u</div>
+            <div><span class="ln">2</span><span class="kw">SELECT</span> u.name, u.email<span class="ghost sarah"><span class="tag">Sarah</span></span></div>
+            <div><span class="ln">3</span><span class="kw">FROM</span> users u<span class="ghost julien"><span class="tag">Julien</span></span></div>
             <div><span class="ln">4</span><span class="kw">WHERE</span> u.<span class="cursor-bar"></span></div>
 
             <div class="autocomplete">
@@ -210,6 +216,87 @@ const headAfter = parts[1] ?? '';
     font-size: 10px;
     color: #9a9aa0;
   }
+  .chrome .presence {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chrome .presence .av {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid #f7f7f6;
+    margin-left: -5px;
+    font-size: 8px;
+    font-weight: 700;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .chrome .presence .av:first-child { margin-left: 0; }
+  .chrome .presence .av-marc { background: #2DA31E; }
+  .chrome .presence .av-sarah { background: #EC4899; }
+  .chrome .presence .av-julien { background: #6366F1; }
+  .chrome .presence .presence-count {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--db-primary, #2DA31E);
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.10);
+    border: 1px solid rgba(65, 205, 42, 0.25);
+    margin-left: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chrome .presence .presence-count::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--db-primary-vivid, #41cd2a);
+    box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.25);
+    animation: presencePulse 2s ease-in-out infinite;
+  }
+  @keyframes presencePulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.25); }
+    50% { box-shadow: 0 0 0 5px rgba(65, 205, 42, 0); }
+  }
+
+  /* Ghost cursors — other teammates editing in real time */
+  .ghost {
+    display: inline-block;
+    width: 2px;
+    height: 17px;
+    vertical-align: -3px;
+    position: relative;
+    margin: 0 1px 0 2px;
+  }
+  .ghost.sarah { background: #EC4899; }
+  .ghost.julien { background: #6366F1; }
+  .ghost .tag {
+    position: absolute;
+    top: -17px;
+    left: -1px;
+    padding: 2px 7px;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif;
+    border-radius: 4px 4px 4px 0;
+    white-space: nowrap;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    box-shadow: 0 2px 6px rgba(10, 10, 15, 0.12);
+  }
+  .ghost.sarah .tag { background: #EC4899; }
+  .ghost.julien .tag { background: #6366F1; }
 
   /* Token colors */
   .kw { color: #1e40af; font-weight: 500; }
