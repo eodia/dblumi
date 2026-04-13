@@ -35,93 +35,50 @@ const headAfter = parts[1] ?? '';
           <div class="chrome">
             <div class="d d1"></div><div class="d d2"></div><div class="d d3"></div>
             <span class="path">eodia / active_users.sql</span>
-            <div class="presence" aria-label="3 teammates editing">
-              <div class="av av-marc" title="Marc">M</div>
-              <div class="av av-sarah" title="Sarah">S</div>
-              <div class="av av-julien" title="Julien">J</div>
-              <span class="presence-count">3 editing</span>
-            </div>
           </div>
-          <div class="mock-body">
-            <div class="editor">
-              <div><span class="ln">1</span><span class="cm">-- Active users in the last 30 days</span></div>
-              <div><span class="ln">2</span><span class="kw">SELECT</span> u.name, u.email<span class="ghost sarah"><span class="tag">Sarah</span></span></div>
-              <div><span class="ln">3</span><span class="kw">FROM</span> users u<span class="ghost julien"><span class="tag">Julien</span></span></div>
-              <div><span class="ln">4</span><span class="kw">WHERE</span> u.<span class="cursor-bar"></span></div>
+          <div class="editor">
+            <div class="line"><span class="ln">1</span><span class="typed t-1"><span class="cm">-- Active users in the last 30 days</span></span></div>
+            <div class="line"><span class="ln">2</span><span class="typed t-2"><span class="kw">SELECT</span> u.name, u.email</span></div>
+            <div class="line"><span class="ln">3</span><span class="typed t-3"><span class="kw">FROM</span> users u</span></div>
+            <div class="line"><span class="ln">4</span><span class="typed t-4"><span class="kw">WHERE</span> u.<span class="cursor-bar"></span></span></div>
 
-              <div class="autocomplete">
-                <div class="ac-item">
-                  <span class="ic key">K</span>
-                  <span class="name">id</span>
-                  <span class="type">uuid</span>
-                </div>
-                <div class="ac-item">
-                  <span class="ic">c</span>
-                  <span class="name">name</span>
-                  <span class="type">text</span>
-                </div>
-                <div class="ac-item">
-                  <span class="ic">c</span>
-                  <span class="name">email</span>
-                  <span class="type">text</span>
-                </div>
-                <div class="ac-item selected">
-                  <span class="ic">c</span>
-                  <span class="name">last_seen</span>
-                  <span class="type">timestamp</span>
-                </div>
-                <div class="ac-item">
-                  <span class="ic">c</span>
-                  <span class="name">org_id</span>
-                  <span class="type">uuid</span>
-                </div>
-                <div class="ac-item">
-                  <span class="ic">c</span>
-                  <span class="name">created_at</span>
-                  <span class="type">timestamp</span>
-                </div>
-                <div class="ac-footer">
-                  <span><span class="kbd">↑↓</span> navigate</span>
-                  <span><span class="kbd">⏎</span> insert</span>
-                  <span style="margin-left:auto">6 columns</span>
-                </div>
+            <div class="autocomplete">
+              <div class="ac-item">
+                <span class="ic key">K</span>
+                <span class="name">id</span>
+                <span class="type">uuid</span>
+              </div>
+              <div class="ac-item">
+                <span class="ic">c</span>
+                <span class="name">name</span>
+                <span class="type">text</span>
+              </div>
+              <div class="ac-item">
+                <span class="ic">c</span>
+                <span class="name">email</span>
+                <span class="type">text</span>
+              </div>
+              <div class="ac-item selected">
+                <span class="ic">c</span>
+                <span class="name">last_seen</span>
+                <span class="type">timestamp</span>
+              </div>
+              <div class="ac-item">
+                <span class="ic">c</span>
+                <span class="name">org_id</span>
+                <span class="type">uuid</span>
+              </div>
+              <div class="ac-item">
+                <span class="ic">c</span>
+                <span class="name">created_at</span>
+                <span class="type">timestamp</span>
+              </div>
+              <div class="ac-footer">
+                <span><span class="kbd">↑↓</span> navigate</span>
+                <span><span class="kbd">⏎</span> insert</span>
+                <span style="margin-left:auto">6 columns</span>
               </div>
             </div>
-
-            <aside class="chat">
-              <div class="chat-head">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>Team chat</span>
-                <span class="chat-count">3</span>
-              </div>
-              <div class="chat-msgs">
-                <div class="msg">
-                  <div class="msg-av av-sarah">S</div>
-                  <div class="msg-body">
-                    <div class="msg-meta"><b>Sarah</b><time>2m</time></div>
-                    <div class="msg-text">email is not unique across orgs — use <code>u.org_id</code></div>
-                  </div>
-                </div>
-                <div class="msg">
-                  <div class="msg-av av-marc">M</div>
-                  <div class="msg-body">
-                    <div class="msg-meta"><b>Marc</b><time>now</time></div>
-                    <div class="msg-text">good point, switching 👍</div>
-                  </div>
-                </div>
-                <div class="msg msg-typing">
-                  <div class="msg-av av-julien">J</div>
-                  <div class="msg-body">
-                    <div class="msg-meta"><b>Julien</b><span class="typing-label">is typing</span></div>
-                    <div class="typing-dots"><span></span><span></span><span></span></div>
-                  </div>
-                </div>
-              </div>
-              <div class="chat-input">
-                <span>Reply to the team…</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </div>
-            </aside>
           </div>
           <div class="statusbar">
             <span class="dot"></span>
@@ -253,123 +210,6 @@ const headAfter = parts[1] ?? '';
     font-size: 10px;
     color: #9a9aa0;
   }
-  .chrome .presence {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .chrome .presence .av {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 1.5px solid #f7f7f6;
-    margin-left: -5px;
-    font-size: 8px;
-    font-weight: 700;
-    color: #fff;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Inter', system-ui, sans-serif;
-  }
-  .chrome .presence .av:first-child { margin-left: 0; }
-  .chrome .presence .av-marc { background: #2DA31E; }
-  .chrome .presence .av-sarah { background: #EC4899; }
-  .chrome .presence .av-julien { background: #6366F1; }
-  .chrome .presence .presence-count {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 9.5px;
-    font-weight: 600;
-    color: var(--db-primary, #2DA31E);
-    padding: 2px 7px;
-    border-radius: 100px;
-    background: rgba(65, 205, 42, 0.10);
-    border: 1px solid rgba(65, 205, 42, 0.25);
-    margin-left: 2px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .chrome .presence .presence-count::before {
-    content: "";
-    display: inline-block;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--db-primary-vivid, #41cd2a);
-    box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.25);
-    animation: presencePulse 2s ease-in-out infinite;
-  }
-  @keyframes presencePulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.25); }
-    50% { box-shadow: 0 0 0 5px rgba(65, 205, 42, 0); }
-  }
-
-  /* Ghost cursors — other teammates editing in real time */
-  .ghost {
-    display: inline-block;
-    width: 2px;
-    height: 17px;
-    vertical-align: -3px;
-    position: relative;
-    margin: 0 1px 0 2px;
-    animation: ghostBlink 1s step-end infinite;
-  }
-  .ghost.sarah {
-    background: #EC4899;
-    animation:
-      ghostBlink 1s step-end infinite,
-      ghostTypeSarah 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-  .ghost.julien {
-    background: #6366F1;
-    animation:
-      ghostBlink 1s step-end infinite,
-      ghostTypeJulien 6.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-  @keyframes ghostBlink {
-    0%, 50% { opacity: 1; }
-    50.01%, 100% { opacity: 0; }
-  }
-  /* Sarah: small "typing burst" every 5.5s — cursor jumps right as if typing */
-  @keyframes ghostTypeSarah {
-    0%, 60% { transform: translateX(0); }
-    65% { transform: translateX(3px); }
-    70% { transform: translateX(6px); }
-    75% { transform: translateX(10px); }
-    80% { transform: translateX(14px); }
-    85% { transform: translateX(12px) scaleY(0.85); }
-    90% { transform: translateX(6px); }
-    100% { transform: translateX(0); }
-  }
-  /* Julien: different rhythm, phase-offset */
-  @keyframes ghostTypeJulien {
-    0%, 30% { transform: translateX(0); }
-    35% { transform: translateX(4px); }
-    40% { transform: translateX(9px); }
-    45% { transform: translateX(13px); }
-    50% { transform: translateX(8px) scaleY(0.9); }
-    55% { transform: translateX(0); }
-    100% { transform: translateX(0); }
-  }
-  .ghost .tag {
-    position: absolute;
-    top: -17px;
-    left: -1px;
-    padding: 2px 7px;
-    color: #fff;
-    font-size: 9px;
-    font-weight: 600;
-    font-family: 'Inter', system-ui, sans-serif;
-    border-radius: 4px 4px 4px 0;
-    white-space: nowrap;
-    line-height: 1.25;
-    letter-spacing: 0.01em;
-    box-shadow: 0 2px 6px rgba(10, 10, 15, 0.12);
-  }
-  .ghost.sarah .tag { background: #EC4899; }
-  .ghost.julien .tag { background: #6366F1; }
 
   /* Token colors */
   .kw { color: #1e40af; font-weight: 500; }
@@ -378,22 +218,41 @@ const headAfter = parts[1] ?? '';
   .cm { color: #a0a0a0; font-style: italic; }
   .num { color: #d97706; }
 
-  /* Write mockup: split into editor + team chat */
-  .mock-body {
-    display: grid;
-    grid-template-columns: 1fr 220px;
-    min-height: 340px;
-  }
+  /* Write mockup: editor + autocomplete with typing animation */
   .editor {
     padding: 22px 14px 220px;
+    min-height: 340px;
     background: #fff;
     line-height: 1.95;
     font-size: 13px;
     color: var(--db-text-soft, #3A3A42);
     position: relative;
-    border-right: 1px solid var(--db-border-subtle, #EDEDF0);
     overflow: hidden;
   }
+  .editor .line { display: block; min-height: 25px; }
+  .editor .typed {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 0;
+    vertical-align: top;
+  }
+  .editor .t-1 {
+    animation: typeLine1 1.4s steps(36) 0.4s forwards;
+  }
+  .editor .t-2 {
+    animation: typeLine2 0.9s steps(22) 1.9s forwards;
+  }
+  .editor .t-3 {
+    animation: typeLine3 0.6s steps(12) 2.9s forwards;
+  }
+  .editor .t-4 {
+    animation: typeLine4 0.45s steps(8) 3.6s forwards;
+  }
+  @keyframes typeLine1 { to { max-width: 40ch; } }
+  @keyframes typeLine2 { to { max-width: 26ch; } }
+  @keyframes typeLine3 { to { max-width: 14ch; } }
+  @keyframes typeLine4 { to { max-width: 10ch; } }
   .editor .ln {
     color: #c5c5ca;
     display: inline-block;
@@ -418,18 +277,25 @@ const headAfter = parts[1] ?? '';
 
   .autocomplete {
     position: absolute;
-    top: 82px;
-    left: 232px;
+    top: 122px;
+    left: 114px;
     background: #fff;
     border: 1px solid var(--db-border, #E2E2E6);
     border-radius: 8px;
     box-shadow:
       0 20px 40px -12px rgba(10, 10, 15, 0.25),
       0 8px 16px -8px rgba(10, 10, 15, 0.1);
-    width: 240px;
+    width: 220px;
     overflow: hidden;
     font-family: 'Inter', sans-serif;
     font-size: 11.5px;
+    opacity: 0;
+    transform: translateY(-6px);
+    animation: acFadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) 4.1s forwards;
+    z-index: 10;
+  }
+  @keyframes acFadeIn {
+    to { opacity: 1; transform: translateY(0); }
   }
   .autocomplete .ac-item {
     display: flex;
@@ -493,160 +359,19 @@ const headAfter = parts[1] ?? '';
     font-family: 'JetBrains Mono', monospace;
   }
 
-  /* Status bar */
-  /* ── Team chat panel ── */
-  .chat {
-    background: #fafaf9;
-    display: flex;
-    flex-direction: column;
-    font-family: 'Inter', system-ui, sans-serif;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-  }
-  .chat-head {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--db-text-soft, #3A3A42);
-    background: #ffffff;
-  }
-  .chat-head svg { color: var(--db-primary, #2DA31E); flex-shrink: 0; }
-  .chat-head .chat-count {
-    margin-left: auto;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 100px;
-    background: rgba(65, 205, 42, 0.10);
-    border: 1px solid rgba(65, 205, 42, 0.25);
-    color: var(--db-primary, #2DA31E);
-    text-transform: none;
-    letter-spacing: 0.02em;
-  }
-  .chat-msgs {
-    flex: 1;
-    padding: 12px 10px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    overflow: hidden;
-  }
-  .chat-msgs .msg {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .chat-msgs .msg-av {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-size: 10px;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .chat-msgs .av-sarah { background: #EC4899; }
-  .chat-msgs .av-marc { background: #2DA31E; }
-  .chat-msgs .av-julien { background: #6366F1; }
-  .chat-msgs .msg-body { min-width: 0; flex: 1; }
-  .chat-msgs .msg-meta {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 10px;
-    color: #9a9aa0;
-    margin-bottom: 2px;
-  }
-  .chat-msgs .msg-meta b {
-    font-weight: 700;
-    color: var(--db-text, #0A0A0B);
-    font-size: 10.5px;
-  }
-  .chat-msgs .msg-meta time {
-    font-weight: 500;
-    color: #b0b0b6;
-  }
-  .chat-msgs .msg-meta .typing-label {
-    font-style: italic;
-    color: #b0b0b6;
-  }
-  .chat-msgs .msg-text {
-    font-size: 11px;
-    color: var(--db-text-soft, #3A3A42);
-    line-height: 1.45;
-    word-wrap: break-word;
-  }
-  .chat-msgs .msg-text code {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    padding: 1px 5px;
-    border-radius: 4px;
-    background: rgba(65, 205, 42, 0.12);
-    color: var(--db-primary, #2DA31E);
-    border: 1px solid rgba(65, 205, 42, 0.22);
-  }
-  .chat-msgs .typing-dots {
-    display: inline-flex;
-    gap: 3px;
-    padding: 4px 0 0;
-  }
-  .chat-msgs .typing-dots span {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #6366F1;
-    animation: chatTypingDots 1.2s ease-in-out infinite;
-  }
-  .chat-msgs .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
-  .chat-msgs .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes chatTypingDots {
-    0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
-    30% { opacity: 1; transform: scale(1); }
-  }
-  .chat-input {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 10px;
-    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
-    background: #ffffff;
-    font-size: 10.5px;
-    color: #b0b0b6;
-  }
-  .chat-input span { flex: 1; }
-  .chat-input svg {
-    color: #ffffff;
-    background: var(--db-primary, #2DA31E);
-    padding: 5px;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    box-sizing: border-box;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .ghost.sarah,
-    .ghost.julien {
-      animation: ghostBlink 1s step-end infinite !important;
+    .editor .typed {
+      animation: none !important;
+      max-width: none;
     }
-    .chat-msgs .typing-dots span { animation: none; }
+    .autocomplete {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
   }
 
-  @media (max-width: 980px) {
-    .mock-body { grid-template-columns: 1fr; }
-    .editor { border-right: 0; border-bottom: 1px solid var(--db-border-subtle, #EDEDF0); }
-  }
-
+  /* Status bar */
   .mock .statusbar {
     display: flex;
     align-items: center;

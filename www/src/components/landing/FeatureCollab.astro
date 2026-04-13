@@ -88,23 +88,43 @@ const headAfter = parts[1] ?? '';
                 <div class="av" style="background:#6366F1">J</div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="sq-item">
-              <svg class="code-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-              <div class="info">
-                <div class="name">top_customers</div>
-                <div class="meta">
-                  <span>Edited last week by Marc</span>
-                  <span>·</span>
-                  <span>v4</span>
-                </div>
+        <aside class="chat">
+          <div class="chat-head">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>regions_by_revenue</span>
+            <span class="chat-count">3</span>
+          </div>
+          <div class="chat-msgs">
+            <div class="msg">
+              <div class="msg-av av-sarah">S</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>Sarah</b><time>2m</time></div>
+                <div class="msg-text">email is not unique across orgs — use <code>u.org_id</code></div>
               </div>
-              <div class="avatars">
-                <div class="av" style="background:#2DA31E">M</div>
+            </div>
+            <div class="msg">
+              <div class="msg-av av-marc">M</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>Marc</b><time>now</time></div>
+                <div class="msg-text">good point, switching 👍</div>
+              </div>
+            </div>
+            <div class="msg msg-typing">
+              <div class="msg-av av-julien">J</div>
+              <div class="msg-body">
+                <div class="msg-meta"><b>Julien</b><span class="typing-label">is typing</span></div>
+                <div class="typing-dots"><span></span><span></span><span></span></div>
               </div>
             </div>
           </div>
-        </div>
+          <div class="chat-input">
+            <span>Reply to the team…</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </div>
+        </aside>
       </div>
     </div>
   </div>
@@ -319,6 +339,161 @@ const headAfter = parts[1] ?? '';
   }
   .collab-mock .sq-item .avatars .av:first-child {
     margin-left: 0;
+  }
+
+  /* ── Chat panel (stacked below the team queries list) ── */
+  .chat {
+    margin-top: 14px;
+    background: #fff;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    box-shadow:
+      0 40px 80px -24px rgba(10, 10, 15, 0.18),
+      0 16px 32px -16px rgba(10, 10, 15, 0.10);
+  }
+  .chat-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--db-text-soft, #3A3A42);
+    background: #fdfdfc;
+  }
+  .chat-head svg { color: var(--db-primary, #2DA31E); flex-shrink: 0; }
+  .chat-head span:not(.chat-count) {
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: none;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0;
+    color: var(--db-text, #0A0A0B);
+  }
+  .chat-head .chat-count {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.10);
+    border: 1px solid rgba(65, 205, 42, 0.25);
+    color: var(--db-primary, #2DA31E);
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .chat-msgs {
+    padding: 14px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .chat-msgs .msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+  }
+  .chat-msgs .msg-av {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .chat-msgs .av-sarah { background: #EC4899; }
+  .chat-msgs .av-marc { background: #2DA31E; }
+  .chat-msgs .av-julien { background: #6366F1; }
+  .chat-msgs .msg-body { min-width: 0; flex: 1; }
+  .chat-msgs .msg-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: 10px;
+    color: #9a9aa0;
+    margin-bottom: 2px;
+  }
+  .chat-msgs .msg-meta b {
+    font-weight: 700;
+    color: var(--db-text, #0A0A0B);
+    font-size: 11px;
+  }
+  .chat-msgs .msg-meta time {
+    font-weight: 500;
+    color: #b0b0b6;
+  }
+  .chat-msgs .msg-meta .typing-label {
+    font-style: italic;
+    color: #b0b0b6;
+  }
+  .chat-msgs .msg-text {
+    font-size: 12px;
+    color: var(--db-text-soft, #3A3A42);
+    line-height: 1.5;
+    word-wrap: break-word;
+  }
+  .chat-msgs .msg-text code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(65, 205, 42, 0.12);
+    color: var(--db-primary, #2DA31E);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+  }
+  .chat-msgs .typing-dots {
+    display: inline-flex;
+    gap: 4px;
+    padding: 5px 0 0;
+  }
+  .chat-msgs .typing-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6366F1;
+    animation: chatTypingDots 1.2s ease-in-out infinite;
+  }
+  .chat-msgs .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .chat-msgs .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes chatTypingDots {
+    0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+  }
+  .chat-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
+    background: #fdfdfc;
+    font-size: 11px;
+    color: #b0b0b6;
+  }
+  .chat-input span { flex: 1; }
+  .chat-input svg {
+    color: #fff;
+    background: var(--db-primary, #2DA31E);
+    padding: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chat-msgs .typing-dots span { animation: none; }
   }
 
   @media (max-width: 980px) {
