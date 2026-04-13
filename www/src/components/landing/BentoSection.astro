@@ -450,43 +450,79 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
   .lvl .bar .seg.fill-3 { background: #fb923c; }
   .lvl .bar .seg.fill-4 { background: var(--db-destructive); }
   .lvl .name { flex: 1; font-weight: 500; }
+  @property --alarm-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  @property --alarm-angle-2 {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
   .lvl.active {
     background: rgba(220, 38, 38, 0.06);
     border-color: rgba(220, 38, 38, 0.22);
     color: var(--db-destructive);
     font-weight: 600;
     position: relative;
-    overflow: hidden;
     transition: background 0.3s ease, border-color 0.3s ease;
   }
+  /* Primary rotating red border — ported from the old site (in red) */
   .lvl.active::before {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
-    border-radius: 4px;
+    border-radius: 5px;
     padding: 2px;
     background: conic-gradient(
-      from 0deg,
+      from var(--alarm-angle),
       transparent 0%,
-      #DC2626 12%,
-      #ff3b3b 22%,
-      transparent 34%,
-      transparent 50%,
-      #DC2626 62%,
-      #ff3b3b 72%,
-      transparent 84%,
+      transparent 25%,
+      #DC2626 35%,
+      #ff4444 42%,
+      #DC2626 49%,
+      transparent 60%,
       transparent 100%
     );
     -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
             mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
             mask-composite: exclude;
     opacity: 0;
     transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  /* Secondary blurred trail for depth */
+  .lvl.active::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 6px;
+    padding: 3px;
+    background: conic-gradient(
+      from var(--alarm-angle-2),
+      transparent 0%,
+      transparent 30%,
+      rgba(220, 38, 38, 0.85) 40%,
+      transparent 50%,
+      transparent 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+            mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    filter: blur(4px);
     pointer-events: none;
   }
   .bcard:hover .lvl.active {
@@ -495,13 +531,21 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
   }
   .bcard:hover .lvl.active::before {
     opacity: 1;
-    animation: alarmSpin 1.4s linear infinite;
+    animation: alarm-spin 3s linear infinite;
   }
-  @keyframes alarmSpin {
-    to { transform: rotate(1turn); }
+  .bcard:hover .lvl.active::after {
+    opacity: 1;
+    animation: alarm-spin-glow 3s linear infinite;
+  }
+  @keyframes alarm-spin {
+    to { --alarm-angle: 360deg; }
+  }
+  @keyframes alarm-spin-glow {
+    to { --alarm-angle-2: 360deg; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .bcard:hover .lvl.active::before { animation: none; }
+    .bcard:hover .lvl.active::before,
+    .bcard:hover .lvl.active::after { animation: none; }
   }
 
   /* ── i18n card ── */
