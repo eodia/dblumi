@@ -207,7 +207,7 @@ const en: LandingStrings = {
   ask: {
     label: "AI Copilot",
     headline: "Your database {{accent}}talks back.",
-    lead: "Ask in plain English or French. The copilot <strong>sees your whole schema</strong> — every table, column, relationship — and writes queries that actually run. Bring your own key: <strong>Anthropic, OpenAI, Azure or Ollama</strong>.",
+    lead: "The copilot <strong>sees your whole schema</strong> — every table, column, relationship — and writes queries that actually run. Bring your own key: <strong>Anthropic, OpenAI, Azure or Ollama</strong>.",
     bullets: [
       "Natural language → working SQL, grounded in your schema",
       "Explain, optimize, or debug any query in-place",
@@ -448,7 +448,7 @@ const fr: LandingStrings = {
   ask: {
     label: "Copilot IA",
     headline: "Ta base de données {{accent}}te répond.",
-    lead: "Pose tes questions en anglais ou en français. Le copilot <strong>voit tout ton schéma</strong> — chaque table, colonne, relation — et écrit des requêtes qui tournent vraiment. Ta clé, ton IA : <strong>Anthropic, OpenAI, Azure ou Ollama</strong>.",
+    lead: "Le copilot <strong>voit tout ton schéma</strong> — chaque table, colonne, relation — et écrit des requêtes qui tournent vraiment. Ta clé, ton IA : <strong>Anthropic, OpenAI, Azure ou Ollama</strong>.",
     bullets: [
       "Langage naturel → SQL qui fonctionne, grounded sur ton schéma",
       "Explique, optimise ou débogue n'importe quelle requête sur place",
