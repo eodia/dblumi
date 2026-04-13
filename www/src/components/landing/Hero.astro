@@ -775,18 +775,18 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   .editor {
     flex: 1 1 auto;
     min-height: 120px;
-    padding: 10px 0;
+    padding: 8px 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     line-height: 1.8;
     color: var(--db-text-soft);
     position: relative;
     overflow: hidden;
-    background: linear-gradient(to right, #fafaf9 0 44px, transparent 44px);
+    background: #fff;
   }
   .editor-empty {
     position: absolute;
-    inset: 12px 12px auto 58px;
+    inset: 14px 14px auto 60px;
     color: #c5c5ca;
     font-style: italic;
     font-family: 'Inter', sans-serif;
@@ -794,37 +794,44 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     transition: opacity 0.3s;
   }
   .editor.has-content .editor-empty { opacity: 0; pointer-events: none; }
-  .line {
+  /* Runtime-created elements need :global() since Astro scoping only tags build-time DOM */
+  .editor :global(.line) {
     display: flex;
-    align-items: center;
-    padding: 0 16px 0 0;
+    align-items: stretch;
+    padding: 0;
     white-space: nowrap;
-    min-height: 22px;
+    min-height: 24px;
     position: relative;
   }
-  .line:hover { background: rgba(65, 205, 42, 0.04); }
-  .ln {
+  .editor :global(.line:hover) { background: rgba(65, 205, 42, 0.04); }
+  .editor :global(.ln) {
     color: #b0b0b6;
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-    width: 30px;
-    padding: 0 8px 0 0;
-    margin-right: 8px;
+    width: 44px;
+    padding: 0 14px 0 0;
     flex-shrink: 0;
     user-select: none;
     font-size: 10.5px;
     font-weight: 500;
     border-right: 1px solid var(--db-border-subtle);
-    min-height: 22px;
+    background: #fafaf9;
     box-sizing: border-box;
   }
-  .code { flex: 1; position: relative; }
-  .kw { color: #c026d3; font-weight: 600; }
-  .fn { color: #8b5cf6; font-weight: 500; }
-  .str { color: #059669; }
-  .cm { color: #94a3b8; font-style: italic; }
-  .cursor {
+  .editor :global(.code) {
+    flex: 1;
+    position: relative;
+    padding: 2px 14px;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .editor :global(.kw) { color: #c026d3; font-weight: 600; }
+  .editor :global(.fn) { color: #8b5cf6; font-weight: 500; }
+  .editor :global(.str) { color: #059669; }
+  .editor :global(.cm) { color: #94a3b8; font-style: italic; }
+  .editor :global(.cursor) {
     display: inline-block;
     width: 2px;
     height: 15px;
