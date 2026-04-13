@@ -1,0 +1,72 @@
+---
+// www/src/components/landing/FAQ.astro
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].faq;
+---
+
+<section class="db-faq-sec">
+  <h2>{t.title}</h2>
+  <div class="db-faq">
+    {t.items.map((item, i) => (
+      <details class="db-faq-item" open={i === 0}>
+        <summary class="q">
+          {item.q}
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="a">{item.a}</div>
+      </details>
+    ))}
+  </div>
+</section>
+
+<style>
+  .db-faq-sec {
+    padding: 88px 40px;
+    background: var(--db-alt-bg);
+    border-radius: 20px;
+    max-width: 1200px;
+    margin: 24px auto;
+  }
+  .db-faq-sec h2 {
+    font-size: 38px; font-weight: 800;
+    letter-spacing: -0.025em; line-height: 1;
+    margin: 0 0 40px;
+    text-align: center;
+    color: var(--db-text);
+  }
+  .db-faq {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .db-faq-item {
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+  }
+  .db-faq-item .q {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14px; font-weight: 600;
+    color: var(--db-text);
+    list-style: none;
+  }
+  .db-faq-item .q::-webkit-details-marker { display: none; }
+  .db-faq-item .q .chev {
+    margin-left: auto;
+    transition: transform 0.2s;
+    color: var(--db-muted-fg);
+  }
+  .db-faq-item[open] .q .chev { transform: rotate(180deg); }
+  .db-faq-item .a {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--db-border-subtle);
+    font-size: 13px; color: var(--db-muted-fg);
+    line-height: 1.55;
+  }
+</style>
