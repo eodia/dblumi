@@ -163,9 +163,22 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const payload: CreateConnectionInput = {
+        name: form.name,
+        driver: form.driver,
+        ssl: form.ssl,
+        ...(form.host ? { host: form.host } : {}),
+        ...(form.port != null ? { port: form.port } : {}),
+        ...(form.database ? { database: form.database } : {}),
+        ...(form.username ? { username: form.username } : {}),
+        ...(form.password ? { password: form.password } : {}),
+        ...(form.filePath ? { filePath: form.filePath } : {}),
+        ...(form.color ? { color: form.color } : {}),
+        ...(form.environment ? { environment: form.environment } : {}),
+      }
       const result = editing
-        ? await connectionsApi.update(editing.id, form)
-        : await connectionsApi.create(form)
+        ? await connectionsApi.update(editing.id, payload)
+        : await connectionsApi.create(payload)
       // Save share assignments if admin
       if (isAdmin) {
         const connId = editing?.id ?? result.connection.id
