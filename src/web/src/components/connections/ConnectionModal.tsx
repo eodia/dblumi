@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { CheckCircle, XCircle, Loader2, Link2, FormInput } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Link2, FormInput, Copy, Check } from 'lucide-react'
 import { DriverIcon } from '@/components/ui/driver-icon'
 import { ComboboxChips } from '@/components/ui/combobox-chips'
 import { connectionsApi, type Connection, type CreateConnectionInput, type DbDriver } from '@/api/connections'
@@ -134,6 +134,30 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
   const [parseError, setParseError] = useState('')
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const [testing, setTesting] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const buildConnectionString = (): string => {
+    if (form.driver === 'sqlite') return `sqlite://${form.filePath ?? ''}`
+    const scheme = form.driver === 'mysql' ? 'mysql' : form.driver === 'oracle' ? 'oracle' : 'postgresql'
+    const user = encodeURIComponent(form.username ?? '')
+    const pwd = form.password ? encodeURIComponent(form.password) : '<password>'
+    const auth = user ? `${user}:${pwd}@` : ''
+    const host = form.host ?? ''
+    const port = form.port != null ? `:${form.port}` : ''
+    const db = form.database ? `/${form.database}` : ''
+    const ssl = form.ssl ? '?sslmode=require' : ''
+    return `${scheme}://${auth}${host}${port}${db}${ssl}`
+  }
+
+  const handleCopyString = async () => {
+    try {
+      await navigator.clipboard.writeText(buildConnectionString())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // noop
+    }
+  }
 
   const set = <K extends keyof CreateConnectionInput>(k: K, v: CreateConnectionInput[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
@@ -408,10 +432,18 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
           <Separator />
 
           <DialogFooter className="flex-row justify-between sm:justify-between">
-            <Button type="button" variant="ghost" size="sm" onClick={handleTest} disabled={testing || (form.driver === 'sqlite' ? !form.filePath : !form.host)}>
-              {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {t('conn.test')}
-            </Button>
+            <div className="flex gap-1">
+              <Button type="button" variant="ghost" size="sm" onClick={handleTest} disabled={testing || (form.driver === 'sqlite' ? !form.filePath : !form.host)}>
+                {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {t('conn.test')}
+              </Button>
+              {editing && (
+                <Button type="button" variant="ghost" size="sm" onClick={handleCopyString}>
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? t('conn.copied') : t('conn.copyString')}
+                </Button>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={onClose}>
                 {t('conn.cancel')}

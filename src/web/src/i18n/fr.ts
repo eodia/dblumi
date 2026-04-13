@@ -124,6 +124,8 @@ export const fr = {
   'conn.filePath': 'Chemin du fichier',
   'conn.filePathPlaceholder': '/données/app.db ou :memory:',
   'conn.test': 'Tester',
+  'conn.copyString': 'Copier la chaîne',
+  'conn.copied': 'Copié',
   'conn.testFail': 'Échec de connexion',
   'conn.cancel': 'Annuler',
   'conn.save': 'Enregistrer',
