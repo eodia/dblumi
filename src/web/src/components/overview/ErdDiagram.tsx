@@ -20,6 +20,7 @@ import '@xyflow/react/dist/style.css'
 import { connectionsApi, type SchemaTable } from '@/api/connections'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TableNode, type TableNodeData } from './TableNode'
 
 type Props = { connectionId: string; onNavigate: (page: 'sql-editor' | 'tables') => void }
@@ -169,8 +170,21 @@ export function ErdDiagram({ connectionId, onNavigate }: Props) {
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="h-64 flex items-center justify-center text-xs text-muted-foreground">Loading…</div>
+      <div className="rounded-lg border border-border bg-card p-4 relative">
+        <div className="grid grid-cols-3 gap-6 h-[480px]">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="space-y-2 p-3 rounded-md border border-border bg-surface-raised/30">
+              <Skeleton className="h-4 w-3/4" />
+              <div className="space-y-1.5 pt-2">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-5/6" />
+                <Skeleton className="h-3 w-4/6" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground pointer-events-none">Loading…</div>
       </div>
     )
   }

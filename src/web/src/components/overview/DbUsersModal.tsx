@@ -13,6 +13,7 @@ import { connectionsApi } from '@/api/connections'
 import type { DbUser } from '@/api/db-users'
 import { DbUserList } from './DbUserList'
 import { DbUserForm } from './DbUserForm'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type Props = {
   connectionId: string
@@ -71,8 +72,18 @@ export function DbUsersModal({ connectionId, open, onOpenChange }: Props) {
           {/* Left panel — user list */}
           <div className="w-56 flex-shrink-0 overflow-hidden">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <div className="relative h-full">
+                <div className="space-y-2 p-3">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-2 py-1.5">
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-3 flex-1" style={{ maxWidth: `${60 + ((i * 11) % 35)}%` }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
               </div>
             ) : (
               <DbUserList
