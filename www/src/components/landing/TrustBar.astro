@@ -1,0 +1,64 @@
+---
+// www/src/components/landing/TrustBar.astro
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props {
+  lang: Lang;
+  stars?: number;
+}
+const { lang, stars = 2347 } = Astro.props;
+const t = strings[lang].trust;
+---
+
+<section class="db-trust">
+  <div class="db-trust-label">{t.label}</div>
+  <div class="db-trust-logos">
+    {t.logos.map((logo) => <span class="lg">{logo}</span>)}
+  </div>
+  <a href="https://github.com/eodia/dblumi" class="db-trust-gh">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span class="num">{stars.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US')}</span> {t.starsText}
+  </a>
+</section>
+
+<style>
+  .db-trust {
+    padding: 48px 32px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 20px;
+    max-width: 1200px;
+    margin: 24px auto;
+  }
+  .db-trust-label {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--db-muted-fg);
+    margin-bottom: 22px;
+  }
+  .db-trust-logos {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    flex-wrap: wrap;
+    opacity: 0.55;
+  }
+  .db-trust-logos .lg {
+    font-size: 18px; font-weight: 700;
+    color: var(--db-text-soft);
+    letter-spacing: -0.01em;
+  }
+  .db-trust-gh {
+    margin-top: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: #fdfdfc;
+    border: 1px solid var(--db-border);
+    border-radius: 100px;
+    font-size: 13px; color: var(--db-text-soft);
+  }
+  .db-trust-gh .num { color: var(--db-text); font-weight: 800; font-size: 16px; }
+</style>
