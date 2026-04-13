@@ -1,0 +1,139 @@
+---
+// www/src/components/landing/Pricing.astro
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].pricing;
+const [headBefore, headAfter = ''] = t.headline.split('{{accent}}');
+---
+
+<section id="pricing" class="db-pricing">
+  <h2>{headBefore}<span class="kalam">{headAfter}</span></h2>
+  <p class="sub">{t.sub}</p>
+
+  <div class="db-plans">
+    <div class="db-plan featured">
+      <span class="plan-label">{t.plans.selfHosted.label}</span>
+      <div class="plan-name">{t.plans.selfHosted.name}</div>
+      <div class="plan-price">{t.plans.selfHosted.price}<span class="unit">{t.plans.selfHosted.unit}</span></div>
+      <p class="plan-desc">{t.plans.selfHosted.desc}</p>
+      <ul>
+        {t.plans.selfHosted.bullets.map((b) => (
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {b}
+          </li>
+        ))}
+      </ul>
+      <a class="btn primary" href={lang === 'fr' ? '/fr/guides/installation/' : '/guides/installation/'}>↓ {t.plans.selfHosted.cta}</a>
+    </div>
+
+    <div class="db-plan">
+      <span class="plan-label">{t.plans.enterprise.label}</span>
+      <div class="plan-name">{t.plans.enterprise.name}</div>
+      <div class="plan-price">{t.plans.enterprise.price}</div>
+      <p class="plan-desc">{t.plans.enterprise.desc}</p>
+      <ul>
+        {t.plans.enterprise.bullets.map((b) => (
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {b}
+          </li>
+        ))}
+      </ul>
+      <a class="btn outline" href="mailto:hello@dblumi.dev">{t.plans.enterprise.cta}</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .db-pricing {
+    padding: 88px 40px 96px;
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 20px;
+    text-align: center;
+    max-width: 1200px;
+    margin: 24px auto;
+  }
+  .db-pricing h2 {
+    font-size: 46px; font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    margin: 0 0 12px;
+    color: var(--db-text);
+  }
+  .db-pricing .sub {
+    font-size: 15px;
+    color: var(--db-muted-fg);
+    margin: 0 0 48px;
+  }
+  .db-plans {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  .db-plan {
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 18px;
+    padding: 32px 28px;
+    text-align: left;
+    position: relative;
+  }
+  .db-plan.featured {
+    border-color: var(--db-primary);
+    box-shadow: 0 0 0 4px rgba(65, 205, 42, 0.1);
+  }
+  .db-plan .plan-label {
+    display: inline-block;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--db-muted-fg);
+  }
+  .db-plan.featured .plan-label { color: var(--db-primary); }
+  .db-plan .plan-name { font-size: 22px; font-weight: 800; margin: 6px 0 4px; color: var(--db-text); }
+  .db-plan .plan-price {
+    font-size: 40px; font-weight: 800;
+    color: var(--db-text);
+    margin: 12px 0 4px;
+    letter-spacing: -0.02em; line-height: 1;
+  }
+  .db-plan .plan-price .unit { font-size: 14px; font-weight: 500; color: var(--db-muted-fg); margin-left: 4px; }
+  .db-plan .plan-desc {
+    font-size: 13px; color: var(--db-muted-fg);
+    margin: 0 0 20px; line-height: 1.5;
+  }
+  .db-plan ul {
+    list-style: none; padding: 0;
+    margin: 0 0 24px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .db-plan ul li {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 13px; color: var(--db-text-soft);
+  }
+  .db-plan ul li svg {
+    color: var(--db-primary);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .db-plan .btn {
+    display: block;
+    width: 100%;
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 13.5px; font-weight: 600;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  .db-plan .btn.primary { background: var(--db-primary); color: #fff; }
+  .db-plan .btn.outline { background: #fff; color: var(--db-text); border: 1px solid var(--db-border); }
+  @media (max-width: 700px) {
+    .db-plans { grid-template-columns: 1fr; }
+    .db-pricing h2 { font-size: 34px; }
+  }
+</style>
