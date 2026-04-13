@@ -24,7 +24,6 @@ const m = t.mockup;
     <div class="docker-bar">
       <span class="prompt">$</span>
       {t.dockerCmd}
-      <span class="copy">⎘</span>
     </div>
     <div class="btns">
       <a href={lang === 'fr' ? '/fr/guides/installation/' : '/guides/installation/'} class="btn-p">
@@ -74,7 +73,7 @@ const m = t.mockup;
 
         <!-- Navigation -->
         <nav class="sb-nav">
-          <div class="nav-item" data-view="overview">
+          <div class="nav-item">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             {m.navProject}
           </div>
@@ -392,7 +391,6 @@ const m = t.mockup;
     margin-bottom: 20px; color: var(--db-text-soft);
   }
   .docker-bar .prompt { color: #9a9a9a; }
-  .docker-bar .copy { margin-left: 6px; color: #9a9a9a; cursor: pointer; font-size: 14px; }
   .btns { display: flex; gap: 10px; }
   .btn-p {
     background: var(--db-primary); color: #fff;
