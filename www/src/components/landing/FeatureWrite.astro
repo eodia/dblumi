@@ -376,7 +376,8 @@ const headAfter = parts[1] ?? '';
     top: 72px;
     animation: acPosition 8s ease infinite;
   }
-  /* Popup hops between line 2 (top 72) and line 4 (top 122) */
+  /* Popup hops between line 2 (top 72) and line 4 (top 122),
+     and disappears right after "last_seen" is accepted */
   @keyframes acPosition {
     0%, 13% { opacity: 0; top: 72px; }
     15% { opacity: 1; top: 72px; }        /* appears near line 2 as "SELECT u." is typed */
@@ -385,19 +386,21 @@ const headAfter = parts[1] ?? '';
     /* Jump to line 4 position */
     34% { opacity: 0; top: 122px; }
     36% { opacity: 1; top: 122px; }       /* appears near line 4 as "WHERE u." is typed */
-    44% { opacity: 1; top: 122px; filter: drop-shadow(0 0 10px rgba(65, 205, 42, 0.55)); }
-    48%, 80% { opacity: 1; top: 122px; filter: none; }
-    82%, 94% { opacity: 1; top: 122px; }
-    96%, 100% { opacity: 0; top: 122px; }
+    43% { opacity: 1; top: 122px; }       /* hold on last_seen highlight */
+    44% { opacity: 1; top: 122px; filter: drop-shadow(0 0 12px rgba(65, 205, 42, 0.6)); }
+    46% { opacity: 0; top: 122px; filter: none; } /* disappears right after accept */
+    100% { opacity: 0; top: 122px; }
   }
-  /* Moving selection highlight — jumps to name → email → last_seen at the right moments */
+  /* Moving selection highlight — jumps to name → email → last_seen at the right moments.
+     Positioned inside the .autocomplete which starts below the 1px top border,
+     so we add 1px offset and use exact .ac-item heights (padding 6+15+6+border = 28px). */
   .autocomplete::after {
     content: '';
     position: absolute;
     left: 0;
     right: 0;
-    height: 27px;
-    top: 27px;
+    height: 28px;
+    top: 29px;
     background: rgba(65, 205, 42, 0.14);
     border-left: 2px solid var(--db-primary, #2DA31E);
     box-sizing: border-box;
@@ -407,29 +410,26 @@ const headAfter = parts[1] ?? '';
     animation: acHighlight 8s ease infinite;
   }
   @keyframes acHighlight {
-    /* Start: hidden, parked on "name" row (row 2, top 27) */
-    0%, 14% { top: 27px; opacity: 0; }
-    /* "SELECT u." done → highlight "name" */
-    16% { top: 27px; opacity: 1; }
-    21% { top: 27px; opacity: 1; }
-    /* Accept flash */
-    22% { top: 27px; opacity: 0.35; }
-    /* Wait for ", u." to type, then highlight "email" (row 3, top 54) */
-    23% { top: 54px; opacity: 0; }
-    25% { top: 54px; opacity: 1; }
-    26% { top: 54px; opacity: 1; }
-    /* Accept flash */
-    27% { top: 54px; opacity: 0.35; }
-    /* Hide until line 4 */
-    28%, 35% { top: 54px; opacity: 0; }
-    /* Line 4: highlight "last_seen" (row 4, top 81) */
-    37% { top: 81px; opacity: 0; }
-    41% { top: 81px; opacity: 1; }
-    43% { top: 81px; opacity: 1; }
-    /* Accept flash */
-    44% { top: 81px; opacity: 0.35; }
-    /* Stay hidden while line 4c types */
-    45%, 100% { top: 81px; opacity: 0; }
+    /* Start hidden, parked on name row */
+    0%, 14% { top: 29px; opacity: 0; }
+    /* "SELECT u." done → highlight "name" (row 2) */
+    16% { top: 29px; opacity: 1; }
+    21% { top: 29px; opacity: 1; }
+    22% { top: 29px; opacity: 0.35; }                 /* accept flash */
+    /* Move to "email" (row 3) */
+    23% { top: 57px; opacity: 0; }
+    25% { top: 57px; opacity: 1; }
+    26% { top: 57px; opacity: 1; }
+    27% { top: 57px; opacity: 0.35; }                 /* accept flash */
+    /* Hide during line 3 */
+    28%, 35% { top: 57px; opacity: 0; }
+    /* Highlight "last_seen" (row 4) */
+    37% { top: 85px; opacity: 0; }
+    41% { top: 85px; opacity: 1; }
+    43% { top: 85px; opacity: 1; }
+    44% { top: 85px; opacity: 0.35; }                 /* accept flash */
+    /* Popup disappears just after — keep highlight hidden for the rest */
+    45%, 100% { top: 85px; opacity: 0; }
   }
   .autocomplete .ac-item {
     display: flex;
