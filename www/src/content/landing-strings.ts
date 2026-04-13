@@ -77,6 +77,8 @@ type BentoStrings = {
     erd: { label: string; title: string; desc: string };
     safety: { label: string; title: string; desc: string; levels: string[]; levelActive: string };
     i18n: { label: string; title: string; desc: string };
+    hassle: { label: string; title: string; desc: string };
+    drawer: { label: string; title: string; desc: string };
   };
 };
 
@@ -267,6 +269,16 @@ const en: LandingStrings = {
         label: "i18n",
         title: "Français, {{accent}}English…",
         desc: "Both languages shipped. More coming soon.",
+      },
+      hassle: {
+        label: "One client",
+        title: "Say goodbye to {{accent}}the hassle.",
+        desc: "Stop juggling pgAdmin, DBeaver, TablePlus and a terminal. One tool, every database.",
+      },
+      drawer: {
+        label: "All-in-one",
+        title: "Query, share, {{accent}}done.",
+        desc: "Write SQL, save queries, explain plans, serve JSON APIs, speak MCP — all in one unified workspace.",
       },
     },
   },
@@ -508,6 +520,16 @@ const fr: LandingStrings = {
         label: "i18n",
         title: "Français, {{accent}}English…",
         desc: "Les deux langues sont livrées. D'autres arrivent bientôt.",
+      },
+      hassle: {
+        label: "Un seul outil",
+        title: "Dis adieu à {{accent}}la galère.",
+        desc: "Plus besoin de jongler entre pgAdmin, DBeaver, TablePlus et un terminal. Un seul outil, toutes les bases.",
+      },
+      drawer: {
+        label: "Tout-en-un",
+        title: "Écris, partage, {{accent}}exécute.",
+        desc: "Rédige du SQL, sauvegarde, explain plans, sers des API JSON, parle MCP — tout dans un workspace unifié.",
       },
     },
   },

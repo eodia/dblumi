@@ -19,6 +19,8 @@ const [drvBefore, drvAfter] = accent(t.cards.drivers.title);
 const [erdBefore, erdAfter] = accent(t.cards.erd.title);
 const [safetyBefore, safetyAfter] = accent(t.cards.safety.title);
 const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
+const [hassleBefore, hassleAfter] = accent(t.cards.hassle.title);
+const [drawerBefore, drawerAfter] = accent(t.cards.drawer.title);
 ---
 
 <section class="bento-section">
@@ -184,6 +186,62 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
           <span class="lang-ghost">IT</span>
           <span class="lang-ghost">+</span>
           <span class="soon-label">soon</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Hassle (3) + Drawer (3) -->
+    <div class="bcard span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+        {t.cards.hassle.label}
+      </span>
+      <h3>{hassleBefore}<span class="accent">{hassleAfter}</span></h3>
+      <p>{t.cards.hassle.desc}</p>
+      <div class="visual">
+        <div class="goodbye">
+          <span class="competitor c1" style="--x: -110px; --y: -24px; --r: -14deg;">pgAdmin</span>
+          <span class="competitor c2" style="--x: 85px; --y: -32px; --r: 11deg;">DBeaver</span>
+          <span class="competitor c3" style="--x: -45px; --y: 22px; --r: 16deg;">phpMyAdmin</span>
+          <span class="competitor c4" style="--x: 75px; --y: 34px; --r: -9deg;">DataGrip</span>
+          <span class="competitor c5" style="--x: -115px; --y: 40px; --r: 6deg;">TablePlus</span>
+          <span class="competitor c6" style="--x: 105px; --y: -4px; --r: -7deg;">HeidiSQL</span>
+          <div class="goodbye-core">
+            <img src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/logo-dblumi-light.svg`} alt="dblumi" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+        {t.cards.drawer.label}
+      </span>
+      <h3>{drawerBefore}<span class="accent">{drawerAfter}</span></h3>
+      <p>{t.cards.drawer.desc}</p>
+      <div class="visual">
+        <div class="drawer">
+          <div class="deck-card dc1">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span>Query</span>
+          </div>
+          <div class="deck-card dc2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <span>Share</span>
+          </div>
+          <div class="deck-card dc3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Explain</span>
+          </div>
+          <div class="deck-card dc4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+            <span>API</span>
+          </div>
+          <div class="deck-card dc5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
+            <span>MCP</span>
+          </div>
         </div>
       </div>
     </div>
@@ -632,6 +690,125 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
     .bcard.span-3,
     .bcard.span-4 {
       grid-column: span 1;
+    }
+  }
+
+  /* ── Hassle card — competitor logos fade out on hover ── */
+  .goodbye {
+    position: relative;
+    width: 100%;
+    height: 160px;
+  }
+  .goodbye .competitor {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--r));
+    padding: 5px 11px;
+    background: #ffffff;
+    border: 1px solid var(--db-border);
+    border-radius: 7px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--db-text-soft);
+    box-shadow: 0 4px 12px -4px rgba(10, 10, 15, 0.15);
+    white-space: nowrap;
+    transition:
+      transform 0.65s cubic-bezier(0.55, 0, 0.85, 0.1),
+      opacity 0.45s ease-out,
+      filter 0.5s ease-out;
+  }
+  .goodbye .goodbye-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+    transition:
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s,
+      opacity 0.5s ease-out 0.15s;
+    z-index: 5;
+    padding: 14px 20px;
+    background: #ffffff;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 14px;
+    box-shadow:
+      0 18px 50px -12px rgba(65, 205, 42, 0.4),
+      0 0 0 6px rgba(65, 205, 42, 0.06);
+  }
+  .goodbye .goodbye-core img {
+    display: block;
+    height: 28px;
+    width: auto;
+  }
+  .bcard:hover .goodbye .competitor {
+    transform:
+      translate(-50%, -50%)
+      translate(calc(var(--x) * 2.6), calc(var(--y) * 2.6))
+      rotate(calc(var(--r) * 2.4))
+      scale(0.6);
+    opacity: 0;
+    filter: blur(3px);
+  }
+  .bcard:hover .goodbye .goodbye-core {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  /* ── Drawer card — fan of stacked cards on hover ── */
+  .drawer {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 8px;
+  }
+  .drawer .deck-card {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    width: 68px;
+    height: 84px;
+    margin-left: -34px;
+    background: #ffffff;
+    border: 1px solid var(--db-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--db-text);
+    box-shadow: 0 6px 18px -6px rgba(10, 10, 15, 0.15);
+    transform-origin: 50% 100%;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .drawer .deck-card svg { color: var(--db-primary-vivid); flex-shrink: 0; }
+  /* Initial stacked state — slight offsets for "deck of cards" feel */
+  .drawer .dc1 { z-index: 1; transform: rotate(-3deg) translateY(-1px); }
+  .drawer .dc2 { z-index: 2; transform: rotate(-1deg); }
+  .drawer .dc3 { z-index: 3; transform: rotate(0deg); }
+  .drawer .dc4 { z-index: 4; transform: rotate(1deg); }
+  .drawer .dc5 { z-index: 5; transform: rotate(3deg) translateY(-1px); }
+  /* Fan-out on hover */
+  .bcard:hover .drawer .dc1 { transform: rotate(-28deg); }
+  .bcard:hover .drawer .dc2 { transform: rotate(-14deg); }
+  .bcard:hover .drawer .dc3 { transform: rotate(0deg); }
+  .bcard:hover .drawer .dc4 { transform: rotate(14deg); }
+  .bcard:hover .drawer .dc5 { transform: rotate(28deg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bcard:hover .goodbye .competitor,
+    .bcard:hover .goodbye .goodbye-core,
+    .bcard:hover .drawer .deck-card {
+      transition: none;
     }
   }
 </style>
