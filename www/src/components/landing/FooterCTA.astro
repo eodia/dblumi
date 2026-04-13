@@ -5,6 +5,7 @@ import { strings, type Lang } from '../../content/landing-strings';
 interface Props { lang: Lang; }
 const { lang } = Astro.props;
 const t = strings[lang].cta;
+const dockerCmd = strings[lang].hero.dockerCmd;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
@@ -24,7 +25,33 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       {t.secondary}
     </a>
   </div>
+  <div class="docker-bar">
+    <span class="prompt">$</span>
+    <code class="cmd">{dockerCmd}</code>
+    <button type="button" class="copy" data-cmd={dockerCmd} aria-label="Copy docker command">
+      <svg class="ic-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <svg class="ic-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>
+  </div>
 </section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const copyBtn = document.querySelector<HTMLButtonElement>('.db-cta .docker-bar .copy');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const cmd = copyBtn.dataset.cmd ?? '';
+        try {
+          await navigator.clipboard.writeText(cmd);
+          copyBtn.classList.add('copied');
+          setTimeout(() => copyBtn.classList.remove('copied'), 1500);
+        } catch {
+          /* clipboard unavailable */
+        }
+      });
+    }
+  });
+</script>
 
 <style>
   .db-cta {
@@ -81,9 +108,43 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     color: var(--db-text);
     border: 1px solid var(--db-border);
   }
+  .db-cta .docker-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 28px auto 0;
+    padding: 8px 8px 8px 14px;
+    background: #f7f7f6;
+    border: 1px solid #ececeb;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--db-text-soft);
+    position: relative;
+  }
+  .db-cta .docker-bar .prompt { color: #9a9a9a; }
+  .db-cta .docker-bar .cmd { font-family: inherit; color: inherit; }
+  .db-cta .docker-bar .copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 4px;
+    border-radius: 7px;
+    color: var(--db-muted-fg);
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
+  }
+  .db-cta .docker-bar .copy:hover { background: #edecea; color: var(--db-text); }
+  .db-cta .docker-bar .copy .ic-check { display: none; color: var(--db-primary); }
+  .db-cta .docker-bar .copy.copied .ic-copy { display: none; }
+  .db-cta .docker-bar .copy.copied .ic-check { display: inline-block; }
+
   @media (max-width: 700px) {
     .db-cta { padding: 80px 24px; }
     .db-cta h2 { font-size: 42px; }
     .db-cta .btns { flex-direction: column; }
+    .db-cta .docker-bar { font-size: 11px; max-width: 100%; overflow: hidden; }
   }
 </style>

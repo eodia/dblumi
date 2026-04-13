@@ -22,14 +22,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <span class="l"><span class="kalam brand">{t.headline.accent}</span></span>
     </h1>
     <p class="sub">{t.lead}</p>
-    <div class="docker-bar">
-      <span class="prompt">$</span>
-      <code class="cmd">{t.dockerCmd}</code>
-      <button type="button" class="copy" data-cmd={t.dockerCmd} aria-label="Copy docker command">
-        <svg class="ic-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        <svg class="ic-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
-    </div>
     <div class="btns">
       <a href={lang === 'fr' ? `${base}/fr/guides/installation/` : `${base}/guides/installation/`} class="btn-p">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -387,28 +379,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     font-size: 16px; max-width: 520px;
     margin: 24px 0 28px; line-height: 1.55;
   }
-  .docker-bar {
-    display: inline-flex; align-items: center; gap: 10px;
-    background: #f7f7f6; border: 1px solid #ececeb; border-radius: 10px;
-    padding: 8px 8px 8px 14px;
-    font-family: 'JetBrains Mono', monospace; font-size: 13px;
-    margin-bottom: 20px; color: var(--db-text-soft);
-  }
-  .docker-bar .prompt { color: #9a9a9a; }
-  .docker-bar .cmd { font-family: inherit; color: inherit; }
-  .docker-bar .copy {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px;
-    margin-left: 4px;
-    border-radius: 7px;
-    color: var(--db-muted-fg);
-    background: transparent;
-    transition: background 0.15s, color 0.15s;
-  }
-  .docker-bar .copy:hover { background: #edecea; color: var(--db-text); }
-  .docker-bar .copy .ic-check { display: none; color: var(--db-primary); }
-  .docker-bar .copy.copied .ic-copy { display: none; }
-  .docker-bar .copy.copied .ic-check { display: inline-block; }
   .btns { display: flex; gap: 10px; }
   .btn-p {
     background: var(--db-primary); color: #fff;
@@ -1118,20 +1088,5 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       question: m.animUserQuestion,
       aiIntro: m.animAiIntro,
     });
-
-    // Docker copy button
-    const copyBtn = document.querySelector<HTMLButtonElement>('.docker-bar .copy');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', async () => {
-        const cmd = copyBtn.dataset.cmd ?? '';
-        try {
-          await navigator.clipboard.writeText(cmd);
-          copyBtn.classList.add('copied');
-          setTimeout(() => copyBtn.classList.remove('copied'), 1500);
-        } catch {
-          /* clipboard unavailable — silently fail */
-        }
-      });
-    }
   });
 </script>
