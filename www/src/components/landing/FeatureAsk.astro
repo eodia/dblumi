@@ -1,0 +1,335 @@
+---
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].ask;
+
+const parts = t.headline.split('{{accent}}');
+const headBefore = parts[0] ?? '';
+const headAfter = parts[1] ?? '';
+---
+
+<section class="db-feat-ask">
+  <div class="wrap">
+    <div class="row rev">
+      <div class="text">
+        <span class="label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
+          {t.label}
+        </span>
+        <h2>{headBefore}<span class="kalam">{headAfter}</span></h2>
+        <p class="lead" set:html={t.lead}></p>
+        <ul class="bullets">
+          {t.bullets.map((b) => (
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="visual">
+        <div class="cop-mock">
+          <div class="hdr">
+            <span class="spark">✦</span>
+            <span class="title">Copilot</span>
+            <span class="sub">Claude Sonnet</span>
+            <span class="spacer"></span>
+            <span class="close">×</span>
+          </div>
+          <div class="convo">
+            <div class="user-msg">Monthly active users by country, last quarter</div>
+            <div class="ai-msg">
+              Here's the query — I joined on <code>users.org_id</code> → <code>orgs.country</code>:
+              <div class="sql-block">
+                <div class="sql-hdr">
+                  <span>sql</span>
+                  <span class="spacer"></span>
+                  <button class="btn">⎘ Copy</button>
+                  <button class="btn primary">▶ Insert</button>
+                </div>
+<pre><span class="kw">SELECT</span> o.country,
+       <span class="fn">DATE_TRUNC</span>(<span class="str">'month'</span>, u.last_seen) <span class="kw">AS</span> m,
+       <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> u.id) <span class="kw">AS</span> mau
+  <span class="kw">FROM</span> users u
+  <span class="kw">JOIN</span> orgs o <span class="kw">ON</span> o.id = u.org_id
+ <span class="kw">WHERE</span> u.last_seen &gt;= <span class="str">'2026-01-01'</span>
+ <span class="kw">GROUP BY</span> o.country, m
+ <span class="kw">ORDER BY</span> m, mau <span class="kw">DESC</span>;</pre>
+              </div>
+            </div>
+          </div>
+          <div class="input-bar">
+            <div class="input">Ask the copilot…</div>
+            <span class="send">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  .db-feat-ask {
+    padding: 96px 56px;
+    background: var(--db-alt-bg, #f8f8f7);
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .db-feat-ask .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .db-feat-ask .row {
+    display: grid;
+    grid-template-columns: 0.9fr 1.2fr;
+    gap: 72px;
+    align-items: center;
+  }
+  .db-feat-ask .row.rev { grid-template-columns: 1.2fr 0.9fr; }
+  .db-feat-ask .row.rev .text { order: 2; }
+  .db-feat-ask .row.rev .visual { order: 1; }
+
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--db-primary, #2DA31E);
+    padding: 5px 10px;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.07);
+    margin-bottom: 22px;
+  }
+  h2 {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.025em;
+    margin: 0 0 20px;
+    color: var(--db-text, #0A0A0B);
+    max-width: 14ch;
+  }
+  h2 .kalam {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    color: var(--db-primary-vivid, #41cd2a);
+  }
+  p.lead {
+    font-size: 16px;
+    color: var(--db-muted-fg, #6B6B76);
+    line-height: 1.6;
+    max-width: 44ch;
+    margin: 0 0 24px;
+  }
+  p.lead :global(strong) {
+    color: var(--db-text, #0A0A0B);
+    font-weight: 600;
+  }
+  ul.bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  ul.bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    line-height: 1.45;
+  }
+  ul.bullets li svg {
+    flex-shrink: 0;
+    color: var(--db-primary, #2DA31E);
+    margin-top: 2px;
+  }
+
+  /* Token colors */
+  .kw { color: #1e40af; font-weight: 500; }
+  .fn { color: #8b5cf6; }
+  .str { color: var(--db-primary, #2DA31E); }
+
+  /* Copilot mockup */
+  .cop-mock {
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 12px;
+    background: var(--db-card, #FFFFFF);
+    overflow: hidden;
+    box-shadow:
+      0 40px 80px -24px rgba(10, 10, 15, 0.20),
+      0 16px 32px -16px rgba(10, 10, 15, 0.12);
+    font-family: 'Inter', sans-serif;
+    max-width: 400px;
+  }
+  .cop-mock .hdr {
+    background: #0a0a0b;
+    color: #fff;
+    padding: 11px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cop-mock .hdr .spark {
+    color: var(--db-primary-vivid, #41cd2a);
+    font-size: 14px;
+  }
+  .cop-mock .hdr .title {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .cop-mock .hdr .sub {
+    font-size: 10px;
+    color: #9a9aa0;
+    margin-left: 2px;
+  }
+  .cop-mock .hdr .spacer { flex: 1; }
+  .cop-mock .hdr .close {
+    color: #9a9aa0;
+    font-size: 14px;
+  }
+
+  .cop-mock .convo {
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #fff;
+  }
+  .cop-mock .user-msg {
+    align-self: flex-end;
+    background: var(--db-primary, #2DA31E);
+    color: #fff;
+    border-radius: 12px 12px 3px 12px;
+    padding: 8px 12px;
+    max-width: 82%;
+    font-size: 12.5px;
+  }
+  .cop-mock .ai-msg {
+    align-self: flex-start;
+    background: #fff;
+    border: 1px solid var(--db-border-subtle, #EDEDF0);
+    border-radius: 12px 12px 12px 3px;
+    padding: 10px 12px;
+    max-width: 94%;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--db-text-soft, #3A3A42);
+  }
+  .cop-mock .ai-msg code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--db-muted, #F0F0F2);
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: var(--db-primary, #2DA31E);
+  }
+  .cop-mock .ai-msg .sql-block {
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--db-border-subtle, #EDEDF0);
+    background: #fdfdfc;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .cop-mock .ai-msg .sql-block .sql-hdr {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    background: #f7f7f6;
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    font-size: 9px;
+    text-transform: uppercase;
+    color: #9a9aa0;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+  }
+  .cop-mock .ai-msg .sql-block .sql-hdr .spacer { flex: 1; }
+  .cop-mock .ai-msg .sql-block .sql-hdr .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    margin-left: 4px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--db-text-soft, #3A3A42);
+    background: transparent;
+    border: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cop-mock .ai-msg .sql-block .sql-hdr .btn.primary {
+    color: var(--db-primary, #2DA31E);
+  }
+  .cop-mock .ai-msg .sql-block pre {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--db-text-soft, #3A3A42);
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .cop-mock .input-bar {
+    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
+    padding: 10px;
+    display: flex;
+    gap: 6px;
+    background: #fdfdfc;
+  }
+  .cop-mock .input-bar .input {
+    flex: 1;
+    background: #fff;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: #b0b0b6;
+    height: 26px;
+    display: flex;
+    align-items: center;
+  }
+  .cop-mock .input-bar .send {
+    width: 28px;
+    height: 28px;
+    background: var(--db-primary, #2DA31E);
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  @media (max-width: 980px) {
+    .db-feat-ask {
+      padding: 56px 24px;
+    }
+    .db-feat-ask .row,
+    .db-feat-ask .row.rev {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+    .db-feat-ask .row.rev .text { order: unset; }
+    .db-feat-ask .row.rev .visual { order: unset; }
+    .cop-mock {
+      max-width: 100%;
+    }
+  }
+</style>
