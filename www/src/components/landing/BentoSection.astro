@@ -405,6 +405,33 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
   .erd-box .tbl { font-weight: 700; color: var(--db-primary); display: block; }
   .erd-box .col { color: #9a9aa0; font-size: 8px; display: block; }
   .erd-lines { position: absolute; inset: 0; pointer-events: none; }
+  .erd-lines path {
+    transition: stroke 0.35s ease, stroke-width 0.35s ease;
+  }
+  .bcard:hover .erd-lines path {
+    stroke: rgba(65, 205, 42, 0.9);
+    stroke-width: 1.6;
+    animation: erdDashFlow 0.9s linear infinite;
+  }
+  @keyframes erdDashFlow {
+    to { stroke-dashoffset: -6; }
+  }
+  .erd-box {
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.45s ease,
+                border-color 0.35s ease;
+  }
+  .bcard:hover .erd-box {
+    border-color: rgba(65, 205, 42, 0.35);
+    box-shadow: 0 6px 16px -6px rgba(65, 205, 42, 0.25);
+  }
+  .bcard:hover .erd-box.users { transform: translate(-2px, -2px); }
+  .bcard:hover .erd-box.orgs { transform: translate(2px, -2px); }
+  .bcard:hover .erd-box.orders { transform: translate(-50%, 2px); }
+  @media (prefers-reduced-motion: reduce) {
+    .bcard:hover .erd-lines path { animation: none; }
+    .bcard:hover .erd-box { transform: none; }
+  }
 
   /* ── Guardrails card ── */
   .levels { display: flex; flex-direction: column; gap: 5px; }
@@ -427,6 +454,46 @@ const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
     background: rgba(220,38,38,0.06);
     border-color: rgba(220,38,38,0.22);
     color: var(--db-destructive); font-weight: 600;
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+  .lvl.active::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 7px;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      #DC2626 30deg,
+      #ef4444 65deg,
+      transparent 100deg,
+      transparent 180deg,
+      #DC2626 210deg,
+      #ef4444 245deg,
+      transparent 280deg,
+      transparent 360deg
+    );
+    z-index: -1;
+    opacity: 0;
+    filter: blur(1px);
+    transition: opacity 0.3s ease;
+  }
+  .bcard:hover .lvl.active {
+    background: rgba(220, 38, 38, 0.10);
+    border-color: rgba(220, 38, 38, 0.4);
+  }
+  .bcard:hover .lvl.active::before {
+    opacity: 0.9;
+    animation: alarmSpin 1.4s linear infinite;
+  }
+  @keyframes alarmSpin {
+    to { transform: rotate(1turn); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bcard:hover .lvl.active::before { animation: none; }
   }
 
   /* ── i18n card ── */
