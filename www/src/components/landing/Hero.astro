@@ -222,8 +222,27 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
         <div class="below-tabs">
           <div class="editor-area">
+            <div class="presence" aria-hidden="true">
+              <span class="presence-label">
+                <span class="dot-live"></span>
+                3 editing
+              </span>
+              <div class="presence-stack">
+                <span class="presence-av av-marc" title="Marc">M</span>
+                <span class="presence-av av-sarah" title="Sarah">S</span>
+                <span class="presence-av av-julien" title="Julien">J</span>
+              </div>
+            </div>
             <div class="editor" id="db-hero-editor">
               <div class="editor-empty" id="db-hero-editor-empty">// Start typing or ask the copilot…</div>
+              <span class="ghost-cursor ghost-sarah" aria-hidden="true">
+                <span class="ghost-bar"></span>
+                <span class="ghost-label">Sarah</span>
+              </span>
+              <span class="ghost-cursor ghost-julien" aria-hidden="true">
+                <span class="ghost-bar"></span>
+                <span class="ghost-label">Julien</span>
+              </span>
             </div>
             <div class="results-wrap" id="db-hero-results">
               <div class="results-toolbar">
@@ -741,6 +760,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     min-height: 0;
     border-right: 1px solid var(--db-border-subtle);
     background: #fff;
+    position: relative;
   }
   .editor {
     flex: 1 1 auto;
@@ -838,6 +858,102 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     box-shadow: 0 0 4px rgba(65, 205, 42, 0.4);
   }
   @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+  /* Collaborative presence badge (top-right of editor area) */
+  .presence {
+    position: absolute;
+    top: 8px; right: 10px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 10px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 100px;
+    box-shadow: 0 2px 6px rgba(10, 10, 15, 0.06);
+    pointer-events: none;
+  }
+  .presence .presence-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--db-muted-fg);
+    text-transform: none;
+  }
+  .presence .dot-live {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--db-primary-vivid);
+    box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.22);
+    animation: livePulse 1.6s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.22); }
+    50% { box-shadow: 0 0 0 5px rgba(65, 205, 42, 0); }
+  }
+  .presence .presence-stack {
+    display: inline-flex;
+  }
+  .presence .presence-av {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    margin-left: -6px;
+    box-shadow: 0 1px 2px rgba(10, 10, 15, 0.08);
+  }
+  .presence .presence-av:first-child { margin-left: 0; }
+  .presence .av-marc { background: #2DA31E; }
+  .presence .av-sarah { background: #EC4899; }
+  .presence .av-julien { background: #6366F1; }
+
+  /* Ghost cursors from other collaborators (fade in during SQL writing) */
+  .ghost-cursor {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+  }
+  .editor.has-content .ghost-cursor {
+    opacity: 1;
+    transition-delay: 1.8s;
+  }
+  .ghost-cursor .ghost-bar {
+    display: block;
+    width: 2px;
+    height: 16px;
+    border-radius: 1px;
+  }
+  .ghost-cursor .ghost-label {
+    position: absolute;
+    top: -14px;
+    left: -2px;
+    padding: 2px 6px;
+    border-radius: 4px 4px 4px 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+  .ghost-sarah { top: 62px; left: 230px; }
+  .ghost-sarah .ghost-bar { background: #EC4899; }
+  .ghost-sarah .ghost-label { background: #EC4899; }
+  .ghost-julien { top: 154px; left: 170px; }
+  .ghost-julien .ghost-bar { background: #6366F1; }
+  .ghost-julien .ghost-label { background: #6366F1; }
 
   /* Results */
   .results-wrap {
