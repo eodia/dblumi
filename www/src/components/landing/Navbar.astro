@@ -7,7 +7,7 @@ interface Props {
   stars?: number;
 }
 
-const { lang, stars = 2300 } = Astro.props;
+const { lang, stars = 0 } = Astro.props;
 const t = strings[lang].nav;
 
 function formatStars(n: number): string {
@@ -31,10 +31,12 @@ const langLabel = lang === 'en' ? 'FR' : 'EN';
       <a href={lang === 'fr' ? `${base}/fr/#pricing` : `${base}/#pricing`}>{t.pricing}</a>
       <a href={lang === 'fr' ? `${base}/fr/blog/` : `${base}/blog/`}>{t.blog}</a>
     </div>
-    <a href="https://github.com/eodia/dblumi" class="db-nav-stars" aria-label={`GitHub ${formatStars(stars)} ${t.stars}`}>
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span class="num">{formatStars(stars)}</span> {t.stars}
-    </a>
+    {stars > 0 && (
+      <a href="https://github.com/eodia/dblumi" class="db-nav-stars" aria-label={`GitHub ${formatStars(stars)} ${t.stars}`}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span class="num">{formatStars(stars)}</span> {t.stars}
+      </a>
+    )}
     <a href={langHref} class="db-nav-lang" aria-label={langLabel}>{langLabel}</a>
     <a href={lang === 'fr' ? `${base}/fr/guides/installation/` : `${base}/guides/installation/`} class="db-nav-login">{t.login}</a>
     <a href={lang === 'fr' ? `${base}/fr/guides/installation/` : `${base}/guides/installation/`} class="db-nav-cta">{t.cta}</a>

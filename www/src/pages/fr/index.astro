@@ -37,7 +37,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
   </head>
   <body>
-    <Navbar lang="fr" stars={githubStars} />
+    <!-- TODO: re-enable stars when repo has some: stars={githubStars} -->
+    <Navbar lang="fr" />
     <Hero lang="fr" />
     <main class="landing-page">
       <div id="features">

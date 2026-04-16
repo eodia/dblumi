@@ -26,11 +26,15 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     </a>
   </div>
   <div class="docker-bar">
+    <span class="docker-ic" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.186m0 2.716h2.118a.187.187 0 00.186-.186V6.29a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.887c0 .102.082.185.185.186m-2.93 0h2.12a.186.186 0 00.184-.186V6.29a.185.185 0 00-.185-.185H8.1a.185.185 0 00-.185.185v1.887c0 .102.083.185.185.186m-2.964 0h2.119a.186.186 0 00.185-.186V6.29a.185.185 0 00-.185-.185H5.136a.186.186 0 00-.186.185v1.887c0 .102.084.185.186.186m5.893 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m-2.93 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 00.185-.185V9.006a.185.185 0 00-.184-.186h-2.12a.186.186 0 00-.186.186v1.887c0 .102.084.185.186.185m-2.92 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.186.185v1.888c0 .102.083.185.186.185M23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-.23.97-.09 1.882.403 2.661-.595.332-1.55.413-1.744.42H.751a.751.751 0 00-.75.748 11.376 11.376 0 00.692 4.062c.545 1.428 1.355 2.48 2.41 3.124 1.18.723 3.1 1.137 5.275 1.137.983.003 1.963-.086 2.93-.266a12.248 12.248 0 003.823-1.389c.98-.567 1.86-1.288 2.61-2.136 1.252-1.418 1.998-2.997 2.553-4.4h.221c1.372 0 2.215-.549 2.68-1.009.309-.293.55-.65.707-1.046l.098-.288Z"/></svg>
+    </span>
     <span class="prompt">$</span>
     <code class="cmd">{dockerCmd}</code>
     <button type="button" class="copy" data-cmd={dockerCmd} aria-label="Copy docker command">
-      <svg class="ic-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      <svg class="ic-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <svg class="ic-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <svg class="ic-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span class="copy-label">Copy</span>
     </button>
   </div>
 </section>
@@ -111,35 +115,90 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   .db-cta .docker-bar {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 11px;
     margin: 28px auto 0;
-    padding: 8px 8px 8px 14px;
-    background: #f7f7f6;
-    border: 1px solid #ececeb;
-    border-radius: 10px;
+    padding: 7px 7px 7px 16px;
+    background: linear-gradient(180deg, #101015 0%, #0a0a0b 100%);
+    border: 1px solid #1f1f24;
+    border-radius: 12px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
-    color: var(--db-text-soft);
+    color: #e5e5ea;
     position: relative;
+    box-shadow:
+      0 18px 40px -18px rgba(10, 10, 15, 0.6),
+      0 0 0 1px rgba(65, 205, 42, 0.08),
+      0 0 24px -4px rgba(65, 205, 42, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: box-shadow 0.25s, transform 0.25s;
   }
-  .db-cta .docker-bar .prompt { color: #9a9a9a; }
-  .db-cta .docker-bar .cmd { font-family: inherit; color: inherit; }
+  .db-cta .docker-bar:hover {
+    box-shadow:
+      0 22px 48px -18px rgba(10, 10, 15, 0.7),
+      0 0 0 1px rgba(65, 205, 42, 0.22),
+      0 0 36px -4px rgba(65, 205, 42, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
+  }
+  .db-cta .docker-bar .docker-ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(65, 205, 42, 0.12);
+    color: var(--db-primary-vivid, #41cd2a);
+    flex-shrink: 0;
+  }
+  .db-cta .docker-bar .prompt {
+    color: var(--db-primary-vivid, #41cd2a);
+    font-weight: 600;
+  }
+  .db-cta .docker-bar .cmd {
+    font-family: inherit;
+    color: #f0f0f0;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
   .db-cta .docker-bar .copy {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    gap: 5px;
+    padding: 6px 12px;
     margin-left: 4px;
-    border-radius: 7px;
-    color: var(--db-muted-fg);
-    background: transparent;
-    transition: background 0.15s, color 0.15s;
+    border-radius: 8px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0a0a0b;
+    background: var(--db-primary-vivid, #41cd2a);
+    border: 0;
+    cursor: pointer;
+    box-shadow: 0 0 14px -2px rgba(65, 205, 42, 0.5);
+    transition: background 0.15s, transform 0.15s, box-shadow 0.2s;
   }
-  .db-cta .docker-bar .copy:hover { background: #edecea; color: var(--db-text); }
-  .db-cta .docker-bar .copy .ic-check { display: none; color: var(--db-primary); }
+  .db-cta .docker-bar .copy:hover {
+    background: #5de847;
+    transform: translateY(-1px);
+    box-shadow: 0 0 18px -2px rgba(65, 205, 42, 0.7);
+  }
+  .db-cta .docker-bar .copy:active { transform: translateY(0); }
+  .db-cta .docker-bar .copy .ic-check { display: none; }
+  .db-cta .docker-bar .copy.copied { background: #9aefa0; }
   .db-cta .docker-bar .copy.copied .ic-copy { display: none; }
   .db-cta .docker-bar .copy.copied .ic-check { display: inline-block; }
+  .db-cta .docker-bar .copy.copied .copy-label::after {
+    content: 'ied!';
+  }
+  .db-cta .docker-bar .copy.copied .copy-label {
+    font-size: 0;
+  }
+  .db-cta .docker-bar .copy.copied .copy-label::after {
+    font-size: 11px;
+    content: 'Copied!';
+  }
 
   @media (max-width: 700px) {
     .db-cta { padding: 80px 24px; }
