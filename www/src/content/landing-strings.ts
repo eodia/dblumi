@@ -79,6 +79,8 @@ type BentoStrings = {
     i18n: { label: string; title: string; desc: string };
     hassle: { label: string; title: string; desc: string };
     drawer: { label: string; title: string; desc: string };
+    versioning: { label: string; title: string; desc: string };
+    game: { label: string; title: string; desc: string; hint: string; score: string };
   };
 };
 
@@ -159,7 +161,7 @@ const en: LandingStrings = {
     lead: "The <strong>modern SQL client</strong> built for developer teams. Write safer queries, get <strong>AI-powered suggestions</strong>, and <strong>share</strong> everything with your team.",
     ctaPrimary: "Self-host now",
     ctaSecondary: "Live demo",
-    dockerCmd: "docker run -d -p 5173:5173 eodia/dblumi:latest",
+    dockerCmd: "docker run -p 5173:5173 eodia/dblumi",
     mockup: {
       envProd: "prod",
       filterTables: "Filter tables…",
@@ -280,6 +282,18 @@ const en: LandingStrings = {
         title: "Query, share, {{accent}}done.",
         desc: "Write SQL, save queries, explain plans, serve JSON APIs, speak MCP — all in one unified workspace.",
       },
+      versioning: {
+        label: "Version history",
+        title: "Track every change, {{accent}}restore any version.",
+        desc: "Every save creates a version. Browse the full timeline of a query, compare any two versions side by side, and restore a previous version in one click.",
+      },
+      game: {
+        label: "Easter egg",
+        title: "See how painful it was {{accent}}before dblumi.",
+        desc: "Remember juggling 4 clients, 12 tabs, and a terminal? Us neither. We blocked it out. But we did make a game about it — collect every database before the bugs catch you.",
+        hint: "Arrow keys",
+        score: "Databases",
+      },
     },
   },
   pricing: {
@@ -367,7 +381,7 @@ const en: LandingStrings = {
         title: "Developers",
         links: [
           { label: "Docs", href: "/guides/introduction/" },
-          { label: "API reference", href: "/api/" },
+          { label: "API reference", href: "/api-docs/" },
           { label: "MCP server", href: "/guides/mcp/" },
           { label: "GitHub", href: "https://github.com/eodia/dblumi" },
         ],
@@ -375,10 +389,9 @@ const en: LandingStrings = {
       company: {
         title: "Company",
         links: [
-          { label: "About", href: "/about/" },
+          { label: "About", href: "https://eodia.com" },
           { label: "Blog", href: "/blog/" },
           { label: "Contact", href: "mailto:hello@dblumi.dev" },
-          { label: "Brand", href: "/brand/" },
         ],
       },
       legal: {
@@ -410,7 +423,7 @@ const fr: LandingStrings = {
     lead: "Le <strong>client SQL moderne</strong> pensé pour les équipes de développement. Écris des requêtes plus sûres, profite des <strong>suggestions de l'IA</strong>, et <strong>partage</strong> tout avec ton équipe.",
     ctaPrimary: "Héberger maintenant",
     ctaSecondary: "Démo live",
-    dockerCmd: "docker run -d -p 5173:5173 eodia/dblumi:latest",
+    dockerCmd: "docker run -p 5173:5173 eodia/dblumi",
     mockup: {
       envProd: "prod",
       filterTables: "Filtrer les tables…",
@@ -531,6 +544,18 @@ const fr: LandingStrings = {
         title: "Écris, partage, {{accent}}exécute.",
         desc: "Rédige du SQL, sauvegarde, explain plans, sers des API JSON, parle MCP — tout dans un workspace unifié.",
       },
+      versioning: {
+        label: "Historique",
+        title: "Chaque modif tracée, {{accent}}chaque version restaurable.",
+        desc: "Chaque sauvegarde crée une version. Parcours la timeline complète d'une requête, compare deux versions côte à côte, et restaure une version précédente en un clic.",
+      },
+      game: {
+        label: "Easter egg",
+        title: "Revivez l'enfer d'{{accent}}avant dblumi.",
+        desc: "4 clients, 12 onglets, un terminal qui plante et des erreurs SQL inexplicables. On a refoulé ces souvenirs. Mais on en a quand même fait un jeu — récupère toutes tes bases avant que les bugs ne t'attrapent.",
+        hint: "Flèches",
+        score: "Bases",
+      },
     },
   },
   pricing: {
@@ -618,7 +643,7 @@ const fr: LandingStrings = {
         title: "Développeurs",
         links: [
           { label: "Docs", href: "/fr/guides/introduction/" },
-          { label: "Référence API", href: "/fr/api/" },
+          { label: "Référence API", href: "/api-docs/" },
           { label: "Serveur MCP", href: "/fr/guides/mcp/" },
           { label: "GitHub", href: "https://github.com/eodia/dblumi" },
         ],
@@ -626,10 +651,9 @@ const fr: LandingStrings = {
       company: {
         title: "Entreprise",
         links: [
-          { label: "À propos", href: "/fr/about/" },
+          { label: "À propos", href: "https://eodia.com" },
           { label: "Blog", href: "/fr/blog/" },
           { label: "Contact", href: "mailto:hello@dblumi.dev" },
-          { label: "Marque", href: "/fr/brand/" },
         ],
       },
       legal: {
