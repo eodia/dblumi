@@ -1,0 +1,92 @@
+---
+import '../../../styles/landing.css';
+import Navbar from '../../../components/landing/Navbar.astro';
+import SiteFooter from '../../../components/landing/SiteFooter.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const date = new Date(post.data.date);
+const formatted = date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{post.data.title} — dblumi blog</title>
+    <meta name="description" content={post.data.description} />
+    <meta property="og:title" content={post.data.title} />
+    <meta property="og:description" content={post.data.description} />
+    <meta property="og:type" content="article" />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <Navbar lang="fr" />
+    <main class="blog-post">
+      <a href={`${base}/fr/blog/`} class="back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Tous les articles
+      </a>
+
+      <article>
+        <div class="post-meta">
+          <time datetime={date.toISOString()}>{formatted}</time>
+          <span class="sep">·</span>
+          <span class="author">{post.data.author}</span>
+        </div>
+        <h1>{post.data.title}</h1>
+        <div class="tags">
+          {post.data.tags.map((tag: string) => (
+            <span class="tag">{tag}</span>
+          ))}
+        </div>
+        <div class="prose">
+          <Content />
+        </div>
+      </article>
+    </main>
+    <SiteFooter lang="fr" />
+  </body>
+</html>
+
+<style>
+  .blog-post {
+    max-width: 720px; margin: 0 auto; padding: 140px 40px 80px;
+    font-family: 'Inter', system-ui, sans-serif; color: var(--db-text, #0A0A0B);
+  }
+  .back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: var(--db-muted-fg, #6B6B76);
+    text-decoration: none; margin-bottom: 32px; transition: color 0.15s;
+  }
+  .back:hover { color: var(--db-primary, #2DA31E); }
+  .post-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--db-muted-fg, #6B6B76); margin-bottom: 12px; }
+  .post-meta .sep { color: var(--db-border, #E2E2E6); }
+  article h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.15; margin: 0 0 14px; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 36px; }
+  .tag { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; background: rgba(65,205,42,0.08); color: var(--db-primary, #2DA31E); border: 1px solid rgba(65,205,42,0.2); }
+  .prose { line-height: 1.75; font-size: 15px; color: var(--db-text-soft, #3A3A42); }
+  .prose :global(h2) { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 40px 0 12px; color: var(--db-text, #0A0A0B); }
+  .prose :global(h3) { font-size: 17px; font-weight: 700; margin: 28px 0 8px; color: var(--db-text, #0A0A0B); }
+  .prose :global(p) { margin: 0 0 18px; }
+  .prose :global(strong) { color: var(--db-text, #0A0A0B); font-weight: 600; }
+  .prose :global(a) { color: var(--db-primary, #2DA31E); text-decoration: underline; text-decoration-color: rgba(65,205,42,0.35); text-underline-offset: 3px; }
+  .prose :global(ul), .prose :global(ol) { padding-left: 20px; margin: 0 0 18px; }
+  .prose :global(li) { margin-bottom: 6px; }
+  .prose :global(code) { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: rgba(65,205,42,0.08); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(65,205,42,0.18); color: var(--db-primary, #2DA31E); }
+  .prose :global(pre) { background: #0a0a0b; border: 1px solid #1a1a1e; border-radius: 10px; padding: 18px 20px; overflow-x: auto; margin: 0 0 24px; }
+  .prose :global(pre code) { background: transparent; border: 0; padding: 0; color: #e5e5ea; font-size: 13px; line-height: 1.65; }
+  .prose :global(hr) { border: 0; height: 1px; background: var(--db-border, #E2E2E6); margin: 40px 0; }
+  .prose :global(blockquote) { border-left: 3px solid var(--db-primary, #2DA31E); padding: 4px 0 4px 18px; margin: 0 0 18px; color: var(--db-muted-fg, #6B6B76); font-style: italic; }
+  @media (max-width: 700px) { .blog-post { padding: 120px 20px 60px; } article h1 { font-size: 28px; } }
+</style>

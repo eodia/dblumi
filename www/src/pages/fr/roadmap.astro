@@ -1,0 +1,252 @@
+---
+import '../../styles/landing.css';
+import Navbar from '../../components/landing/Navbar.astro';
+import SiteFooter from '../../components/landing/SiteFooter.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Roadmap — dblumi</title>
+    <meta name="description" content="Feuille de route produit de dblumi." />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <Navbar lang="fr" />
+    <main class="roadmap-page">
+      <h1>Roadmap</h1>
+      <p class="intro">Où l'on va. Les priorités évoluent avec les retours de la communauté — <a href="https://github.com/eodia/dblumi/discussions">rejoignez la discussion</a>.</p>
+
+      <div class="timeline">
+
+        <article class="milestone next">
+          <div class="ms-marker"></div>
+          <div class="ms-content">
+            <span class="ms-tag next">Prochainement</span>
+            <h2>v0.2.0</h2>
+            <ul>
+              <li>
+                <strong>Driver MongoDB</strong>
+                <span>Support complet de MongoDB — requêtes, parcours de collections et exploration de documents aux côtés des bases SQL</span>
+              </li>
+              <li>
+                <strong>Serveur MCP</strong>
+                <span>Exposer votre schéma comme serveur Model Context Protocol pour que Claude, GPT et tout agent IA interroge votre base en une ligne de config</span>
+              </li>
+              <li>
+                <strong>Mode sombre</strong>
+                <span>Thème sombre complet pour l'interface applicative, respectant la préférence système</span>
+              </li>
+              <li>
+                <strong>Planificateur de requêtes</strong>
+                <span>Planifier des requêtes sauvegardées sur un cron — avec alertes email en cas d'échec ou dépassement de seuil</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="milestone">
+          <div class="ms-marker"></div>
+          <div class="ms-content">
+            <span class="ms-tag">Planifié</span>
+            <h2>v0.3.0</h2>
+            <ul>
+              <li>
+                <strong>Driver SQL Server</strong>
+                <span>Support de Microsoft SQL Server via tedious — avec exploration des procédures stockées</span>
+              </li>
+              <li>
+                <strong>Dashboards et graphiques</strong>
+                <span>Épingler des résultats de requêtes sous forme de graphiques et KPIs sur un tableau de bord personnalisable</span>
+              </li>
+              <li>
+                <strong>Endpoints API pour requêtes sauvegardées</strong>
+                <span>Exposer les requêtes sauvegardées comme endpoints REST authentifiés avec paramètres nommés, rate limiting et gestion de clés API</span>
+              </li>
+              <li>
+                <strong>Journal d'audit</strong>
+                <span>Tracer qui a exécuté quoi, quand, sur quelle connexion — avec export et politiques de rétention</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="milestone">
+          <div class="ms-marker"></div>
+          <div class="ms-content">
+            <span class="ms-tag">Planifié</span>
+            <h2>v0.4.0</h2>
+            <ul>
+              <li>
+                <strong>Drivers Redis et DynamoDB</strong>
+                <span>Support NoSQL au-delà de MongoDB — parcours de clés, exécution de commandes, visualisation de structures</span>
+              </li>
+              <li>
+                <strong>Webhooks</strong>
+                <span>Déclencher des callbacks HTTP sur des événements de requête, violations de garde-fous ou échecs planifiés</span>
+              </li>
+              <li>
+                <strong>Système de plugins</strong>
+                <span>Extensions communautaires pour drivers, formatteurs et panneaux UI personnalisés</span>
+              </li>
+              <li>
+                <strong>UI mobile-friendly</strong>
+                <span>Mise en page responsive pour tablette et mobile — consultation de requêtes et inspection de résultats en lecture seule</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="milestone">
+          <div class="ms-marker"></div>
+          <div class="ms-content">
+            <span class="ms-tag">En exploration</span>
+            <h2>Futur</h2>
+            <ul>
+              <li>
+                <strong>IA locale Ollama</strong>
+                <span>Intégration de premier plan avec les LLM locaux via Ollama — zéro appel API externe</span>
+              </li>
+              <li>
+                <strong>Lignage de données</strong>
+                <span>Tracer le flux de données au niveau des colonnes à travers les requêtes et vues</span>
+              </li>
+              <li>
+                <strong>Extension VS Code</strong>
+                <span>Exécuter des requêtes et parcourir les schémas directement depuis l'éditeur</span>
+              </li>
+              <li>
+                <strong>Provider Terraform / Pulumi</strong>
+                <span>Gérer connexions, groupes et paramètres en infrastructure-as-code</span>
+              </li>
+              <li>
+                <strong>Langues additionnelles</strong>
+                <span>Allemand, espagnol, italien, portugais, japonais — traductions communautaires</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
+      </div>
+    </main>
+    <SiteFooter lang="fr" />
+  </body>
+</html>
+
+<style>
+  .roadmap-page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 140px 40px 80px;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--db-text, #0A0A0B);
+    line-height: 1.7;
+  }
+  .roadmap-page h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+  }
+  .roadmap-page .intro {
+    font-size: 16px;
+    color: var(--db-muted-fg, #6B6B76);
+    margin: 0 0 48px;
+  }
+  .roadmap-page .intro a {
+    color: var(--db-primary, #2DA31E);
+    text-decoration: underline;
+    text-decoration-color: rgba(65, 205, 42, 0.35);
+    text-underline-offset: 3px;
+  }
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--db-primary, #2DA31E) 0%, rgba(65, 205, 42, 0.15) 100%);
+  }
+  .milestone {
+    position: relative;
+    margin-bottom: 48px;
+  }
+  .ms-marker {
+    position: absolute;
+    left: -32px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--db-border, #E2E2E6);
+    z-index: 1;
+  }
+  .milestone.next .ms-marker {
+    background: var(--db-primary, #2DA31E);
+    border-color: var(--db-primary, #2DA31E);
+    box-shadow: 0 0 0 4px rgba(65, 205, 42, 0.15), 0 0 12px rgba(65, 205, 42, 0.3);
+  }
+  .ms-content {
+    background: #fff;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .milestone.next .ms-content {
+    border-color: rgba(65, 205, 42, 0.35);
+    box-shadow: 0 8px 28px -12px rgba(65, 205, 42, 0.18);
+  }
+  .ms-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--db-muted-fg, #6B6B76);
+    background: var(--db-muted, #F0F0F2);
+    border-radius: 100px;
+    padding: 3px 10px;
+    margin-bottom: 10px;
+  }
+  .ms-tag.next {
+    color: var(--db-primary, #2DA31E);
+    background: rgba(65, 205, 42, 0.1);
+    border: 1px solid rgba(65, 205, 42, 0.3);
+  }
+  .ms-content h2 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 16px;
+  }
+  .ms-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .ms-content li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ms-content li strong { font-size: 14px; font-weight: 700; color: var(--db-text, #0A0A0B); }
+  .ms-content li span { font-size: 13px; color: var(--db-muted-fg, #6B6B76); line-height: 1.5; }
+
+  @media (max-width: 700px) {
+    .roadmap-page { padding: 120px 20px 60px; }
+    .ms-content { padding: 18px; }
+    .ms-content h2 { font-size: 18px; }
+  }
+</style>

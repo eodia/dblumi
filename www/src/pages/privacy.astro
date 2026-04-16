@@ -1,0 +1,237 @@
+---
+import '../styles/landing.css';
+import Navbar from '../components/landing/Navbar.astro';
+import SiteFooter from '../components/landing/SiteFooter.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — dblumi</title>
+    <meta name="description" content="dblumi privacy policy. How we handle your data." />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <Navbar lang="en" />
+    <main class="legal-page">
+
+      <div class="legal-hero">
+        <span class="legal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </span>
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated · April 2026</p>
+      </div>
+
+      <div class="tldr">
+        <strong>TL;DR —</strong> dblumi is self-hosted. Your data stays on your servers. We don't track you, we don't collect your queries, and we don't sell anything to anyone.
+      </div>
+
+      <div class="sections">
+        <section class="card">
+          <div class="card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <div>
+            <h2>Your infrastructure, your data</h2>
+            <p>When you self-host dblumi, <strong>your data never leaves your infrastructure</strong>. We have zero access to your databases, queries, credentials, or AI conversations. Period.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-icon red">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+          </div>
+          <div>
+            <h2>What we don't collect</h2>
+            <ul>
+              <li>Database credentials or connection strings</li>
+              <li>SQL queries or query results</li>
+              <li>Schema metadata</li>
+              <li>AI copilot conversations</li>
+              <li>User-generated content of any kind</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-icon purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div>
+            <h2>Website analytics</h2>
+            <p>This website may use privacy-friendly, cookie-free analytics to understand traffic patterns. No personal data is collected or shared with third parties.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-icon blue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
+          </div>
+          <div>
+            <h2>AI &amp; third-party services</h2>
+            <p>If you use the AI copilot with Anthropic, OpenAI, Azure, or Ollama — your prompts go <strong>directly from your server to the provider</strong>. dblumi never proxies or stores this traffic. GitHub interactions are governed by GitHub's own policy.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-icon amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <h2>Cookies</h2>
+            <p>This website does not use tracking cookies. The self-hosted application uses session cookies <strong>for authentication only</strong> — no analytics, no fingerprinting, no third-party scripts.</p>
+          </div>
+        </section>
+      </div>
+
+      <div class="contact-bar">
+        Questions? Reach out at <a href="mailto:privacy@eodia.fr">privacy@eodia.fr</a>
+      </div>
+
+    </main>
+    <SiteFooter lang="en" />
+  </body>
+</html>
+
+<style>
+  .legal-page {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 140px 40px 80px;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--db-text, #0A0A0B);
+    line-height: 1.7;
+  }
+
+  .legal-hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .legal-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(65, 205, 42, 0.3), transparent 70%),
+      linear-gradient(135deg, #fff 0%, #f5f7f4 100%);
+    border: 1px solid rgba(65, 205, 42, 0.28);
+    color: var(--db-primary, #2DA31E);
+    box-shadow: 0 12px 32px -10px rgba(65, 205, 42, 0.35), 0 0 0 6px rgba(65, 205, 42, 0.05);
+    margin-bottom: 18px;
+  }
+  .legal-hero h1 {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0 0 6px;
+  }
+  .legal-hero .updated {
+    font-size: 13px;
+    color: var(--db-muted-fg, #6B6B76);
+  }
+
+  .tldr {
+    padding: 18px 22px;
+    border-radius: 12px;
+    background: rgba(65, 205, 42, 0.06);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    margin-bottom: 36px;
+    line-height: 1.6;
+  }
+  .tldr strong {
+    color: var(--db-primary, #2DA31E);
+    font-weight: 700;
+  }
+
+  .sections {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+  .card {
+    display: flex;
+    gap: 18px;
+    padding: 22px 24px;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    border-color: rgba(65, 205, 42, 0.3);
+    box-shadow: 0 8px 24px -12px rgba(65, 205, 42, 0.12);
+  }
+  .card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(65, 205, 42, 0.1);
+    color: var(--db-primary, #2DA31E);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .card-icon.red { background: rgba(220, 38, 38, 0.08); color: #dc2626; }
+  .card-icon.purple { background: rgba(139, 92, 246, 0.08); color: #8b5cf6; }
+  .card-icon.blue { background: rgba(37, 99, 235, 0.08); color: #2563eb; }
+  .card-icon.amber { background: rgba(245, 158, 11, 0.08); color: #d97706; }
+
+  .card h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .card p {
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    margin: 0;
+    line-height: 1.6;
+  }
+  .card ul {
+    padding-left: 18px;
+    margin: 0;
+  }
+  .card li {
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    margin-bottom: 4px;
+  }
+  .card strong {
+    color: var(--db-text, #0A0A0B);
+    font-weight: 600;
+  }
+
+  .contact-bar {
+    text-align: center;
+    padding: 18px;
+    border-radius: 10px;
+    background: var(--db-muted, #F0F0F2);
+    font-size: 14px;
+    color: var(--db-muted-fg, #6B6B76);
+  }
+  .contact-bar a {
+    color: var(--db-primary, #2DA31E);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(65, 205, 42, 0.35);
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 700px) {
+    .legal-page { padding: 120px 20px 60px; }
+    .card { flex-direction: column; gap: 10px; padding: 18px; }
+  }
+</style>
