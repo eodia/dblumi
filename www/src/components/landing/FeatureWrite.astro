@@ -60,33 +60,33 @@ const headAfter = parts[1] ?? '';
               <span class="cursor-bar"></span>
             </div>
 
-            <div class="autocomplete">
-              <div class="ac-item">
+            <div class="autocomplete" data-show="false">
+              <div class="ac-item" data-name="id">
                 <span class="ic key">K</span>
                 <span class="name">id</span>
                 <span class="type">uuid</span>
               </div>
-              <div class="ac-item">
+              <div class="ac-item" data-name="name">
                 <span class="ic">c</span>
                 <span class="name">name</span>
                 <span class="type">text</span>
               </div>
-              <div class="ac-item">
+              <div class="ac-item" data-name="email">
                 <span class="ic">c</span>
                 <span class="name">email</span>
                 <span class="type">text</span>
               </div>
-              <div class="ac-item">
+              <div class="ac-item" data-name="last_seen">
                 <span class="ic">c</span>
                 <span class="name">last_seen</span>
                 <span class="type">timestamp</span>
               </div>
-              <div class="ac-item">
+              <div class="ac-item" data-name="org_id">
                 <span class="ic">c</span>
                 <span class="name">org_id</span>
                 <span class="type">uuid</span>
               </div>
-              <div class="ac-item">
+              <div class="ac-item" data-name="created_at">
                 <span class="ic">c</span>
                 <span class="name">created_at</span>
                 <span class="type">timestamp</span>
@@ -96,6 +96,12 @@ const headAfter = parts[1] ?? '';
                 <span><span class="kbd">↹</span> accept</span>
                 <span style="margin-left:auto">6 columns · AI ranked</span>
               </div>
+            </div>
+
+            <div class="hand-cursor" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#0a0a0b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round">
+                <path d="M5.5 2 L5.5 14 L3.5 12 L2.5 13 L6.5 20 L14.5 20 L16.5 18 L16.5 9 L15 9 L15 12 L14 12 L14 7 L12.5 7 L12.5 12 L11.5 12 L11.5 6 L10 6 L10 12 L9 12 L9 3 L7.5 3 L7.5 14 L6.5 14 L6.5 2 Z"/>
+              </svg>
             </div>
 
             <div class="speed-pill" aria-hidden="true">
@@ -241,7 +247,6 @@ const headAfter = parts[1] ?? '';
   .num { color: #d97706; }
   .op { color: #c026d3; font-weight: 500; }
 
-  /* Solo writer mockup — focused on typing speed + autocomplete */
   .editor {
     padding: 22px 14px 28px;
     min-height: 340px;
@@ -266,80 +271,13 @@ const headAfter = parts[1] ?? '';
     font-size: 11px;
     flex-shrink: 0;
   }
-  /* Each line segment is revealed char-by-char via max-width + steps() */
+  /* Each line segment is revealed by JS via inline max-width transitions */
   .typed {
     display: inline-block;
     overflow: hidden;
     white-space: nowrap;
     max-width: 0;
     vertical-align: bottom;
-  }
-  /* 8s loop — line 1, line 2 split into 4 segments, line 3, line 4 split into 3 */
-  .l1  { animation: typeL1  8s steps(36, end) infinite; }
-  .l2a { animation: typeL2a 8s steps(9, end)  infinite; }
-  .l2b { animation: typeL2b 8s steps(1, end)  infinite; }
-  .l2c { animation: typeL2c 8s steps(4, end)  infinite; }
-  .l2d { animation: typeL2d 8s steps(1, end)  infinite; }
-  .l3  { animation: typeL3  8s steps(12, end) infinite; }
-  .l4a { animation: typeL4a 8s steps(8, end)  infinite; }
-  .l4b { animation: typeL4b 8s steps(1, end)  infinite; }
-  .l4c { animation: typeL4c 8s steps(30, end) infinite; }
-
-  @keyframes typeL1 {
-    0%, 2% { max-width: 0; }
-    10% { max-width: 36ch; }
-    96% { max-width: 36ch; }
-    98%, 100% { max-width: 0; }
-  }
-  /* Line 2: "SELECT u." typed, then "name" accepted, then ", u.", then "email" accepted */
-  @keyframes typeL2a {
-    0%, 14% { max-width: 0; }
-    19% { max-width: 9ch; }
-    96% { max-width: 9ch; }
-    98%, 100% { max-width: 0; }
-  }
-  @keyframes typeL2b {
-    0%, 21% { max-width: 0; }
-    22% { max-width: 4ch; }
-    96% { max-width: 4ch; }
-    98%, 100% { max-width: 0; }
-  }
-  @keyframes typeL2c {
-    0%, 22% { max-width: 0; }
-    24% { max-width: 4ch; }
-    96% { max-width: 4ch; }
-    98%, 100% { max-width: 0; }
-  }
-  @keyframes typeL2d {
-    0%, 26% { max-width: 0; }
-    27% { max-width: 5ch; }
-    96% { max-width: 5ch; }
-    98%, 100% { max-width: 0; }
-  }
-  @keyframes typeL3 {
-    0%, 29% { max-width: 0; }
-    33% { max-width: 12ch; }
-    96% { max-width: 12ch; }
-    98%, 100% { max-width: 0; }
-  }
-  /* Line 4: "WHERE u." typed, then "last_seen" accepted, then " >= NOW() - INTERVAL '30 days'" typed slowly */
-  @keyframes typeL4a {
-    0%, 35% { max-width: 0; }
-    40% { max-width: 8ch; }
-    96% { max-width: 8ch; }
-    98%, 100% { max-width: 0; }
-  }
-  @keyframes typeL4b {
-    0%, 43% { max-width: 0; }
-    44% { max-width: 9ch; }
-    96% { max-width: 9ch; }
-    98%, 100% { max-width: 0; }
-  }
-  @keyframes typeL4c {
-    0%, 46% { max-width: 0; }
-    82% { max-width: 30ch; }    /* 36% of 8s = 2.88s for 30 chars — "human slow" */
-    96% { max-width: 30ch; }
-    98%, 100% { max-width: 0; }
   }
 
   /* Local caret blinks at the end of the current input */
@@ -374,75 +312,32 @@ const headAfter = parts[1] ?? '';
     z-index: 10;
     opacity: 0;
     top: 72px;
-    animation: acPosition 8s ease infinite;
-  }
-  /* Popup hops between line 2 (top 72) and line 4 (top 122),
-     and disappears right after "last_seen" is accepted */
-  @keyframes acPosition {
-    0%, 13% { opacity: 0; top: 72px; }
-    15% { opacity: 1; top: 72px; }        /* appears near line 2 as "SELECT u." is typed */
-    28% { opacity: 1; top: 72px; }        /* hold through name + , u. + email accepts */
-    29% { opacity: 0; top: 72px; }
-    /* Jump to line 4 position */
-    34% { opacity: 0; top: 122px; }
-    36% { opacity: 1; top: 122px; }       /* appears near line 4 as "WHERE u." is typed */
-    43% { opacity: 1; top: 122px; }       /* hold on last_seen highlight */
-    44% { opacity: 1; top: 122px; filter: drop-shadow(0 0 12px rgba(65, 205, 42, 0.6)); }
-    46% { opacity: 0; top: 122px; filter: none; } /* disappears right after accept */
-    100% { opacity: 0; top: 122px; }
-  }
-  /* Moving selection highlight — jumps to name → email → last_seen at the right moments.
-     Positioned inside the .autocomplete which starts below the 1px top border,
-     so we add 1px offset and use exact .ac-item heights (padding 6+15+6+border = 28px). */
-  .autocomplete::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 28px;
-    top: 29px;
-    background: rgba(65, 205, 42, 0.14);
-    border-left: 2px solid var(--db-primary, #2DA31E);
-    box-sizing: border-box;
+    transform: translateY(-4px);
     pointer-events: none;
-    opacity: 0;
-    z-index: 1;
-    animation: acHighlight 8s ease infinite;
+    transition: opacity 0.22s ease, transform 0.22s ease;
   }
-  @keyframes acHighlight {
-    /* Start hidden, parked on name row */
-    0%, 14% { top: 29px; opacity: 0; }
-    /* "SELECT u." done → highlight "name" (row 2) */
-    16% { top: 29px; opacity: 1; }
-    21% { top: 29px; opacity: 1; }
-    22% { top: 29px; opacity: 0.35; }                 /* accept flash */
-    /* Move to "email" (row 3) */
-    23% { top: 57px; opacity: 0; }
-    25% { top: 57px; opacity: 1; }
-    26% { top: 57px; opacity: 1; }
-    27% { top: 57px; opacity: 0.35; }                 /* accept flash */
-    /* Hide during line 3 */
-    28%, 35% { top: 57px; opacity: 0; }
-    /* Highlight "last_seen" (row 4) */
-    37% { top: 85px; opacity: 0; }
-    41% { top: 85px; opacity: 1; }
-    43% { top: 85px; opacity: 1; }
-    44% { top: 85px; opacity: 0.35; }                 /* accept flash */
-    /* Popup disappears just after — keep highlight hidden for the rest */
-    45%, 100% { top: 85px; opacity: 0; }
+  .autocomplete[data-show="true"] {
+    opacity: 1;
+    transform: translateY(0);
   }
   .autocomplete .ac-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
     color: var(--db-text-soft, #3A3A42);
     border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    transition: background 0.15s, color 0.15s;
   }
   .autocomplete .ac-item:last-child { border-bottom: 0; }
-  .autocomplete .ac-item.selected {
-    background: rgba(65, 205, 42, 0.10);
+  .autocomplete .ac-item.active {
+    background: rgba(65, 205, 42, 0.12);
     color: var(--db-primary, #2DA31E);
+    box-shadow: inset 2px 0 0 var(--db-primary, #2DA31E);
+  }
+  .autocomplete .ac-item.flash {
+    background: rgba(65, 205, 42, 0.32);
   }
   .autocomplete .ac-item .ic {
     width: 14px;
@@ -458,7 +353,7 @@ const headAfter = parts[1] ?? '';
     font-weight: 700;
     flex-shrink: 0;
   }
-  .autocomplete .ac-item.selected .ic {
+  .autocomplete .ac-item.active .ic {
     background: rgba(65, 205, 42, 0.15);
     color: var(--db-primary, #2DA31E);
   }
@@ -493,6 +388,32 @@ const headAfter = parts[1] ?? '';
     font-family: 'JetBrains Mono', monospace;
   }
 
+  /* Pointer-hand cursor that moves to the clicked row */
+  .hand-cursor {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+    transform: translate(0, 0);
+    transition: transform 0.55s cubic-bezier(0.33, 0.8, 0.3, 1), opacity 0.25s ease;
+    filter: drop-shadow(0 2px 4px rgba(10, 10, 15, 0.35));
+  }
+  .hand-cursor.clicking {
+    transform-origin: 5px 3px;
+  }
+  .hand-cursor.clicking svg {
+    animation: handClick 0.3s ease-out;
+  }
+  @keyframes handClick {
+    0% { transform: scale(1); }
+    45% { transform: scale(0.82); }
+    100% { transform: scale(1); }
+  }
+
   /* Speed pill — floats in the editor's bottom-left corner */
   .speed-pill {
     position: absolute;
@@ -522,13 +443,13 @@ const headAfter = parts[1] ?? '';
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .typed,
+    .typed { max-width: 100ch !important; }
     .autocomplete,
-    .autocomplete .accept-hint,
+    .hand-cursor,
     .speed-pill,
     .cursor-bar { animation: none; }
-    .typed { max-width: 100ch; }
-    .autocomplete { opacity: 1; transform: none; }
+    .autocomplete { display: none; }
+    .hand-cursor { display: none; }
   }
 
   .mock .statusbar {
@@ -562,5 +483,150 @@ const headAfter = parts[1] ?? '';
       width: 100%;
       margin-top: 10px;
     }
+    .hand-cursor { display: none; }
   }
 </style>
+
+<script>
+  // JS-driven choreography: type → popup opens → hand moves to field → click → accept
+  document.querySelectorAll<HTMLElement>('.db-feat-write .mock').forEach((mock) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const editor = mock.querySelector<HTMLElement>('.editor');
+    const ac = mock.querySelector<HTMLElement>('.autocomplete');
+    const hand = mock.querySelector<HTMLElement>('.hand-cursor');
+    if (!editor || !ac || !hand) return;
+
+    const typed = {
+      l1: mock.querySelector<HTMLElement>('.l1'),
+      l2a: mock.querySelector<HTMLElement>('.l2a'),
+      l2b: mock.querySelector<HTMLElement>('.l2b'),
+      l2c: mock.querySelector<HTMLElement>('.l2c'),
+      l2d: mock.querySelector<HTMLElement>('.l2d'),
+      l3: mock.querySelector<HTMLElement>('.l3'),
+      l4a: mock.querySelector<HTMLElement>('.l4a'),
+      l4b: mock.querySelector<HTMLElement>('.l4b'),
+      l4c: mock.querySelector<HTMLElement>('.l4c'),
+    };
+    if (Object.values(typed).some((el) => !el)) return;
+
+    const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+    async function type(el: HTMLElement, chars: number, msPerChar: number) {
+      for (let i = 0; i <= chars; i++) {
+        el.style.maxWidth = i + 'ch';
+        if (i < chars) await sleep(msPerChar);
+      }
+    }
+
+    function instant(el: HTMLElement, chars: number) {
+      el.style.maxWidth = chars + 'ch';
+    }
+
+    function reset() {
+      Object.values(typed).forEach((el) => { el!.style.maxWidth = '0'; });
+      ac!.setAttribute('data-show', 'false');
+      ac!.querySelectorAll('.ac-item').forEach((it) => {
+        it.classList.remove('active', 'flash');
+      });
+      hand!.style.opacity = '0';
+      hand!.style.transform = 'translate(280px, 180px)';
+    }
+
+    function showPopup(top: number) {
+      ac!.style.top = top + 'px';
+      ac!.setAttribute('data-show', 'true');
+    }
+
+    function hidePopup() {
+      ac!.setAttribute('data-show', 'false');
+      ac!.querySelectorAll('.ac-item').forEach((it) => {
+        it.classList.remove('active', 'flash');
+      });
+    }
+
+    async function moveHandTo(itemName: string) {
+      const item = ac!.querySelector<HTMLElement>(`.ac-item[data-name="${itemName}"]`);
+      if (!item) return;
+      // Highlight the target row as the hand approaches
+      ac!.querySelectorAll('.ac-item').forEach((it) => it.classList.remove('active'));
+      item.classList.add('active');
+
+      const editorRect = editor!.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      // Hand SVG tip is at top-left corner; offset so the fingertip lands inside the row
+      const x = itemRect.left - editorRect.left + 24;
+      const y = itemRect.top - editorRect.top + itemRect.height / 2 - 4;
+      hand!.style.opacity = '1';
+      hand!.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    async function clickItem(itemName: string) {
+      const item = ac!.querySelector<HTMLElement>(`.ac-item[data-name="${itemName}"]`);
+      if (!item) return;
+      hand!.classList.add('clicking');
+      item.classList.add('flash');
+      await sleep(180);
+      item.classList.remove('flash');
+      hand!.classList.remove('clicking');
+    }
+
+    async function loop() {
+      while (true) {
+        reset();
+        await sleep(500);
+
+        // Line 1: comment (36 chars)
+        await type(typed.l1!, 36, 28);
+        await sleep(280);
+
+        // Line 2 part a: "SELECT u." (9 chars) — popup opens on the dot
+        await type(typed.l2a!, 9, 55);
+        showPopup(72);
+        await sleep(350);
+        await moveHandTo('name');
+        await sleep(620);
+        await clickItem('name');
+        instant(typed.l2b!, 4);
+        hidePopup();
+        hand!.style.opacity = '0';
+        await sleep(380);
+
+        // Line 2 part c: ", u." (4 chars) — popup re-opens on the dot
+        await type(typed.l2c!, 4, 55);
+        showPopup(72);
+        await sleep(350);
+        await moveHandTo('email');
+        await sleep(600);
+        await clickItem('email');
+        instant(typed.l2d!, 5);
+        hidePopup();
+        hand!.style.opacity = '0';
+        await sleep(420);
+
+        // Line 3: FROM users u (12 chars)
+        await type(typed.l3!, 12, 45);
+        await sleep(320);
+
+        // Line 4 part a: "WHERE u." (8 chars) — popup opens on the dot
+        await type(typed.l4a!, 8, 55);
+        showPopup(122);
+        await sleep(380);
+        await moveHandTo('last_seen');
+        await sleep(700);
+        await clickItem('last_seen');
+        instant(typed.l4b!, 9);
+        hidePopup();
+        hand!.style.opacity = '0';
+        await sleep(350);
+
+        // Line 4 part c: slow-typed tail " >= NOW() - INTERVAL '30 days'" (30 chars)
+        await type(typed.l4c!, 30, 95);
+
+        await sleep(2400);
+      }
+    }
+
+    void loop();
+  });
+</script>
