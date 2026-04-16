@@ -155,6 +155,7 @@ const NAV_ITEMS = [
 ]
 
 import { DriverIcon } from '@/components/ui/driver-icon'
+import { Skeleton } from '@/components/ui/skeleton'
 
 function EnvBadge({ env }: { env: string }) {
   let cls = 'bg-muted text-muted-foreground border-border'
@@ -246,10 +247,20 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
       {/* table + view list — hidden when sidebar is collapsed */}
       <div className="group-data-[collapsible=icon]:hidden overflow-y-auto flex-1 px-1 pb-2">
         {isLoading && (
-          <div className="flex items-center gap-2 px-3 py-3 text-xs text-muted-foreground">
-            <RefreshCw className="h-3 w-3 animate-spin" />
-            {t('common.loading')}
-          </div>
+          <>
+            <div className="flex items-center gap-2 px-3 py-3 text-xs text-muted-foreground">
+              <RefreshCw className="h-3 w-3 animate-spin" />
+              {t('common.loading')}
+            </div>
+            <div className="space-y-1 px-2 pb-2">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2 py-1">
+                  <Skeleton className="h-3 w-3 rounded-sm" />
+                  <Skeleton className="h-3 flex-1" style={{ maxWidth: `${60 + ((i * 13) % 35)}%` }} />
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {(() => {
@@ -1158,9 +1169,16 @@ function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
           </div>
           <div className="max-h-52 overflow-y-auto">
             {isLoading && (
-              <div className="px-2 py-2 text-xs text-muted-foreground flex items-center gap-2">
-                <RefreshCw className="h-3 w-3 animate-spin" /> {t('common.loading')}
-              </div>
+              <>
+                <div className="px-2 py-2 text-xs text-muted-foreground flex items-center gap-2">
+                  <RefreshCw className="h-3 w-3 animate-spin" /> {t('common.loading')}
+                </div>
+                <div className="px-2 pb-2 space-y-1.5">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-4 w-full" style={{ maxWidth: `${70 + ((i * 7) % 30)}%` }} />
+                  ))}
+                </div>
+              </>
             )}
             {filtered.map((db) => (
               <DropdownMenuItem key={db} className="gap-2 text-xs font-mono cursor-pointer" onClick={() => handleSwitch(db)}>

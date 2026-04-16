@@ -10,7 +10,8 @@ export default defineConfig({
 		starlight({
 			title: 'dblumi',
 			logo: {
-				src: './public/logo-dblumi.svg',
+				light: './public/logo-dblumi-light.svg',
+				dark: './public/logo-dblumi.svg',
 				replacesTitle: true,
 			},
 			description: 'The modern SQL client with AI, built for developers',

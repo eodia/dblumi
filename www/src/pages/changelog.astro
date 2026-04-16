@@ -1,0 +1,216 @@
+---
+import '../styles/landing.css';
+import Navbar from '../components/landing/Navbar.astro';
+import SiteFooter from '../components/landing/SiteFooter.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Changelog — dblumi</title>
+    <meta name="description" content="dblumi release notes and changelog." />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <Navbar lang="en" />
+    <main class="changelog-page">
+      <h1>Changelog</h1>
+      <p class="intro">Every release, documented. Follow what's new, improved, and fixed.</p>
+
+      <article class="release">
+        <div class="release-hdr">
+          <span class="tag">Latest</span>
+          <h2>v0.1.0 <span class="codename">— Initial Release</span></h2>
+          <time>April 2026</time>
+        </div>
+
+        <section>
+          <h3>SQL Editor</h3>
+          <ul>
+            <li>Multi-tab SQL editor powered by CodeMirror 6 with syntax highlighting</li>
+            <li>Schema-aware autocomplete on tables, columns, joins, and relationships</li>
+            <li>EXPLAIN plan analysis with visual breakdown</li>
+            <li>Streaming query results via SSE — no timeout on long queries</li>
+            <li>Export results to CSV, JSON, or SQL</li>
+            <li>CSV & SQL dump import with AI-powered column mapping</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>4 Database Drivers</h3>
+          <ul>
+            <li>PostgreSQL, MySQL, Oracle, and SQLite supported out of the box</li>
+            <li>Seamless multi-driver experience — switch databases without leaving the window</li>
+            <li>Connection pooling and credential encryption (AES-256-GCM)</li>
+            <li>SSL/TLS support for all drivers</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>AI Copilot</h3>
+          <ul>
+            <li>Natural language → working SQL, grounded in your schema</li>
+            <li>Explain, optimize, or debug any query in-place</li>
+            <li>BYOK — Anthropic Claude, OpenAI, Azure OpenAI, or local Ollama</li>
+            <li>Streaming responses via SSE</li>
+            <li>Your prompts go directly to the provider — dblumi never proxies or stores them</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Collaboration & Sharing</h3>
+          <ul>
+            <li>Real-time collaborative editing with Yjs + WebSocket — see cursors and edits live</li>
+            <li>Save queries to your workspace with folders, tags, and team sharing</li>
+            <li>Full version history — browse the timeline, diff any two versions, restore in one click</li>
+            <li>Role-based access control: Admin, Editor, Viewer per connection</li>
+            <li>Group-based sharing with color tagging</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Schema & Data</h3>
+          <ul>
+            <li>Interactive schema browser with search</li>
+            <li>Auto-generated entity-relationship diagrams</li>
+            <li>Table explorer with inline editing</li>
+            <li>Database user management per connection</li>
+            <li>Data sync between databases (multi-table)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Security & Administration</h3>
+          <ul>
+            <li>4 safety levels — from unrestricted dev to fully locked production</li>
+            <li>Destructive query detection with confirmation flow</li>
+            <li>JWT authentication with token revocation</li>
+            <li>SSO via GitHub, Google, Keycloak/OIDC</li>
+            <li>Admin panel for user management and instance configuration</li>
+            <li>Password strength indicator and forgot-password flow (SMTP)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>REST API & Integrations</h3>
+          <ul>
+            <li>Full REST API (v1) for every resource</li>
+            <li>Interactive Swagger UI with OpenAPI 3.0 spec</li>
+            <li>Turn any saved query into a JSON endpoint with named parameters and API keys</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Self-hosting</h3>
+          <ul>
+            <li>Docker Compose in 30 seconds</li>
+            <li>AGPL-3.0 — every feature, forever free</li>
+            <li>100% self-hosted — your data never leaves your network</li>
+            <li>Environment-based configuration</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>UI & DX</h3>
+          <ul>
+            <li>Command palette for quick navigation</li>
+            <li>Internationalization — English and French shipped</li>
+            <li>Tailwind CSS v4 design system with Radix UI + shadcn/ui components</li>
+            <li>Geist (sans) + JetBrains Mono (mono) fonts</li>
+          </ul>
+        </section>
+      </article>
+    </main>
+    <SiteFooter lang="en" />
+  </body>
+</html>
+
+<style>
+  .changelog-page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 140px 40px 80px;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--db-text, #0A0A0B);
+    line-height: 1.7;
+  }
+  .changelog-page h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+  }
+  .changelog-page .intro {
+    font-size: 16px;
+    color: var(--db-muted-fg, #6B6B76);
+    margin: 0 0 48px;
+  }
+  .release {
+    border-left: 2px solid rgba(65, 205, 42, 0.35);
+    padding-left: 28px;
+    margin-bottom: 56px;
+    position: relative;
+  }
+  .release::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--db-primary, #2DA31E);
+    box-shadow: 0 0 0 4px rgba(65, 205, 42, 0.15);
+  }
+  .release-hdr {
+    margin-bottom: 28px;
+  }
+  .release-hdr .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--db-primary, #2DA31E);
+    background: rgba(65, 205, 42, 0.1);
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    padding: 3px 10px;
+    margin-bottom: 10px;
+  }
+  .release-hdr h2 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 4px;
+  }
+  .release-hdr .codename {
+    font-weight: 400;
+    color: var(--db-muted-fg, #6B6B76);
+  }
+  .release-hdr time {
+    font-size: 13px;
+    color: var(--db-muted-fg, #6B6B76);
+  }
+  .release section {
+    margin-bottom: 24px;
+  }
+  .release h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    letter-spacing: -0.01em;
+  }
+  .release ul {
+    padding-left: 18px;
+    margin: 0;
+  }
+  .release li {
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    margin-bottom: 5px;
+  }
+</style>

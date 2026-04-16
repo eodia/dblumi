@@ -27,6 +27,24 @@ import { ConnectionModal } from '@/components/connections/ConnectionModal'
 import { ComboboxChips } from '@/components/ui/combobox-chips'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import { DriverIcon } from '@/components/ui/driver-icon'
+import { Skeleton } from '@/components/ui/skeleton'
+
+function AdminRowSkeletons({ count = 6 }: { count?: number }) {
+  return (
+    <div className="divide-y divide-border-subtle">
+      {[...Array(count)].map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-2.5 w-1/2" />
+          </div>
+          <Skeleton className="h-6 w-16 rounded-md" />
+        </div>
+      ))}
+    </div>
+  )
+}
 import { useAuthStore } from '@/stores/auth.store'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -257,7 +275,12 @@ export function AdminPage() {
                 <Plus className="h-3 w-3" />{t('admin.newGroup')}
               </Button>
             </div>
-            {groupsLoading && <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('common.loading')}</div>}
+            {groupsLoading && (
+              <>
+                <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('common.loading')}</div>
+                <AdminRowSkeletons />
+              </>
+            )}
             {allGroups.map((g) => (
               <GroupRow key={g.id} group={g}
                 onEdit={() => { setEditGroup(g); setGroupName(g.name); setGroupDesc(g.description ?? ''); setGroupColor(g.color ?? GROUP_COLORS[0]!) }}
@@ -271,7 +294,12 @@ export function AdminPage() {
         {/* ── Users tab ── */}
         {tab === 'users' && (
           <div>
-            {usersLoading && <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('common.loading')}</div>}
+            {usersLoading && (
+              <>
+                <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('common.loading')}</div>
+                <AdminRowSkeletons count={8} />
+              </>
+            )}
             {allUsers.map((u) => (
               <UserRow key={u.id} user={u} isSelf={u.id === currentUser?.id}
                 onEdit={() => { setEditUser(u); setEditName(u.name); setEditEmail(u.email); setEditRole(u.role); setEditUserGroupIds([]) }}
@@ -289,7 +317,12 @@ export function AdminPage() {
                 <Database className="h-3 w-3" />{t('conn.new')}
               </Button>
             </div>
-            {connsLoading && <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('common.loading')}</div>}
+            {connsLoading && (
+              <>
+                <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('common.loading')}</div>
+                <AdminRowSkeletons count={5} />
+              </>
+            )}
             {connections.map((conn) => (
               <ConnectionRow key={conn.id} conn={conn}
                 onEdit={() => { setEditConn(conn); setConnModalOpen(true) }}

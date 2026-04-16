@@ -22,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
@@ -265,10 +266,20 @@ export function SchemaSidebar({ connections }: Props) {
             <ScrollArea className="flex-1">
               <div className="px-1 py-0.5">
                 {isLoading && (
-                  <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    {t('common.loading')}
-                  </div>
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      {t('common.loading')}
+                    </div>
+                    <div className="space-y-1 px-2 pb-2">
+                      {[...Array(8)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1">
+                          <Skeleton className="h-3 w-3 rounded-sm" />
+                          <Skeleton className="h-3 flex-1" style={{ maxWidth: `${60 + ((i * 13) % 35)}%` }} />
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
 
                 {error && (

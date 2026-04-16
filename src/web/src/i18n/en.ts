@@ -124,6 +124,8 @@ export const en = {
   'conn.filePath': 'File path',
   'conn.filePathPlaceholder': '/data/app.db or :memory:',
   'conn.test': 'Test',
+  'conn.copyString': 'Copy string',
+  'conn.copied': 'Copied',
   'conn.testFail': 'Connection failed',
   'conn.cancel': 'Cancel',
   'conn.save': 'Save',

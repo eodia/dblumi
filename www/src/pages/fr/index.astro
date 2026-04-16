@@ -1,488 +1,56 @@
 ---
-// dblumi Landing Page — Version francaise
+// www/src/pages/fr/index.astro
 import '../../styles/landing.css';
+import Navbar from '../../components/landing/Navbar.astro';
+import Hero from '../../components/landing/Hero.astro';
+import FeatureWrite from '../../components/landing/FeatureWrite.astro';
+import FeatureAsk from '../../components/landing/FeatureAsk.astro';
+import FeatureCollab from '../../components/landing/FeatureCollab.astro';
+import BentoSection from '../../components/landing/BentoSection.astro';
+import Pricing from '../../components/landing/Pricing.astro';
+import FAQ from '../../components/landing/FAQ.astro';
+import FooterCTA from '../../components/landing/FooterCTA.astro';
+import SiteFooter from '../../components/landing/SiteFooter.astro';
+
+let githubStars = 2300;
+try {
+  const res = await fetch('https://api.github.com/repos/eodia/dblumi');
+  if (res.ok) {
+    const data = await res.json();
+    if (typeof data.stargazers_count === 'number') githubStars = data.stargazers_count;
+  }
+} catch { /* fallback */ }
+
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>dblumi — Le client SQL moderne avec IA</title>
-  <meta name="description" content="Le client SQL moderne avec IA, concu pour les developpeurs. Auto-heberge, securise et pret pour l'equipe." />
-  <link rel="sitemap" href={`${base}/sitemap-index.xml`} />
-  <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
-</head>
-<body>
-
-  <canvas id="starfield" class="dl-starfield"></canvas>
-
-  <a href="#main-content" class="dl-skip-link">Aller au contenu</a>
-
-  <!-- ═══ Navbar ═══ -->
-  <nav class="dl-nav" aria-label="Navigation principale">
-    <a href={`${base}/fr/`} class="dl-nav-logo" aria-label="dblumi accueil">
-      <img src={`${base}/logo-dblumi.svg`} alt="dblumi" class="dl-nav-logo-img" />
-    </a>
-    <ul class="dl-nav-links">
-      <li><a href={`${base}/fr/guides/introduction/`}>Docs</a></li>
-      <li><a href={`${base}/fr/features/sql-editor/`}>Fonctionnalites</a></li>
-      <li><a href={`${base}/fr/self-hosting/configuration/`}>Hebergement</a></li>
-    </ul>
-    <div class="dl-nav-right">
-      <a href={`${base}/`} class="dl-nav-lang" aria-label="Switch to English">EN</a>
-      <a href="https://discord.gg/2uTk5X9B" target="_blank" rel="noopener" class="dl-nav-social" aria-label="Discord">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.947 2.418-2.157 2.418z"/></svg>
-      </a>
-      <a href="https://github.com/eodia/dblumi" target="_blank" rel="noopener" class="dl-nav-social" aria-label="GitHub">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-      </a>
-      <a href={`${base}/fr/guides/installation/`} class="dl-nav-cta">Demarrer</a>
-    </div>
-  </nav>
-
-  <main id="main-content">
-
-  <!-- ═══ Hero ═══ -->
-  <section class="dl-hero" aria-label="Introduction">
-    <div class="dl-hero-badge">
-      <span class="pulse"></span>
-      <span class="dl-badge-highlight">Open source</span> &middot; Auto-heberge &middot; Pret pour l'equipe
-    </div>
-
-    <h1>
-      Votre SQL,<br />
-      <span class="gradient">booste par l'IA</span>
-    </h1>
-
-    <p>
-      Le client SQL moderne concu pour les equipes de developpeurs. Ecrivez des requetes plus sures avec des garde-fous, obtenez des suggestions IA et partagez tout avec votre equipe.
-    </p>
-
-    <div class="dl-docker-copy">
-      <span class="dl-docker-prompt">$</span>
-      <code class="dl-docker-cmd">docker pull eodia/dblumi:latest</code>
-      <button class="dl-docker-btn" data-copy="docker pull eodia/dblumi:latest" aria-label="Copier la commande Docker">
-        <svg class="dl-icon-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        <svg class="dl-icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
-    </div>
-
-    <div class="dl-hero-actions">
-      <a href={`${base}/fr/guides/installation/`} class="dl-btn-primary">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Auto-heberger
-      </a>
-      <a href={`${base}/app`} class="dl-btn-secondary" target="_blank" rel="noopener">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-        Demo en ligne
-      </a>
-    </div>
-
-    <div class="dl-hero-visual">
-      <div class="dl-hero-visual-inner">
-        <img src={`${base}/images/hero-screenshot.png`} alt="Editeur SQL dblumi avec coloration syntaxique, affichant une requete multi-lignes avec JOIN, WHERE et GROUP BY" />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>dblumi — Le client SQL moderne avec copilot IA</title>
+    <meta name="description" content="Le client SQL open source avec copilot IA. Auto-hébergé, prêt pour les équipes, AGPL-3.0. Query, explore, ship — sans friction." />
+    <meta property="og:title" content="dblumi — Le client SQL moderne avec copilot IA" />
+    <meta property="og:description" content="Query, explore, ship — sans friction. Auto-hébergé, AGPL-3.0." />
+    <meta property="og:type" content="website" />
+    <link rel="sitemap" href={`${base}/sitemap-index.xml`} />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <!-- TODO: re-enable stars when repo has some: stars={githubStars} -->
+    <Navbar lang="fr" />
+    <Hero lang="fr" />
+    <main class="landing-page">
+      <div id="features">
+        <FeatureWrite lang="fr" />
+        <FeatureAsk lang="fr" />
+        <FeatureCollab lang="fr" />
       </div>
-    </div>
-  </section>
-
-  <!-- ═══ Feature 1: Editeur SQL ═══ -->
-  <div class="dl-features">
-    <div class="dl-separator"></div>
-
-    <section class="dl-feature">
-      <div class="dl-feature-content">
-        <span class="dl-feature-label">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          Editeur SQL
-        </span>
-        <h2>Ecrivez du SQL en toute confiance</h2>
-        <p>
-          Un editeur puissant avec auto-completion, coloration syntaxique et support multi-onglets. Concu pour une experience ultra-rapide.
-        </p>
-        <ul class="dl-feature-list">
-          <li>4 niveaux de securite — du mode libre aux garde-fous complets</li>
-          <li>Detection des requetes destructrices avec confirmation</li>
-          <li>Analyse EXPLAIN integree</li>
-          <li>Multi-onglets avec contextes par connexion</li>
-        </ul>
-      </div>
-      <div class="dl-feature-visual">
-        <img src={`${base}/images/feature-editor.png`} alt="Editeur SQL dblumi avec coloration syntaxique" />
-      </div>
-    </section>
-
-    <div class="dl-separator"></div>
-
-    <!-- ═══ Feature 2: Copilot IA ═══ -->
-    <section class="dl-feature">
-      <div class="dl-feature-content">
-        <span class="dl-feature-label">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="12" cy="15" r="2"/></svg>
-          Copilot IA
-        </span>
-        <h2>Une IA qui comprend votre base de donnees</h2>
-        <p>
-          Posez des questions en langage naturel, generez du SQL, obtenez des explications et des optimisations. L'IA connait votre schema et s'adapte a votre contexte.
-        </p>
-        <ul class="dl-feature-list">
-          <li>Anthropic Claude, OpenAI, Azure OpenAI & Ollama</li>
-          <li>Connaissance du schema — genere des requetes qui fonctionnent</li>
-          <li>Explication, optimisation et debug de requetes</li>
-          <li>Votre cle API — vos donnees restent privees</li>
-        </ul>
-      </div>
-      <div class="dl-feature-visual">
-        <img src={`${base}/images/feature-ai.png`} alt="Panneau Copilot IA dblumi avec requetes sauvegardees et connexions" />
-      </div>
-    </section>
-
-    <div class="dl-separator"></div>
-
-    <!-- ═══ Feature 3: Collaboration ═══ -->
-    <section class="dl-feature">
-      <div class="dl-feature-content">
-        <span class="dl-feature-label">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Collaboration
-        </span>
-        <h2>Requetes partagees, savoir partage</h2>
-        <p>
-          Sauvegardez vos requetes, organisez-les dans des dossiers et partagez-les avec votre equipe. Epinglez les plus importantes. Tout le monde travaille sur la meme base.
-        </p>
-        <ul class="dl-feature-list">
-          <li>Dossiers et requetes epinglees pour un acces rapide</li>
-          <li>Partage avec des individus ou des groupes</li>
-          <li>Controle d'acces par role — admin, editeur, lecteur</li>
-          <li>SSO avec GitHub, Google ou Keycloak</li>
-        </ul>
-      </div>
-      <div class="dl-feature-visual">
-        <img src={`${base}/images/feature-team.png`} alt="Editeur SQL dblumi avec requetes sauvegardees et partage en equipe" />
-      </div>
-    </section>
-
-    <div class="dl-separator"></div>
-
-    <!-- ═══ Feature : Historique des versions ═══ -->
-    <section class="dl-feature">
-      <div class="dl-feature-content">
-        <span class="dl-feature-label">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Historique des versions
-        </span>
-        <h2>Suivez chaque modification, restaurez n'importe quelle version</h2>
-        <p>
-          Chaque sauvegarde cree une version. Parcourez la timeline complete d'une requete, comparez deux versions cote a cote et restaurez une version precedente en un clic.
-        </p>
-        <ul class="dl-feature-list">
-          <li>Timeline complete pour chaque requete sauvegardee</li>
-          <li>Diff cote a cote entre deux versions</li>
-          <li>Restauration en un clic pour revenir instantanement</li>
-          <li>Labels personnalises pour marquer les jalons importants</li>
-        </ul>
-      </div>
-      <div class="dl-feature-visual">
-        <img src={`${base}/images/feature-timeline.png`} alt="Timeline de l'historique des versions dblumi avec comparaison diff cote a cote" />
-      </div>
-    </section>
-
-    <div class="dl-separator"></div>
-
-    <!-- ═══ Feature : API REST ═══ -->
-    <section class="dl-feature">
-      <div class="dl-feature-content">
-        <span class="dl-feature-label">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-          API REST
-        </span>
-        <h2>Tout est controlable par API</h2>
-        <p>
-          Chaque action dans dblumi est disponible via une API REST. Automatisez vos workflows, integrez vos pipelines CI/CD ou construisez vos propres outils — avec une documentation Swagger interactive integree.
-        </p>
-        <ul class="dl-feature-list">
-          <li>API REST complete pour chaque fonctionnalite</li>
-          <li>Documentation Swagger interactive sur <code>/api/docs</code></li>
-          <li>Automatisez requetes, connexions et gestion des utilisateurs</li>
-          <li>Spec OpenAPI pour la generation de code dans tous les langages</li>
-        </ul>
-      </div>
-      <div class="dl-feature-visual">
-        <img src={`${base}/images/feature-swagger.png`} alt="Documentation Swagger interactive de l'API dblumi" />
-      </div>
-    </section>
-
-    <div class="dl-separator"></div>
-
-    <!-- ═══ Feature 4: Schema & ERD ═══ -->
-    <section class="dl-feature">
-      <div class="dl-feature-content">
-        <span class="dl-feature-label">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Schema & ERD
-        </span>
-        <h2>Visualisez votre modele de donnees</h2>
-        <p>
-          Parcourez les tables, colonnes, index et contraintes en un coup d'oeil. Generez des diagrammes entite-relation pour comprendre la structure de votre base.
-        </p>
-        <ul class="dl-feature-list">
-          <li>Explorateur de schema interactif avec recherche</li>
-          <li>Diagrammes ERD auto-generes</li>
-          <li>Details des tables — colonnes, types, contraintes</li>
-          <li>Support PostgreSQL, MySQL, Oracle</li>
-        </ul>
-      </div>
-      <div class="dl-feature-visual">
-        <img src={`${base}/images/feature-schema.png`} alt="Explorateur de schema dblumi avec liste des tables et connexions" />
-      </div>
-    </section>
-
-    <div class="dl-separator"></div>
-
-    <!-- ═══ Feature 5: Securite ═══ -->
-    <section class="dl-feature">
-      <div class="dl-feature-content">
-        <span class="dl-feature-label">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Securite avant tout
-        </span>
-        <h2>Concu pour les bases de production</h2>
-        <p>
-          Auto-heberge par conception. Vos identifiants ne quittent jamais votre infrastructure. Quatre niveaux de garde-fous protegent contre les pertes de donnees accidentelles.
-        </p>
-        <ul class="dl-feature-list">
-          <li>100% auto-heberge — rien dans le cloud</li>
-          <li>Identifiants chiffres AES-256 au repos</li>
-          <li>4 niveaux de garde-fous : aucun &rarr; strict</li>
-          <li>RBAC + SSO pour les equipes enterprise</li>
-        </ul>
-      </div>
-      <div class="dl-feature-visual">
-        <img src={`${base}/images/feature-security.png`} alt="Navigateur de base de donnees dblumi avec gestion des connexions et structure des tables" />
-      </div>
-    </section>
-  </div>
-
-  <!-- ═══ Stats ═══ -->
-  <div class="dl-separator" style="max-width: 1200px; margin: 0 auto;"></div>
-
-  <section class="dl-stats">
-    <div>
-      <div class="dl-stat-value">3</div>
-      <div class="dl-stat-label">Moteurs de base de donnees</div>
-    </div>
-    <div>
-      <div class="dl-stat-value">4</div>
-      <div class="dl-stat-label">Niveaux de garde-fous</div>
-    </div>
-    <div>
-      <div class="dl-stat-value">4</div>
-      <div class="dl-stat-label">Fournisseurs IA</div>
-    </div>
-    <div>
-      <div class="dl-stat-value">100%</div>
-      <div class="dl-stat-label">Auto-heberge</div>
-    </div>
-  </section>
-
-  <!-- ═══ Planet + Pricing ═══ -->
-  <div class="dl-planet-wrapper"></div>
-
-  <section class="dl-pricing">
-    <div class="dl-pricing-header">
-      <div class="dl-pricing-label">Tarifs</div>
-      <h2>Des tarifs simples pour tous.</h2>
-      <p>dblumi est open source et gratuit avec toutes les fonctionnalites. Support professionnel disponible pour les entreprises.</p>
-    </div>
-
-    <div class="dl-pricing-grid dl-pricing-grid-2">
-      <!-- Open Source -->
-      <div class="dl-pricing-card featured">
-        <div class="dl-pricing-name">Open Source</div>
-        <div class="dl-pricing-desc">Toutes les fonctionnalites, pour toujours. Auto-hebergez sur votre infrastructure.</div>
-        <div class="dl-pricing-price">
-          <span class="dl-pricing-amount">Gratuit</span>
-          <span class="dl-pricing-period">/ AGPL-3.0</span>
-        </div>
-        <a href={`${base}/fr/guides/installation/`} class="dl-pricing-cta dl-pricing-cta-primary">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Auto-heberger
-        </a>
-        <ul class="dl-pricing-features">
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Connexions & utilisateurs illimites</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Editeur SQL avec 4 niveaux de garde-fous</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Copilot IA (Claude, OpenAI, Azure, Ollama)</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Requetes sauvegardees, dossiers & partage</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Explorateur de schema & ERD</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Groupes & RBAC</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> SSO (GitHub, Google, Keycloak)</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Identifiants chiffres AES-256</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Support communautaire</li>
-        </ul>
-      </div>
-
-      <!-- Support Entreprise -->
-      <div class="dl-pricing-card">
-        <div class="dl-pricing-name">Support Entreprise</div>
-        <div class="dl-pricing-desc">Pour les organisations qui ont besoin d'un support professionnel et de garanties.</div>
-        <div class="dl-pricing-price">
-          <span class="dl-pricing-amount">Sur mesure</span>
-        </div>
-        <a href="mailto:dblumi@eodia.com" class="dl-pricing-cta dl-pricing-cta-default">Nous contacter</a>
-        <ul class="dl-pricing-features">
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Tout ce qui est dans Open Source</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Support dedie & SLA</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Aide au deploiement & migration</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Integrations sur mesure</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Audit securite & conformite</li>
-          <li><span class="dl-pricing-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> Formation pour votre equipe</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══ FAQ ═══ -->
-  <div class="dl-separator" style="max-width: 1200px; margin: 0 auto;"></div>
-
-  <section class="dl-faq">
-    <div class="dl-faq-header">
-      <div class="dl-pricing-label">FAQ</div>
-      <h2>Questions fr&eacute;quentes</h2>
-    </div>
-    <div class="dl-faq-grid">
-      <details class="dl-faq-item">
-        <summary>dblumi est-il vraiment gratuit ?</summary>
-        <p>Oui. dblumi est open source sous licence AGPL-3.0 avec toutes les fonctionnalit&eacute;s incluses. Pas de version premium, pas de fonctionnalit&eacute;s verrouill&eacute;es. Un support entreprise est disponible en option payante.</p>
-      </details>
-      <details class="dl-faq-item">
-        <summary>Quelles bases de donn&eacute;es sont support&eacute;es ?</summary>
-        <p>PostgreSQL, MySQL et Oracle. Vous pouvez vous connecter &agrave; plusieurs bases simultan&eacute;ment, chacune avec son propre tag d'environnement et ses contr&ocirc;les d'acc&egrave;s.</p>
-      </details>
-      <details class="dl-faq-item">
-        <summary>O&ugrave; sont stock&eacute;es mes donn&eacute;es ?</summary>
-        <p>Tout reste sur votre infrastructure. dblumi est 100% auto-h&eacute;berg&eacute; &mdash; les identifiants de base de donn&eacute;es sont chiffr&eacute;s en AES-256 et ne quittent jamais votre serveur.</p>
-      </details>
-      <details class="dl-faq-item">
-        <summary>Comment fonctionne le copilot IA ?</summary>
-        <p>Le copilot utilise votre propre cl&eacute; API (Anthropic Claude, OpenAI ou Azure OpenAI) ou fonctionne localement avec Ollama. Il lit votre sch&eacute;ma pour g&eacute;n&eacute;rer des requ&ecirc;tes pr&eacute;cises. Vos donn&eacute;es ne sont jamais stock&eacute;es ni utilis&eacute;es pour l'entra&icirc;nement.</p>
-      </details>
-      <details class="dl-faq-item">
-        <summary>Puis-je utiliser dblumi en &eacute;quipe ?</summary>
-        <p>Absolument. Partagez connexions et requ&ecirc;tes sauvegard&eacute;es avec des utilisateurs ou groupes sp&eacute;cifiques. Le contr&ocirc;le d'acc&egrave;s par r&ocirc;le (admin, &eacute;diteur, lecteur) garde tout organis&eacute;.</p>
-      </details>
-      <details class="dl-faq-item">
-        <summary>Comment d&eacute;ployer dblumi ?</summary>
-        <p>Une seule commande <code>docker compose up -d</code>. L'application tourne dans un seul conteneur avec une base SQLite embarqu&eacute;e. Aucune d&eacute;pendance externe requise.</p>
-      </details>
-    </div>
-  </section>
-
-  <!-- ═══ CTA ═══ -->
-  <div class="dl-separator" style="max-width: 1200px; margin: 0 auto;"></div>
-
-  <section class="dl-cta-section">
-    <h2>Pret a <span class="gradient">reprendre le controle</span> ?</h2>
-    <p>Deployez dblumi en quelques minutes. Une commande Docker, un controle total sur vos donnees.</p>
-
-    <div class="dl-docker-copy">
-      <span class="dl-docker-prompt">$</span>
-      <code class="dl-docker-cmd">docker pull eodia/dblumi:latest</code>
-      <button class="dl-docker-btn" data-copy="docker pull eodia/dblumi:latest" aria-label="Copier la commande Docker">
-        <svg class="dl-icon-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        <svg class="dl-icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
-    </div>
-
-    <div class="dl-hero-actions">
-      <a href={`${base}/fr/guides/installation/`} class="dl-btn-primary">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Demarrer
-      </a>
-      <a href={`${base}/fr/guides/introduction/`} class="dl-btn-secondary">
-        Lire la documentation
-      </a>
-    </div>
-  </section>
-
-  </main>
-
-  <!-- ═══ Footer ═══ -->
-  <footer class="dl-footer">
-    <div class="dl-footer-brand">
-      <img src={`${base}/logo-dblumi.svg`} alt="dblumi" class="dl-footer-logo" />
-      <span>&copy; 2026 dblumi &middot; Cr&eacute;&eacute; par <a href="https://eodia.com" target="_blank" rel="noopener" class="dl-footer-eodia">eodia</a></span>
-    </div>
-    <ul class="dl-footer-links">
-      <li><a href={`${base}/fr/guides/introduction/`}>Documentation</a></li>
-      <li><a href="https://github.com/eodia/dblumi" target="_blank" rel="noopener">GitHub</a></li>
-      <li><a href="https://discord.gg/2uTk5X9B" target="_blank" rel="noopener">Discord</a></li>
-      <li><a href={`${base}/fr/self-hosting/configuration/`}>Hebergement</a></li>
-    </ul>
-  </footer>
-
-<script>
-document.querySelectorAll('.dl-docker-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
-      btn.classList.add('copied');
-      setTimeout(() => btn.classList.remove('copied'), 2000);
-    });
-  });
-});
-</script>
-
-<script>
-(function() {
-  const canvas = document.getElementById('starfield');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let w, h, stars;
-  const COUNT = 120;
-  const SPEED = 0.15;
-
-  function resize() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-  }
-
-  function init() {
-    resize();
-    stars = Array.from({ length: COUNT }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: Math.random() * 1.2 + 0.3,
-      a: Math.random() * 0.6 + 0.2,
-      dx: (Math.random() - 0.5) * SPEED,
-      dy: (Math.random() - 0.5) * SPEED,
-      phase: Math.random() * Math.PI * 2,
-      twinkle: Math.random() * 0.015 + 0.005,
-    }));
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-    for (const s of stars) {
-      s.x += s.dx;
-      s.y += s.dy;
-      if (s.x < 0) s.x = w;
-      if (s.x > w) s.x = 0;
-      if (s.y < 0) s.y = h;
-      if (s.y > h) s.y = 0;
-      s.phase += s.twinkle;
-      const alpha = s.a * (0.6 + 0.4 * Math.sin(s.phase));
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      ctx.fill();
-    }
-    requestAnimationFrame(draw);
-  }
-
-  window.addEventListener('resize', resize);
-  init();
-  draw();
-})();
-</script>
-
-</body>
+      <BentoSection lang="fr" />
+      <Pricing lang="fr" />
+      <FAQ lang="fr" />
+      <FooterCTA lang="fr" />
+    </main>
+    <SiteFooter lang="fr" />
+  </body>
 </html>

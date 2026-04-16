@@ -1,0 +1,632 @@
+---
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].write;
+
+const parts = t.headline.split('{{accent}}');
+const headBefore = parts[0] ?? '';
+const headAfter = parts[1] ?? '';
+---
+
+<section class="db-feat-write">
+  <div class="wrap">
+    <div class="row">
+      <div class="text">
+        <span class="label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          {t.label}
+        </span>
+        <h2>{headBefore}<span class="kalam">{headAfter}</span></h2>
+        <p class="lead" set:html={t.lead}></p>
+        <ul class="bullets">
+          {t.bullets.map((b) => (
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="visual">
+        <div class="mock">
+          <div class="chrome">
+            <div class="d d1"></div><div class="d d2"></div><div class="d d3"></div>
+            <span class="path">eodia / active_users.sql</span>
+          </div>
+          <div class="editor">
+            <div class="line-row">
+              <span class="ln">1</span>
+              <span class="typed l1"><span class="cm">-- Active users in the last 30 days</span></span>
+            </div>
+            <div class="line-row">
+              <span class="ln">2</span>
+              <span class="typed l2a"><span class="kw">SELECT</span> u.</span><!--
+              --><span class="typed l2b">name</span><!--
+              --><span class="typed l2c">, u.</span><!--
+              --><span class="typed l2d">email</span>
+            </div>
+            <div class="line-row">
+              <span class="ln">3</span>
+              <span class="typed l3"><span class="kw">FROM</span> users u</span>
+            </div>
+            <div class="line-row">
+              <span class="ln">4</span>
+              <span class="typed l4a"><span class="kw">WHERE</span> u.</span><!--
+              --><span class="typed l4b">last_seen</span><!--
+              --><span class="typed l4c"> <span class="op">&gt;=</span> <span class="fn">NOW</span>() - <span class="kw">INTERVAL</span> <span class="str">'30 days'</span></span>
+              <span class="cursor-bar"></span>
+            </div>
+
+            <div class="autocomplete" data-show="false">
+              <div class="ac-item" data-name="id">
+                <span class="ic key">K</span>
+                <span class="name">id</span>
+                <span class="type">uuid</span>
+              </div>
+              <div class="ac-item" data-name="name">
+                <span class="ic">c</span>
+                <span class="name">name</span>
+                <span class="type">text</span>
+              </div>
+              <div class="ac-item" data-name="email">
+                <span class="ic">c</span>
+                <span class="name">email</span>
+                <span class="type">text</span>
+              </div>
+              <div class="ac-item" data-name="last_seen">
+                <span class="ic">c</span>
+                <span class="name">last_seen</span>
+                <span class="type">timestamp</span>
+              </div>
+              <div class="ac-item" data-name="org_id">
+                <span class="ic">c</span>
+                <span class="name">org_id</span>
+                <span class="type">uuid</span>
+              </div>
+              <div class="ac-item" data-name="created_at">
+                <span class="ic">c</span>
+                <span class="name">created_at</span>
+                <span class="type">timestamp</span>
+              </div>
+              <div class="ac-footer">
+                <span><span class="kbd">↑↓</span> navigate</span>
+                <span><span class="kbd">↹</span> accept</span>
+                <span style="margin-left:auto">6 columns · AI ranked</span>
+              </div>
+            </div>
+
+            <div class="hand-cursor" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#0a0a0b" stroke="#fff" stroke-width="1.2" stroke-linejoin="round">
+                <path d="M5.5 2 L5.5 14 L3.5 12 L2.5 13 L6.5 20 L14.5 20 L16.5 18 L16.5 9 L15 9 L15 12 L14 12 L14 7 L12.5 7 L12.5 12 L11.5 12 L11.5 6 L10 6 L10 12 L9 12 L9 3 L7.5 3 L7.5 14 L6.5 14 L6.5 2 Z"/>
+              </svg>
+            </div>
+
+            <div class="speed-pill" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+              <span>typing at the speed of thought</span>
+            </div>
+          </div>
+          <div class="statusbar">
+            <span class="dot"></span>
+            eodia · postgresql · Ln 4, Col 48 · SQL
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+
+  .db-feat-write {
+    padding: 96px 56px;
+    background: #fff;
+    margin: 0;
+  }
+  .db-feat-write .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .db-feat-write .row {
+    display: grid;
+    grid-template-columns: 0.9fr 1.2fr;
+    gap: 72px;
+    align-items: center;
+  }
+
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--db-primary, #2DA31E);
+    padding: 5px 10px;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.07);
+    margin-bottom: 22px;
+  }
+  h2 {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.025em;
+    margin: 0 0 20px;
+    color: var(--db-text, #0A0A0B);
+    max-width: 14ch;
+  }
+  h2 .kalam {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    color: var(--db-primary-vivid, #41cd2a);
+  }
+  p.lead {
+    font-size: 16px;
+    color: var(--db-muted-fg, #6B6B76);
+    line-height: 1.6;
+    max-width: 44ch;
+    margin: 0 0 24px;
+  }
+  p.lead :global(strong) {
+    color: var(--db-text, #0A0A0B);
+    font-weight: 600;
+    background: linear-gradient(180deg, transparent 58%, rgba(65, 205, 42, 0.28) 58%);
+    padding: 0 2px;
+    border-radius: 2px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  ul.bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  ul.bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    line-height: 1.45;
+  }
+  ul.bullets li svg {
+    flex-shrink: 0;
+    color: var(--db-primary, #2DA31E);
+    margin-top: 2px;
+  }
+
+  /* Generic mockup chrome */
+  .mock {
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 12px;
+    background: var(--db-card, #FFFFFF);
+    overflow: hidden;
+    box-shadow:
+      0 40px 80px -24px rgba(10, 10, 15, 0.20),
+      0 16px 32px -16px rgba(10, 10, 15, 0.12);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .chrome {
+    height: 28px;
+    background: #f7f7f6;
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+  }
+  .chrome .d {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .chrome .d1 { background: #ff5f57; }
+  .chrome .d2 { background: #febc2e; }
+  .chrome .d3 { background: #28c840; }
+  .chrome .path {
+    margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #9a9aa0;
+  }
+  /* Token colors */
+  .kw { color: #1e40af; font-weight: 500; }
+  .fn { color: #8b5cf6; }
+  .str { color: var(--db-primary, #2DA31E); }
+  .cm { color: #a0a0a0; font-style: italic; }
+  .num { color: #d97706; }
+  .op { color: #c026d3; font-weight: 500; }
+
+  .editor {
+    padding: 22px 14px 28px;
+    min-height: 340px;
+    background: #fff;
+    line-height: 1.95;
+    font-size: 13px;
+    color: var(--db-text-soft, #3A3A42);
+    position: relative;
+  }
+  .line-row {
+    display: flex;
+    align-items: baseline;
+    white-space: nowrap;
+  }
+  .editor .ln {
+    color: #c5c5ca;
+    display: inline-block;
+    width: 18px;
+    text-align: right;
+    margin-right: 14px;
+    user-select: none;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  /* Each line segment is revealed by JS via inline max-width transitions */
+  .typed {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 0;
+    vertical-align: bottom;
+  }
+
+  /* Local caret blinks at the end of the current input */
+  .cursor-bar {
+    display: inline-block;
+    width: 2px;
+    height: 15px;
+    background: var(--db-primary-vivid, #41cd2a);
+    vertical-align: -2px;
+    margin-left: 1px;
+    animation: blink 1s step-end infinite;
+    box-shadow: 0 0 4px rgba(65, 205, 42, 0.4);
+  }
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
+  }
+
+  .autocomplete {
+    position: absolute;
+    left: 122px;
+    background: #fff;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 8px;
+    box-shadow:
+      0 20px 40px -12px rgba(10, 10, 15, 0.25),
+      0 8px 16px -8px rgba(10, 10, 15, 0.1);
+    width: 220px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    z-index: 10;
+    opacity: 0;
+    top: 72px;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+  }
+  .autocomplete[data-show="true"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .autocomplete .ac-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    color: var(--db-text-soft, #3A3A42);
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    transition: background 0.15s, color 0.15s;
+  }
+  .autocomplete .ac-item:last-child { border-bottom: 0; }
+  .autocomplete .ac-item.active {
+    background: rgba(65, 205, 42, 0.12);
+    color: var(--db-primary, #2DA31E);
+    box-shadow: inset 2px 0 0 var(--db-primary, #2DA31E);
+  }
+  .autocomplete .ac-item.flash {
+    background: rgba(65, 205, 42, 0.32);
+  }
+  .autocomplete .ac-item .ic {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: var(--db-muted, #F0F0F2);
+    color: var(--db-muted-fg, #6B6B76);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .autocomplete .ac-item.active .ic {
+    background: rgba(65, 205, 42, 0.15);
+    color: var(--db-primary, #2DA31E);
+  }
+  .autocomplete .ac-item .ic.key {
+    color: var(--db-warning, #F59E0B);
+    background: rgba(245, 158, 11, 0.12);
+  }
+  .autocomplete .ac-item .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    flex: 1;
+  }
+  .autocomplete .ac-item .type {
+    font-size: 9px;
+    color: #b0b0b6;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .autocomplete .ac-footer {
+    padding: 5px 10px;
+    font-size: 9px;
+    color: #9a9aa0;
+    background: #fdfdfc;
+    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
+    display: flex;
+    gap: 10px;
+  }
+  .autocomplete .ac-footer .kbd {
+    padding: 0 5px;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 3px;
+    background: #fff;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Pointer-hand cursor that moves to the clicked row */
+  .hand-cursor {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+    transform: translate(0, 0);
+    transition: transform 0.55s cubic-bezier(0.33, 0.8, 0.3, 1), opacity 0.25s ease;
+    filter: drop-shadow(0 2px 4px rgba(10, 10, 15, 0.35));
+  }
+  .hand-cursor.clicking {
+    transform-origin: 5px 3px;
+  }
+  .hand-cursor.clicking svg {
+    animation: handClick 0.3s ease-out;
+  }
+  @keyframes handClick {
+    0% { transform: scale(1); }
+    45% { transform: scale(0.82); }
+    100% { transform: scale(1); }
+  }
+
+  /* Speed pill — floats in the editor's bottom-left corner */
+  .speed-pill {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 8px;
+    background: #ffffff;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--db-primary, #2DA31E);
+    box-shadow: 0 4px 14px -4px rgba(65, 205, 42, 0.3);
+    animation: speedPulse 2.4s ease-in-out infinite;
+  }
+  .speed-pill svg {
+    color: var(--db-primary-vivid, #41cd2a);
+    flex-shrink: 0;
+  }
+  @keyframes speedPulse {
+    0%, 100% { box-shadow: 0 4px 14px -4px rgba(65, 205, 42, 0.3); }
+    50% { box-shadow: 0 6px 22px -4px rgba(65, 205, 42, 0.5); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .typed { max-width: 100ch !important; }
+    .autocomplete,
+    .hand-cursor,
+    .speed-pill,
+    .cursor-bar { animation: none; }
+    .autocomplete { display: none; }
+    .hand-cursor { display: none; }
+  }
+
+  .mock .statusbar {
+    display: flex;
+    align-items: center;
+    padding: 7px 14px;
+    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
+    background: #fdfdfc;
+    font-size: 10px;
+    color: var(--db-muted-fg, #6B6B76);
+    font-family: 'Inter', sans-serif;
+  }
+  .mock .statusbar .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--db-primary-vivid, #41cd2a);
+    margin-right: 6px;
+  }
+
+  @media (max-width: 980px) {
+    .db-feat-write {
+      padding: 56px 24px;
+    }
+    .db-feat-write .row {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+    .autocomplete {
+      position: static;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .hand-cursor { display: none; }
+  }
+</style>
+
+<script>
+  // JS-driven choreography: type → popup opens → hand moves to field → click → accept
+  document.querySelectorAll<HTMLElement>('.db-feat-write .mock').forEach((mock) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const editor = mock.querySelector<HTMLElement>('.editor');
+    const ac = mock.querySelector<HTMLElement>('.autocomplete');
+    const hand = mock.querySelector<HTMLElement>('.hand-cursor');
+    if (!editor || !ac || !hand) return;
+
+    const typed = {
+      l1: mock.querySelector<HTMLElement>('.l1'),
+      l2a: mock.querySelector<HTMLElement>('.l2a'),
+      l2b: mock.querySelector<HTMLElement>('.l2b'),
+      l2c: mock.querySelector<HTMLElement>('.l2c'),
+      l2d: mock.querySelector<HTMLElement>('.l2d'),
+      l3: mock.querySelector<HTMLElement>('.l3'),
+      l4a: mock.querySelector<HTMLElement>('.l4a'),
+      l4b: mock.querySelector<HTMLElement>('.l4b'),
+      l4c: mock.querySelector<HTMLElement>('.l4c'),
+    };
+    if (Object.values(typed).some((el) => !el)) return;
+
+    const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+    async function type(el: HTMLElement, chars: number, msPerChar: number) {
+      for (let i = 0; i <= chars; i++) {
+        el.style.maxWidth = i + 'ch';
+        if (i < chars) await sleep(msPerChar);
+      }
+    }
+
+    function instant(el: HTMLElement, chars: number) {
+      el.style.maxWidth = chars + 'ch';
+    }
+
+    function reset() {
+      Object.values(typed).forEach((el) => { el!.style.maxWidth = '0'; });
+      ac!.setAttribute('data-show', 'false');
+      ac!.querySelectorAll('.ac-item').forEach((it) => {
+        it.classList.remove('active', 'flash');
+      });
+      hand!.style.opacity = '0';
+      hand!.style.transform = 'translate(280px, 180px)';
+    }
+
+    function showPopup(top: number) {
+      ac!.style.top = top + 'px';
+      ac!.setAttribute('data-show', 'true');
+    }
+
+    function hidePopup() {
+      ac!.setAttribute('data-show', 'false');
+      ac!.querySelectorAll('.ac-item').forEach((it) => {
+        it.classList.remove('active', 'flash');
+      });
+    }
+
+    async function moveHandTo(itemName: string) {
+      const item = ac!.querySelector<HTMLElement>(`.ac-item[data-name="${itemName}"]`);
+      if (!item) return;
+      // Highlight the target row as the hand approaches
+      ac!.querySelectorAll('.ac-item').forEach((it) => it.classList.remove('active'));
+      item.classList.add('active');
+
+      const editorRect = editor!.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      // Hand SVG tip is at top-left corner; offset so the fingertip lands inside the row
+      const x = itemRect.left - editorRect.left + 24;
+      const y = itemRect.top - editorRect.top + itemRect.height / 2 - 4;
+      hand!.style.opacity = '1';
+      hand!.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    async function clickItem(itemName: string) {
+      const item = ac!.querySelector<HTMLElement>(`.ac-item[data-name="${itemName}"]`);
+      if (!item) return;
+      hand!.classList.add('clicking');
+      item.classList.add('flash');
+      await sleep(180);
+      item.classList.remove('flash');
+      hand!.classList.remove('clicking');
+    }
+
+    async function loop() {
+      while (true) {
+        reset();
+        await sleep(500);
+
+        // Line 1: comment (36 chars)
+        await type(typed.l1!, 36, 28);
+        await sleep(280);
+
+        // Line 2 part a: "SELECT u." (9 chars) — popup opens on the dot
+        await type(typed.l2a!, 9, 55);
+        showPopup(72);
+        await sleep(350);
+        await moveHandTo('name');
+        await sleep(620);
+        await clickItem('name');
+        instant(typed.l2b!, 4);
+        hidePopup();
+        hand!.style.opacity = '0';
+        await sleep(380);
+
+        // Line 2 part c: ", u." (4 chars) — popup re-opens on the dot
+        await type(typed.l2c!, 4, 55);
+        showPopup(72);
+        await sleep(350);
+        await moveHandTo('email');
+        await sleep(600);
+        await clickItem('email');
+        instant(typed.l2d!, 5);
+        hidePopup();
+        hand!.style.opacity = '0';
+        await sleep(420);
+
+        // Line 3: FROM users u (12 chars)
+        await type(typed.l3!, 12, 45);
+        await sleep(320);
+
+        // Line 4 part a: "WHERE u." (8 chars) — popup opens on the dot
+        await type(typed.l4a!, 8, 55);
+        showPopup(122);
+        await sleep(380);
+        await moveHandTo('last_seen');
+        await sleep(700);
+        await clickItem('last_seen');
+        instant(typed.l4b!, 9);
+        hidePopup();
+        hand!.style.opacity = '0';
+        await sleep(350);
+
+        // Line 4 part c: slow-typed tail " >= NOW() - INTERVAL '30 days'" (30 chars)
+        await type(typed.l4c!, 30, 95);
+
+        await sleep(2400);
+      }
+    }
+
+    void loop();
+  });
+</script>

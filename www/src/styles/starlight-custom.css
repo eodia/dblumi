@@ -1,12 +1,16 @@
 /* ═══════════════════════════════════════════════════
    dblumi — Starlight theme overrides
    Dark + Light mode with green accent
+   Aligned with the affine-inspired landing style
    ═══════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ── Shared: both modes ──────────────────────────── */
 :root,
 ::backdrop {
-  --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sl-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 /* ════════════════════════════════════════════════════
@@ -48,17 +52,17 @@
    LIGHT MODE
    ════════════════════════════════════════════════════ */
 :root[data-theme='light'] {
-  /* ── Accent: darker green for readability ──────── */
-  --sl-color-accent-low: #dcefd6;
-  --sl-color-accent: #1a6e10;
-  --sl-color-accent-high: #114a0a;
-  --sl-color-text-accent: #176210;
+  /* ── Accent: dblumi dual-tone green, matches landing ──── */
+  --sl-color-accent-low: #eaf7e6;
+  --sl-color-accent: #2DA31E;
+  --sl-color-accent-high: #1a6e10;
+  --sl-color-text-accent: #2DA31E;
 
-  /* ── Backgrounds: clean white ──────────────────── */
+  /* ── Backgrounds: clean white with subtle off-white ──── */
   --sl-color-bg: #ffffff;
-  --sl-color-bg-nav: rgba(255, 255, 255, 0.92);
-  --sl-color-bg-sidebar: #f6f8f6;
-  --sl-color-bg-inline-code: #eef2ee;
+  --sl-color-bg-nav: rgba(255, 255, 255, 0.72);
+  --sl-color-bg-sidebar: #fafaf9;
+  --sl-color-bg-inline-code: rgba(65, 205, 42, 0.08);
 
   /* ── Gray scale ────────────────────────────────── */
   --sl-color-gray-1: #1a1a1e;
@@ -226,4 +230,109 @@ a:focus-visible {
   top: 1rem;
   left: 1rem;
   z-index: 999;
+}
+
+/* ════════════════════════════════════════════════════
+   Markdown content — affine-style polish
+   Shared across light and dark modes
+   ════════════════════════════════════════════════════ */
+
+/* ── Highlighter on <strong> (same as landing) ──── */
+.sl-markdown-content strong {
+  background: linear-gradient(180deg, transparent 58%, rgba(65, 205, 42, 0.28) 58%);
+  padding: 0 2px;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  font-weight: 600;
+}
+
+/* ── Inline code with subtle green tint ──────────── */
+.sl-markdown-content :not(pre) > code {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  font-size: 0.88em;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(65, 205, 42, 0.18);
+}
+
+:root[data-theme='light'] .sl-markdown-content :not(pre) > code {
+  color: var(--sl-color-accent);
+}
+:root[data-theme='dark'] .sl-markdown-content :not(pre) > code {
+  color: #9aefa0;
+  border-color: rgba(65, 205, 42, 0.25);
+}
+
+/* ── Headings: tighter letter-spacing, Inter 800 feel ── */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3 {
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+.sl-markdown-content h1 { font-weight: 800; }
+.sl-markdown-content h2 { font-weight: 700; }
+.sl-markdown-content h3 { font-weight: 700; }
+
+/* ── Headline links (anchor hover) ──────────────── */
+.sl-markdown-content h1 > a,
+.sl-markdown-content h2 > a,
+.sl-markdown-content h3 > a { color: inherit; }
+
+/* ── Asides (Note / Tip / Caution / Danger) ──────── */
+:root[data-theme='light'] .starlight-aside--tip {
+  background: rgba(65, 205, 42, 0.07);
+  border-inline-start-color: var(--sl-color-accent);
+}
+:root[data-theme='light'] .starlight-aside--note {
+  background: rgba(65, 205, 42, 0.05);
+  border-inline-start-color: var(--sl-color-accent);
+}
+
+/* ── CTA button style — matches landing ─────────── */
+:root[data-theme='light'] .action.primary {
+  background: var(--sl-color-accent);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(45, 163, 30, 0.25), 0 0 0 1px rgba(45, 163, 30, 0.15);
+}
+:root[data-theme='light'] .action.primary:hover {
+  background: #27901a;
+}
+
+/* ── Links in body copy — underlined with green ───── */
+:root[data-theme='light'] .sl-markdown-content a:not(.action):not(h1 > a):not(h2 > a):not(h3 > a):not(h4 > a) {
+  color: var(--sl-color-accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(65, 205, 42, 0.35);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s;
+}
+:root[data-theme='light'] .sl-markdown-content a:not(.action):hover {
+  text-decoration-color: var(--sl-color-accent);
+}
+
+/* ── Table polish to match landing look ─────────── */
+:root[data-theme='light'] table th {
+  background: #fafaf9;
+  border-color: #e2e2e6;
+  color: #0a0a0b;
+  font-weight: 700;
+  font-size: 0.88em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+:root[data-theme='light'] table td {
+  border-color: #ededf0;
+  color: #3a3a42;
+}
+
+/* ── Sidebar with subtle dblumi feel (light) ────── */
+:root[data-theme='light'] nav.sidebar a[aria-current="page"] {
+  background: rgba(65, 205, 42, 0.10);
+  border-inline-start-color: var(--sl-color-accent);
+  color: var(--sl-color-accent);
+  font-weight: 600;
 }

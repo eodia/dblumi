@@ -1,0 +1,1672 @@
+---
+// www/src/components/landing/BentoSection.astro
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].bento;
+
+function accent(s: string): [string, string] {
+  const parts = s.split('{{accent}}');
+  return [parts[0] ?? '', parts[1] ?? ''];
+}
+
+const [headBefore, headAfter] = accent(t.headline);
+const [restBefore, restAfter] = accent(t.cards.rest.title);
+const [mcpBefore, mcpAfter] = accent(t.cards.mcp.title);
+const [shBefore, shAfter] = accent(t.cards.selfHosted.title);
+const [drvBefore, drvAfter] = accent(t.cards.drivers.title);
+const [erdBefore, erdAfter] = accent(t.cards.erd.title);
+const [safetyBefore, safetyAfter] = accent(t.cards.safety.title);
+const [i18nBefore, i18nAfter] = accent(t.cards.i18n.title);
+const [hassleBefore, hassleAfter] = accent(t.cards.hassle.title);
+const [drawerBefore, drawerAfter] = accent(t.cards.drawer.title);
+const [verBefore, verAfter] = accent(t.cards.versioning.title);
+const [gameBefore, gameAfter] = accent(t.cards.game.title);
+---
+
+<section class="bento-section">
+  <div class="header">
+    <span class="eyebrow">{t.eyebrow}</span>
+    <h2>{headBefore}<span class="kalam">{headAfter}</span></h2>
+    <p class="lead">{t.lead}</p>
+  </div>
+
+  <div class="bento">
+
+    <!-- Row 1: REST API (span 4, light) + MCP (span 2, dark) -->
+    <div class="bcard span-4">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        {t.cards.rest.label}
+      </span>
+      <h3>{restBefore}<span class="accent">{restAfter}</span></h3>
+      <p>{t.cards.rest.desc}</p>
+      <div class="visual">
+        <div class="mini-term">
+<span class="prompt">$</span> <span class="kw">curl</span> <span class="url">https://api.eodia.net/q/regions_by_revenue</span> <span class="dim">\</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">-H</span> <span class="str">"X-API-Key: sk_live_a7f…"</span>
+<br><br>{"{"} <span class="key">"rows"</span>: [<br>&nbsp;&nbsp;&nbsp;{"{"}<span class="key">"region"</span>: <span class="str">"North America"</span>, <span class="key">"revenue"</span>: <span class="num">1245320</span>{"}"}<span class="dim">,</span><br>&nbsp;&nbsp;&nbsp;{"{"}<span class="key">"region"</span>: <span class="str">"Europe"</span>, <span class="key">"revenue"</span>: <span class="num">987410</span>{"}"}<br>] {"}"}
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard dark span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
+        {t.cards.mcp.label}
+      </span>
+      <h3>{mcpBefore}<span class="accent">{mcpAfter}</span></h3>
+      <p>{t.cards.mcp.desc}</p>
+      <div class="visual">
+        <div class="mini-term">
+<span class="dim">// claude_desktop_config.json</span><br>
+{"{"}<br>
+&nbsp;&nbsp;<span class="key">"mcpServers"</span>: {"{"}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"dblumi"</span>: {"{"}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"command"</span>: <span class="str">"npx"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"args"</span>: [<span class="str">"@dblumi/mcp"</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br>
+&nbsp;&nbsp;{"}"}<br>
+{"}"}
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Self-hosted (span 3, dark) + Multi-driver (span 3, light) -->
+    <div class="bcard dark span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        {t.cards.selfHosted.label}
+      </span>
+      <h3>{shBefore}<span class="accent">{shAfter}</span></h3>
+      <p>{t.cards.selfHosted.desc}</p>
+      <div class="visual">
+        <div class="mini-term">
+<span class="prompt">$</span> <span class="kw">docker</span> compose up -d<br>
+<span class="tick">✓</span> <span class="dim">Pulled</span> eodia/dblumi:latest<br>
+<span class="tick">✓</span> <span class="dim">Created</span> dblumi-api<br>
+<span class="tick">✓</span> <span class="dim">Started</span> dblumi <span class="dim">(3s)</span><br>
+<span class="dim">→</span> <span class="url">http://localhost:5173</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+        {t.cards.drivers.label}
+      </span>
+      <h3>{drvBefore}<span class="accent">{drvAfter}</span></h3>
+      <p>{t.cards.drivers.desc}</p>
+      <div class="visual">
+        <div class="magnetic">
+          <div class="core">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+          </div>
+          <div class="chip-orbit" style="--angle: 45deg; --delay: 0s;">
+            <div class="chip"><span class="logo l-pg">PG</span><span class="name">Postgres</span></div>
+          </div>
+          <div class="chip-orbit" style="--angle: 135deg; --delay: 0.3s;">
+            <div class="chip"><span class="logo l-my">My</span><span class="name">MySQL</span></div>
+          </div>
+          <div class="chip-orbit" style="--angle: 225deg; --delay: 0.6s;">
+            <div class="chip"><span class="logo l-or">O</span><span class="name">Oracle</span></div>
+          </div>
+          <div class="chip-orbit" style="--angle: 315deg; --delay: 0.9s;">
+            <div class="chip"><span class="logo l-sq">SL</span><span class="name">SQLite</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Schema ERD (span 2) + Guardrails (span 2) + i18n (span 2) -->
+    <div class="bcard span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/></svg>
+        {t.cards.erd.label}
+      </span>
+      <h3>{erdBefore}<span class="accent">{erdAfter}</span></h3>
+      <p>{t.cards.erd.desc}</p>
+      <div class="visual">
+        <div class="erd">
+          <svg class="erd-lines" viewBox="0 0 280 100" preserveAspectRatio="none">
+            <path d="M 70 24 Q 140 20 210 24" fill="none" stroke="rgba(65,205,42,0.5)" stroke-width="1.3" stroke-dasharray="3 3"/>
+            <path d="M 70 34 Q 90 70 140 82" fill="none" stroke="rgba(65,205,42,0.4)" stroke-width="1.3" stroke-dasharray="3 3"/>
+            <path d="M 210 34 Q 200 70 140 82" fill="none" stroke="rgba(65,205,42,0.4)" stroke-width="1.3" stroke-dasharray="3 3"/>
+          </svg>
+          <div class="erd-box users"><span class="tbl">users</span><span class="col">id</span></div>
+          <div class="erd-box orgs"><span class="tbl">orgs</span><span class="col">id</span></div>
+          <div class="erd-box orders"><span class="tbl">orders</span><span class="col">id</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        {t.cards.safety.label}
+      </span>
+      <h3>{safetyBefore}<span class="accent">{safetyAfter}</span></h3>
+      <p>{t.cards.safety.desc}</p>
+      <div class="visual">
+        <div class="levels">
+          {t.cards.safety.levels.map((lvl, i) => {
+            const isActive = lvl === t.cards.safety.levelActive;
+            const fillClass = `fill-${i + 1}`;
+            return (
+              <div class={`lvl${isActive ? ' active' : ''}`}>
+                <div class="bar">
+                  <span class={`seg${i >= 0 ? ` ${fillClass}` : ''}`}></span>
+                  <span class={`seg${i >= 1 ? ` ${fillClass}` : ''}`}></span>
+                  <span class={`seg${i >= 2 ? ` ${fillClass}` : ''}`}></span>
+                  <span class={`seg${i >= 3 ? ` ${fillClass}` : ''}`}></span>
+                </div>
+                <span class="name">{lvl}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-2">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        {t.cards.i18n.label}
+      </span>
+      <h3>{i18nBefore}<span class="accent">{i18nAfter}</span></h3>
+      <p>{t.cards.i18n.desc}</p>
+      <div class="visual">
+        <div class="langs">
+          <div class="lang active"><div class="code">EN</div><span class="lb">English</span></div>
+          <div class="lang active"><div class="code">FR</div><span class="lb">Français</span></div>
+        </div>
+        <div class="langs-soon">
+          <span class="lang-ghost">DE</span>
+          <span class="lang-ghost">ES</span>
+          <span class="lang-ghost">IT</span>
+          <span class="lang-ghost">+</span>
+          <span class="soon-label">soon</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Hassle (3) + Drawer (3) -->
+    <div class="bcard span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+        {t.cards.hassle.label}
+      </span>
+      <h3>{hassleBefore}<span class="accent">{hassleAfter}</span></h3>
+      <p>{t.cards.hassle.desc}</p>
+      <div class="visual">
+        <div class="goodbye">
+          <span class="competitor c1" style="--x: -110px; --y: -24px; --r: -14deg;">pgAdmin</span>
+          <span class="competitor c2" style="--x: 85px; --y: -32px; --r: 11deg;">DBeaver</span>
+          <span class="competitor c3" style="--x: -45px; --y: 22px; --r: 16deg;">phpMyAdmin</span>
+          <span class="competitor c4" style="--x: 75px; --y: 34px; --r: -9deg;">DataGrip</span>
+          <span class="competitor c5" style="--x: -115px; --y: 40px; --r: 6deg;">TablePlus</span>
+          <span class="competitor c6" style="--x: 105px; --y: -4px; --r: -7deg;">HeidiSQL</span>
+          <div class="goodbye-core">
+            <img src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/logo-dblumi-light.svg`} alt="dblumi" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard span-3">
+      <span class="c-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+        {t.cards.drawer.label}
+      </span>
+      <h3>{drawerBefore}<span class="accent">{drawerAfter}</span></h3>
+      <p>{t.cards.drawer.desc}</p>
+      <div class="visual">
+        <div class="drawer">
+          <div class="deck-card dc1">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span>Query</span>
+          </div>
+          <div class="deck-card dc2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <span>Share</span>
+          </div>
+          <div class="deck-card dc3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Explain</span>
+          </div>
+          <div class="deck-card dc4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+            <span>API</span>
+          </div>
+          <div class="deck-card dc5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
+            <span>MCP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 5: Version History (full width) -->
+    <div class="bcard span-6 ver-card">
+      <div class="ver-text">
+        <span class="c-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><polyline points="12 7 12 12 15 14"/></svg>
+          {t.cards.versioning.label}
+        </span>
+        <h3>{verBefore}<span class="accent">{verAfter}</span></h3>
+        <p>{t.cards.versioning.desc}</p>
+      </div>
+      <div class="ver-visual">
+        <div class="ver-mock">
+          <div class="ver-hdr">
+            <span class="ver-title">Timeline — Products</span>
+            <span class="ver-close">×</span>
+          </div>
+          <div class="ver-body">
+            <div class="ver-list">
+              <div class="ver-item current">
+                <span class="ver-dot"></span>
+                <div class="ver-info">
+                  <span class="ver-name">Current (editor)</span>
+                  <span class="ver-meta">Currently editing</span>
+                </div>
+              </div>
+              <div class="ver-item">
+                <span class="ver-check"></span>
+                <div class="ver-info">
+                  <span class="ver-name">Demo</span>
+                  <span class="ver-meta">6 avr. 2026, 01:26</span>
+                </div>
+              </div>
+              <div class="ver-item selected">
+                <span class="ver-check on"></span>
+                <div class="ver-info">
+                  <span class="ver-name">Demo</span>
+                  <span class="ver-meta">6 avr. 2026, 01:26</span>
+                  <span class="ver-tag">Final version</span>
+                </div>
+              </div>
+              <div class="ver-item">
+                <span class="ver-check"></span>
+                <div class="ver-info">
+                  <span class="ver-name">Demo</span>
+                  <span class="ver-meta">6 avr. 2026, 01:25</span>
+                </div>
+              </div>
+            </div>
+            <div class="ver-diff">
+              <div class="ver-diff-hdr">
+                <span class="ver-vs">vs current</span>
+                <span class="ver-restore">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+                  Restore
+                </span>
+              </div>
+              <pre class="ver-code"><span class="ln">1</span>  <span class="kw">SELECT</span>
+<span class="ln">2</span>    q.id,
+<span class="ln">3</span>    q.reference,
+<span class="ln">4</span>    c.first_name <span class="op">||</span> <span class="str">' '</span> <span class="op">||</span> c.last_name <span class="kw">AS</span> customer_name,
+<span class="ln">5</span>    <span class="fn">COUNT</span>(ql.id) <span class="kw">AS</span> number_of_products,
+<span class="ln">6</span>    <span class="fn">SUM</span>(ql.line_total) <span class="kw">AS</span> total_amount
+<span class="ln">7</span>  <span class="kw">FROM</span> quotes q
+<span class="ln">8</span>  <span class="kw">JOIN</span> customers c <span class="kw">ON</span> q.customer_id = c.id
+<span class="ln">9</span>  <span class="kw">ORDER BY</span> q.created_at <span class="kw">DESC</span>
+<span class="rem"><span class="ln">10</span>  <span class="kw">LIMIT</span> <span class="num">1000</span>;</span>
+<span class="add"><span class="ln">10</span>  <span class="kw">LIMIT</span> <span class="num">100</span>;</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 6: Mini debug game (full width) -->
+    <div class="bcard span-6 game-card dark">
+      <div class="game-text">
+        <span class="c-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M19 7l-3 2"/><path d="M5 7l3 2"/><path d="M19 13h-3"/><path d="M8 13H5"/><path d="M19 19l-3-2"/><path d="M5 19l3-2"/><path d="M12 3v3"/></svg>
+          {t.cards.game.label}
+        </span>
+        <h3>{gameBefore}<span class="accent">{gameAfter}</span></h3>
+        <p>{t.cards.game.desc}</p>
+        <div class="game-score">
+          <span class="sc-label">{t.cards.game.score}</span>
+          <span class="sc-value" data-score>0</span>
+        </div>
+      </div>
+      <div class="game-arena" data-arena tabindex="0" role="application" aria-label="Mini database pac-man">
+        <div class="world" data-world></div>
+        <span class="arena-hint">{t.cards.game.hint}</span>
+        <div class="arena-overlay" data-overlay>
+          <span class="over-title">Game over</span>
+          <span class="over-sub">Click to retry</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  // Mini database Pac-Man — arrow keys, collect databases, avoid bugs.
+  document.querySelectorAll<HTMLElement>('.game-card').forEach((card) => {
+    const arena = card.querySelector<HTMLElement>('[data-arena]');
+    const world = card.querySelector<HTMLElement>('[data-world]');
+    const scoreEl = card.querySelector<HTMLElement>('[data-score]');
+    const overlay = card.querySelector<HTMLElement>('[data-overlay]');
+    if (!arena || !world || !scoreEl || !overlay) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // ── Maze (13×9), '#' = wall, '.' = path ──
+    const MAP = [
+      '#############',
+      '#...........#',
+      '#.##.#.#.##.#',
+      '#...#...#...#',
+      '#.#.#.#.#.#.#',
+      '#...........#',
+      '#.##.###.##.#',
+      '#...........#',
+      '#############',
+    ];
+    const TILE = 22;
+    const COLS = MAP[0].length;
+    const ROWS = MAP.length;
+    const W = COLS * TILE;
+    const H = ROWS * TILE;
+    world.style.width = W + 'px';
+    world.style.height = H + 'px';
+
+    function isWall(tx: number, ty: number) {
+      if (ty < 0 || ty >= ROWS || tx < 0 || tx >= COLS) return true;
+      return MAP[ty][tx] === '#';
+    }
+
+    type Mover = {
+      el: HTMLElement;
+      tx: number;
+      ty: number;
+      dx: number;
+      dy: number;
+      progress: number;     // 0..1 to next tile
+      wantDx: number;
+      wantDy: number;
+      speed: number;        // tiles per frame (at dt=1)
+    };
+
+    function mk(cls: string) {
+      const el = document.createElement('div');
+      el.className = cls;
+      world!.appendChild(el);
+      return el;
+    }
+
+    // Build walls + dots
+    const dots: { el: HTMLElement; tx: number; ty: number; taken: boolean }[] = [];
+
+    function buildLevel() {
+      world!.querySelectorAll('.wall, .dot').forEach((n) => n.remove());
+      dots.length = 0;
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          if (MAP[y][x] === '#') {
+            const w = mk('wall');
+            w.style.width = TILE + 'px';
+            w.style.height = TILE + 'px';
+            w.style.transform = `translate(${x * TILE}px, ${y * TILE}px)`;
+          } else {
+            // Skip dots at bug spawn positions
+            const isSpawn = (x === 6 && y === 5) || (x === 1 && y === 1) || (x === 11 && y === 7);
+            if (!isSpawn) {
+              const d = mk('dot');
+              d.innerHTML = `
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                  <path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/>
+                  <path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>
+                </svg>`;
+              d.style.transform = `translate(${x * TILE + (TILE - 12) / 2}px, ${y * TILE + (TILE - 12) / 2}px)`;
+              dots.push({ el: d, tx: x, ty: y, taken: false });
+            }
+          }
+        }
+      }
+    }
+
+    // Player (Pac-dblumi)
+    const playerEl = mk('pacman');
+    playerEl.innerHTML = `
+      <svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true">
+        <defs>
+          <clipPath id="pac-mouth"><path d="M16 16 L32 6 L32 26 Z"/></clipPath>
+        </defs>
+        <circle cx="16" cy="16" r="14" fill="#41cd2a"/>
+        <circle cx="16" cy="16" r="14" fill="#0a0a0b" clip-path="url(#pac-mouth)"/>
+        <circle cx="16" cy="9" r="2" fill="#0a0a0b"/>
+      </svg>`;
+    const player: Mover = {
+      el: playerEl,
+      tx: 1, ty: 1,
+      dx: 0, dy: 0,
+      progress: 0,
+      wantDx: 0, wantDy: 0,
+      speed: 0.09,
+    };
+
+    // Bugs
+    function makeBug(color: string): HTMLElement {
+      const b = mk('bug');
+      b.innerHTML = `
+        <svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true">
+          <ellipse cx="16" cy="17" rx="8" ry="9" fill="${color}"/>
+          <circle cx="16" cy="10" r="4.5" fill="${color}"/>
+          <path d="M8 15 L3 12" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M24 15 L29 12" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M8 19 L2 20" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M24 19 L30 20" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M8 24 L4 27" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M24 24 L28 27" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="14" cy="9.5" r="1" fill="#fff"/>
+          <circle cx="18" cy="9.5" r="1" fill="#fff"/>
+        </svg>`;
+      return b;
+    }
+    const bugSpawns = [
+      { tx: 6, ty: 5, color: '#ef4444' },
+      { tx: 11, ty: 7, color: '#f59e0b' },
+      { tx: 11, ty: 1, color: '#a855f7' },
+    ];
+    const bugs: Mover[] = bugSpawns.map((s) => ({
+      el: makeBug(s.color),
+      tx: s.tx, ty: s.ty,
+      dx: -1, dy: 0,
+      progress: 0,
+      wantDx: 0, wantDy: 0,
+      speed: 0.07,
+    }));
+
+    function placeMover(m: Mover) {
+      const px = (m.tx + m.dx * m.progress) * TILE + (TILE - 18) / 2;
+      const py = (m.ty + m.dy * m.progress) * TILE + (TILE - 18) / 2;
+      m.el.style.transform = `translate(${px}px, ${py}px)`;
+    }
+
+    function updateMover(m: Mover, dt: number, isBug: boolean) {
+      // If resting, try to start in wanted direction
+      if (m.dx === 0 && m.dy === 0) {
+        if ((m.wantDx !== 0 || m.wantDy !== 0) && !isWall(m.tx + m.wantDx, m.ty + m.wantDy)) {
+          m.dx = m.wantDx;
+          m.dy = m.wantDy;
+        }
+      }
+      if (m.dx === 0 && m.dy === 0) return;
+      m.progress += m.speed * dt;
+      if (m.progress >= 1) {
+        m.tx += m.dx;
+        m.ty += m.dy;
+        m.progress = 0;
+        if (isBug) {
+          // At each tile, pick a new direction: prefer toward player 60% of the time
+          const options: [number, number][] = [];
+          const dirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+          for (const [dx, dy] of dirs) {
+            // Don't reverse unless necessary
+            if (dx === -m.dx && dy === -m.dy) continue;
+            if (!isWall(m.tx + dx, m.ty + dy)) options.push([dx, dy]);
+          }
+          if (options.length === 0) {
+            // Dead end — reverse
+            m.dx = -m.dx;
+            m.dy = -m.dy;
+          } else if (Math.random() < 0.55) {
+            // Chase: pick option minimizing distance to player
+            options.sort((a, b) => {
+              const da = Math.abs((m.tx + a[0]) - player.tx) + Math.abs((m.ty + a[1]) - player.ty);
+              const db = Math.abs((m.tx + b[0]) - player.tx) + Math.abs((m.ty + b[1]) - player.ty);
+              return da - db;
+            });
+            m.dx = options[0][0];
+            m.dy = options[0][1];
+          } else {
+            const pick = options[Math.floor(Math.random() * options.length)];
+            m.dx = pick[0];
+            m.dy = pick[1];
+          }
+        } else {
+          // Player: apply buffered direction if valid, else continue, else stop
+          if ((m.wantDx !== 0 || m.wantDy !== 0) && !isWall(m.tx + m.wantDx, m.ty + m.wantDy)) {
+            m.dx = m.wantDx;
+            m.dy = m.wantDy;
+          } else if (isWall(m.tx + m.dx, m.ty + m.dy)) {
+            m.dx = 0;
+            m.dy = 0;
+          }
+        }
+      }
+      placeMover(m);
+    }
+
+    // Face player in movement direction (rotation)
+    function facePlayer() {
+      let rot = 0;
+      if (player.dx === 1) rot = 0;
+      else if (player.dx === -1) rot = 180;
+      else if (player.dy === -1) rot = -90;
+      else if (player.dy === 1) rot = 90;
+      const px = (player.tx + player.dx * player.progress) * TILE + (TILE - 18) / 2;
+      const py = (player.ty + player.dy * player.progress) * TILE + (TILE - 18) / 2;
+      player.el.style.transform = `translate(${px}px, ${py}px) rotate(${rot}deg)`;
+    }
+
+    // ── INPUT ──
+    function setKey(e: KeyboardEvent) {
+      let handled = false;
+      if (e.code === 'ArrowLeft') { player.wantDx = -1; player.wantDy = 0; handled = true; }
+      else if (e.code === 'ArrowRight') { player.wantDx = 1; player.wantDy = 0; handled = true; }
+      else if (e.code === 'ArrowUp') { player.wantDx = 0; player.wantDy = -1; handled = true; }
+      else if (e.code === 'ArrowDown') { player.wantDx = 0; player.wantDy = 1; handled = true; }
+      if (handled) e.preventDefault();
+    }
+    arena.addEventListener('keydown', setKey);
+    arena.addEventListener('click', () => {
+      arena.focus();
+      if (dead) respawn();
+    });
+
+    // ── STATE ──
+    let score = 0;
+    let dead = false;
+    let lastTs = 0;
+    let running = true;
+
+    function respawn() {
+      dead = false;
+      overlay!.classList.remove('shown');
+      player.el.classList.remove('dead');
+      player.tx = 1; player.ty = 1;
+      player.dx = 0; player.dy = 0;
+      player.wantDx = 0; player.wantDy = 0;
+      player.progress = 0;
+      bugSpawns.forEach((s, i) => {
+        bugs[i].tx = s.tx;
+        bugs[i].ty = s.ty;
+        bugs[i].dx = -1; bugs[i].dy = 0;
+        bugs[i].progress = 0;
+      });
+      score = 0;
+      scoreEl!.textContent = '0';
+      buildLevel();
+      placeAll();
+    }
+
+    function die() {
+      if (dead) return;
+      dead = true;
+      player.el.classList.add('dead');
+      overlay!.classList.add('shown');
+    }
+
+    function placeAll() {
+      placeMover(player);
+      bugs.forEach(placeMover);
+    }
+
+    function tick(ts: number) {
+      if (!lastTs) lastTs = ts;
+      const dt = Math.min(2.5, (ts - lastTs) / 16.67);
+      lastTs = ts;
+
+      if (running && !dead) {
+        updateMover(player, dt, false);
+        facePlayer();
+        bugs.forEach((b) => updateMover(b, dt, true));
+
+        // Collect dot on player tile (when roughly centered)
+        if (player.progress < 0.15 || player.progress > 0.85) {
+          const cx = player.progress > 0.5 ? player.tx + player.dx : player.tx;
+          const cy = player.progress > 0.5 ? player.ty + player.dy : player.ty;
+          for (const d of dots) {
+            if (!d.taken && d.tx === cx && d.ty === cy) {
+              d.taken = true;
+              d.el.classList.add('popped');
+              setTimeout(() => d.el.remove(), 260);
+              score += 1;
+              scoreEl!.textContent = String(score);
+            }
+          }
+          if (dots.every((d) => d.taken)) {
+            setTimeout(() => { if (!dead) { buildLevel(); placeAll(); } }, 500);
+          }
+        }
+
+        // Collision with bugs (same tile or within half a tile)
+        for (const b of bugs) {
+          const ax = player.tx + player.dx * player.progress;
+          const ay = player.ty + player.dy * player.progress;
+          const bx = b.tx + b.dx * b.progress;
+          const by = b.ty + b.dy * b.progress;
+          if (Math.abs(ax - bx) < 0.7 && Math.abs(ay - by) < 0.7) {
+            die();
+            break;
+          }
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    // Pause when card not visible
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) running = e.isIntersecting;
+    });
+    io.observe(card);
+
+    // Init
+    buildLevel();
+    placeAll();
+    requestAnimationFrame(tick);
+  });
+</script>
+
+<style>
+  /* ── Bento section ── */
+  .bento-section {
+    background: var(--db-alt-bg);
+    padding: 88px 40px 96px;
+    border-radius: 20px;
+  }
+  .bento-section .header {
+    max-width: 900px;
+    margin: 0 auto 48px;
+    text-align: center;
+  }
+  .bento-section .eyebrow {
+    display: inline-block;
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--db-primary);
+    padding: 5px 12px;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.07);
+    margin-bottom: 18px;
+  }
+  .bento-section h2 {
+    font-size: 44px; font-weight: 800; line-height: 1.0;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    color: var(--db-text);
+  }
+  .bento-section h2 .kalam {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    color: var(--db-primary-vivid);
+  }
+  .bento-section .lead {
+    font-size: 15px; color: var(--db-muted-fg); line-height: 1.55;
+    max-width: 52ch; margin: 0 auto;
+  }
+
+  /* ── Bento grid ── */
+  .bento {
+    max-width: 1100px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+  .bcard {
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 20px;
+    padding: 26px 24px 24px;
+    display: flex; flex-direction: column;
+    min-height: 240px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bcard.dark { background: #0a0a0b; color: #fff; border-color: #0a0a0b; }
+  .bcard .c-label {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--db-primary);
+    margin-bottom: 10px;
+  }
+  .bcard.dark .c-label { color: var(--db-primary-vivid); }
+  .bcard h3 {
+    font-size: 22px; font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0 0 8px;
+    line-height: 1.05;
+    color: inherit;
+  }
+  .bcard h3 .accent { color: var(--db-primary-vivid); }
+  .bcard p {
+    font-size: 12.5px; color: var(--db-muted-fg);
+    line-height: 1.5; margin: 0;
+    max-width: 38ch;
+  }
+  .bcard.dark p { color: #9a9aa0; }
+  .bcard .visual { margin-top: auto; padding-top: 20px; }
+
+  /* Bento spans */
+  .bcard.span-2 { grid-column: span 2; }
+  .bcard.span-3 { grid-column: span 3; }
+  .bcard.span-4 { grid-column: span 4; }
+
+  /* ── Terminal style (REST, Self-hosted, MCP) ── */
+  .mini-term {
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.65;
+    color: var(--db-text-soft);
+    overflow: hidden;
+  }
+  .dark .mini-term {
+    background: #000;
+    border-color: #1a1a1e;
+    color: #e5e5ea;
+  }
+  .mini-term .prompt { color: #b0b0b6; }
+  .dark .mini-term .prompt { color: #5a5a64; }
+  .mini-term .tick { color: var(--db-primary); }
+  .dark .mini-term .tick { color: var(--db-primary-vivid); }
+  .mini-term .kw { color: var(--db-primary); }
+  .dark .mini-term .kw { color: var(--db-primary-vivid); }
+  .mini-term .url { color: #1e40af; }
+  .dark .mini-term .url { color: #60a5fa; }
+  .mini-term .str { color: var(--db-primary); }
+  .mini-term .key { color: #8b5cf6; }
+  .mini-term .num { color: #d97706; }
+  .mini-term .dim { color: #9a9aa0; }
+  .dark .mini-term .dim { color: #5a5a64; }
+
+  /* ── Drivers card — magnetic orbit ── */
+  .magnetic {
+    position: relative;
+    width: 100%;
+    height: 170px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .magnetic .core {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 56px; height: 56px;
+    margin: -28px 0 0 -28px;
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(65, 205, 42, 0.35), transparent 70%),
+      linear-gradient(135deg, #ffffff 0%, #f5f7f4 100%);
+    border: 1px solid rgba(65, 205, 42, 0.35);
+    box-shadow:
+      0 12px 32px -10px rgba(65, 205, 42, 0.45),
+      0 0 0 6px rgba(65, 205, 42, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    color: var(--db-primary-vivid);
+    animation: coreFloat 4s ease-in-out infinite;
+  }
+  @keyframes coreFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  .magnetic .chip-orbit {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateX(92px) rotate(calc(-1 * var(--angle)));
+    transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 1;
+  }
+  .magnetic:hover .chip-orbit {
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateX(42px) rotate(calc(-1 * var(--angle)));
+  }
+  .magnetic .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 11px;
+    background: #ffffff;
+    border: 1px solid var(--db-border);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px -6px rgba(10, 10, 15, 0.14);
+    white-space: nowrap;
+    animation: chipBob 3.5s ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes chipBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .magnetic .chip .logo {
+    width: 18px; height: 18px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .magnetic .chip .l-pg { background: #336791; }
+  .magnetic .chip .l-my { background: #f29111; }
+  .magnetic .chip .l-or { background: #c74634; }
+  .magnetic .chip .l-sq { background: #003b57; }
+  .magnetic .chip .name { font-size: 10.5px; font-weight: 600; color: var(--db-text); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .magnetic .core,
+    .magnetic .chip { animation: none; }
+  }
+
+  /* ── ERD card ── */
+  .erd {
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 9px;
+    padding: 18px 14px;
+    position: relative;
+    min-height: 110px;
+  }
+  .erd-box {
+    position: absolute;
+    background: #fff;
+    border: 1px solid var(--db-border);
+    border-radius: 5px;
+    padding: 4px 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--db-text-soft);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  .erd-box.users { top: 10px; left: 12px; }
+  .erd-box.orgs { top: 10px; right: 12px; }
+  .erd-box.orders { bottom: 12px; left: 50%; transform: translateX(-50%); }
+  .erd-box .tbl { font-weight: 700; color: var(--db-primary); display: block; }
+  .erd-box .col { color: #9a9aa0; font-size: 8px; display: block; }
+  .erd-lines { position: absolute; inset: 0; pointer-events: none; }
+  .erd-lines path {
+    transition: stroke 0.35s ease, stroke-width 0.35s ease;
+  }
+  .bcard:hover .erd-lines path {
+    stroke: rgba(65, 205, 42, 0.9);
+    stroke-width: 1.6;
+    animation: erdDashFlow 0.9s linear infinite;
+  }
+  @keyframes erdDashFlow {
+    to { stroke-dashoffset: -6; }
+  }
+  .erd-box {
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.45s ease,
+                border-color 0.35s ease;
+  }
+  .bcard:hover .erd-box {
+    border-color: rgba(65, 205, 42, 0.35);
+    box-shadow: 0 6px 16px -6px rgba(65, 205, 42, 0.25);
+  }
+  .bcard:hover .erd-box.users { transform: translate(-2px, -2px); }
+  .bcard:hover .erd-box.orgs { transform: translate(2px, -2px); }
+  .bcard:hover .erd-box.orders { transform: translate(-50%, 2px); }
+  @media (prefers-reduced-motion: reduce) {
+    .bcard:hover .erd-lines path { animation: none; }
+    .bcard:hover .erd-box { transform: none; }
+  }
+
+  /* ── Guardrails card ── */
+  .levels { display: flex; flex-direction: column; gap: 5px; }
+  .lvl {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 10.5px; color: var(--db-text-soft);
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+  }
+  .lvl .bar { display: flex; gap: 2px; }
+  .lvl .bar .seg { width: 7px; height: 9px; border-radius: 2px; background: var(--db-border); }
+  .lvl .bar .seg.fill-1 { background: var(--db-primary-vivid); }
+  .lvl .bar .seg.fill-2 { background: var(--db-warning); }
+  .lvl .bar .seg.fill-3 { background: #fb923c; }
+  .lvl .bar .seg.fill-4 { background: var(--db-destructive); }
+  .lvl .name { flex: 1; font-weight: 500; }
+  @property --alarm-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  @property --alarm-angle-2 {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .lvl.active {
+    background: rgba(220, 38, 38, 0.06);
+    border-color: rgba(220, 38, 38, 0.22);
+    color: var(--db-destructive);
+    font-weight: 600;
+    position: relative;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+  /* Primary rotating red border — ported from the old site (in red) */
+  .lvl.active::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 5px;
+    padding: 2px;
+    background: conic-gradient(
+      from var(--alarm-angle),
+      transparent 0%,
+      transparent 25%,
+      #DC2626 35%,
+      #ff4444 42%,
+      #DC2626 49%,
+      transparent 60%,
+      transparent 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+            mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  /* Secondary blurred trail for depth */
+  .lvl.active::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 6px;
+    padding: 3px;
+    background: conic-gradient(
+      from var(--alarm-angle-2),
+      transparent 0%,
+      transparent 30%,
+      rgba(220, 38, 38, 0.85) 40%,
+      transparent 50%,
+      transparent 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+            mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    filter: blur(4px);
+    pointer-events: none;
+  }
+  .bcard:hover .lvl.active {
+    background: rgba(220, 38, 38, 0.10);
+    border-color: transparent;
+  }
+  .bcard:hover .lvl.active::before {
+    opacity: 1;
+    animation: alarm-spin 3s linear infinite;
+  }
+  .bcard:hover .lvl.active::after {
+    opacity: 1;
+    animation: alarm-spin-glow 3s linear infinite;
+  }
+  @keyframes alarm-spin {
+    to { --alarm-angle: 360deg; }
+  }
+  @keyframes alarm-spin-glow {
+    to { --alarm-angle-2: 360deg; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bcard:hover .lvl.active::before,
+    .bcard:hover .lvl.active::after { animation: none; }
+  }
+
+  /* ── i18n card ── */
+  .langs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .langs-soon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px dashed var(--db-border);
+    background: #fdfdfc;
+  }
+  .langs-soon .lang-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: var(--db-muted);
+    color: #b0b0b6;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .langs-soon .soon-label {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--db-muted-fg);
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.1);
+    border: 1px solid rgba(65, 205, 42, 0.25);
+    color: var(--db-primary);
+  }
+  .lang {
+    flex: 1; padding: 12px 10px;
+    border-radius: 9px;
+    background: #fdfdfc;
+    border: 1px solid var(--db-border-subtle);
+    text-align: center;
+  }
+  .lang.active {
+    background: rgba(65,205,42,0.08);
+    border-color: rgba(65,205,42,0.3);
+    color: var(--db-primary);
+  }
+  .lang .code { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; color: inherit; }
+  .lang .lb { display: block; margin-top: 2px; font-size: 9px; color: var(--db-muted-fg); font-weight: 500; }
+  .lang.active .lb { color: var(--db-primary); }
+
+  /* ── Responsive ── */
+  @media (max-width: 1000px) {
+    .bento {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .bcard.span-4 { grid-column: span 4; }
+    .bcard.span-3 { grid-column: span 2; }
+    .bcard.span-2 { grid-column: span 2; }
+  }
+
+  @media (max-width: 600px) {
+    .bento-section {
+      padding: 56px 20px 64px;
+    }
+    .bento-section h2 {
+      font-size: 32px;
+    }
+    .bento {
+      grid-template-columns: 1fr;
+    }
+    .bcard.span-2,
+    .bcard.span-3,
+    .bcard.span-4 {
+      grid-column: span 1;
+    }
+  }
+
+  /* ── Hassle card — competitor logos fade out on hover ── */
+  .goodbye {
+    position: relative;
+    width: 100%;
+    height: 160px;
+  }
+  .goodbye .competitor {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--r));
+    padding: 5px 11px;
+    background: #ffffff;
+    border: 1px solid var(--db-border);
+    border-radius: 7px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--db-text-soft);
+    box-shadow: 0 4px 12px -4px rgba(10, 10, 15, 0.15);
+    white-space: nowrap;
+    transition:
+      transform 0.65s cubic-bezier(0.55, 0, 0.85, 0.1),
+      opacity 0.45s ease-out,
+      filter 0.5s ease-out;
+  }
+  .goodbye .goodbye-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+    transition:
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s,
+      opacity 0.5s ease-out 0.15s;
+    z-index: 5;
+    padding: 14px 20px;
+    background: #ffffff;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 14px;
+    box-shadow:
+      0 18px 50px -12px rgba(65, 205, 42, 0.4),
+      0 0 0 6px rgba(65, 205, 42, 0.06);
+  }
+  .goodbye .goodbye-core img {
+    display: block;
+    height: 28px;
+    width: auto;
+  }
+  .bcard:hover .goodbye .competitor {
+    transform:
+      translate(-50%, -50%)
+      translate(calc(var(--x) * 2.6), calc(var(--y) * 2.6))
+      rotate(calc(var(--r) * 2.4))
+      scale(0.6);
+    opacity: 0;
+    filter: blur(3px);
+  }
+  .bcard:hover .goodbye .goodbye-core {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  /* ── Drawer card — fan of stacked cards on hover ── */
+  .drawer {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 8px;
+  }
+  .drawer .deck-card {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    width: 68px;
+    height: 84px;
+    margin-left: -34px;
+    background: #ffffff;
+    border: 1px solid var(--db-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--db-text);
+    box-shadow: 0 6px 18px -6px rgba(10, 10, 15, 0.15);
+    transform-origin: 50% 100%;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .drawer .deck-card svg { color: var(--db-primary-vivid); flex-shrink: 0; }
+  /* Initial stacked state — slight offsets for "deck of cards" feel */
+  .drawer .dc1 { z-index: 1; transform: rotate(-3deg) translateY(-1px); }
+  .drawer .dc2 { z-index: 2; transform: rotate(-1deg); }
+  .drawer .dc3 { z-index: 3; transform: rotate(0deg); }
+  .drawer .dc4 { z-index: 4; transform: rotate(1deg); }
+  .drawer .dc5 { z-index: 5; transform: rotate(3deg) translateY(-1px); }
+  /* Scatter on hover — cards fly out in all directions */
+  .bcard:hover .drawer .dc1 { transform: translate(-110px, -70px) rotate(-18deg); }
+  .bcard:hover .drawer .dc2 { transform: translate(-55px,  -95px) rotate(-8deg); }
+  .bcard:hover .drawer .dc3 { transform: translate(5px,   -110px) rotate(4deg); }
+  .bcard:hover .drawer .dc4 { transform: translate(70px,   -80px) rotate(14deg); }
+  .bcard:hover .drawer .dc5 { transform: translate(120px,  -50px) rotate(22deg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bcard:hover .goodbye .competitor,
+    .bcard:hover .goodbye .goodbye-core,
+    .bcard:hover .drawer .deck-card {
+      transition: none;
+    }
+  }
+
+  /* ── Version History card (full width) ── */
+  .bcard.span-6 { grid-column: span 6; }
+  .bcard.ver-card {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 32px;
+    padding: 32px;
+    min-height: 320px;
+  }
+  .bcard.ver-card .ver-text {
+    flex: 0 0 34%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 34ch;
+  }
+  .bcard.ver-card .ver-text p {
+    font-size: 13px;
+    max-width: none;
+  }
+  .bcard.ver-card .ver-visual {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+  .ver-mock {
+    width: 100%;
+    background: #0a0a0b;
+    border: 1px solid #1a1a1e;
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #e5e5ea;
+    box-shadow:
+      0 40px 80px -24px rgba(10, 10, 15, 0.25),
+      0 16px 32px -16px rgba(10, 10, 15, 0.12);
+  }
+  .ver-hdr {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #1a1a1e;
+  }
+  .ver-hdr .ver-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #f0f0f0;
+  }
+  .ver-hdr .ver-close {
+    margin-left: auto;
+    color: #5a5a64;
+    font-size: 18px;
+    line-height: 1;
+  }
+  .ver-body {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 230px;
+  }
+  .ver-list {
+    border-right: 1px solid #1a1a1e;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ver-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    transition: background 0.2s;
+  }
+  .ver-item.selected {
+    background: rgba(65, 205, 42, 0.08);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+  }
+  .ver-item .ver-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--db-primary-vivid, #41cd2a);
+    margin-top: 5px;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(65, 205, 42, 0.7);
+  }
+  .ver-item .ver-check {
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    border: 1.5px solid #33333a;
+    margin-top: 2px;
+    flex-shrink: 0;
+    background: transparent;
+    position: relative;
+  }
+  .ver-item .ver-check.on {
+    border-color: var(--db-primary-vivid, #41cd2a);
+    background: var(--db-primary-vivid, #41cd2a);
+  }
+  .ver-item .ver-check.on::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 3px;
+    width: 4px;
+    height: 7px;
+    border-right: 2px solid #0a0a0b;
+    border-bottom: 2px solid #0a0a0b;
+    transform: rotate(45deg);
+  }
+  .ver-item .ver-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .ver-item .ver-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f0f0f0;
+  }
+  .ver-item.current .ver-name { color: var(--db-primary-vivid, #41cd2a); }
+  .ver-item .ver-meta {
+    font-size: 10.5px;
+    color: #6e6e78;
+  }
+  .ver-item .ver-tag {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-top: 5px;
+    padding: 2px 7px;
+    border-radius: 100px;
+    font-size: 9.5px;
+    font-weight: 600;
+    background: rgba(65, 205, 42, 0.14);
+    color: var(--db-primary-vivid, #41cd2a);
+    border: 1px solid rgba(65, 205, 42, 0.3);
+  }
+  .ver-diff {
+    padding: 10px 14px 14px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .ver-diff-hdr {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .ver-diff-hdr .ver-vs {
+    font-size: 10.5px;
+    color: #6e6e78;
+  }
+  .ver-diff-hdr .ver-restore {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #0a0a0b;
+    background: var(--db-primary-vivid, #41cd2a);
+    box-shadow: 0 0 14px -2px rgba(65, 205, 42, 0.5);
+  }
+  .ver-code {
+    margin: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.7;
+    color: #c4c4c8;
+    background: transparent;
+    white-space: pre;
+    overflow: hidden;
+  }
+  .ver-code .ln {
+    display: inline-block;
+    width: 18px;
+    text-align: right;
+    margin-right: 10px;
+    color: #33333a;
+    user-select: none;
+  }
+  .ver-code .kw { color: #c084fc; font-weight: 500; }
+  .ver-code .fn { color: #60a5fa; }
+  .ver-code .str { color: #5de847; }
+  .ver-code .op { color: #f472b6; }
+  .ver-code .num { color: #fbbf24; }
+  .ver-code .add {
+    display: inline-block;
+    background: rgba(65, 205, 42, 0.12);
+    box-shadow: inset 2px 0 0 var(--db-primary-vivid, #41cd2a);
+    width: 100%;
+    padding-right: 8px;
+  }
+  .ver-code .rem {
+    display: inline-block;
+    background: rgba(220, 38, 38, 0.14);
+    box-shadow: inset 2px 0 0 #ef4444;
+    width: 100%;
+    padding-right: 8px;
+    text-decoration: line-through;
+    text-decoration-color: rgba(239, 68, 68, 0.55);
+  }
+  .ver-code .rem .kw { color: #fca5a5; }
+  .ver-code .rem .num { color: #fca5a5; }
+
+  @media (max-width: 860px) {
+    .bcard.ver-card {
+      flex-direction: column;
+      padding: 24px;
+    }
+    .bcard.ver-card .ver-text {
+      flex: none;
+      max-width: none;
+    }
+    .ver-body {
+      grid-template-columns: 1fr;
+    }
+    .ver-list {
+      border-right: 0;
+      border-bottom: 1px solid #1a1a1e;
+    }
+  }
+
+  /* ── Mini database runner game card ── */
+  .bcard.game-card {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 32px;
+    padding: 32px;
+    min-height: 280px;
+    background:
+      radial-gradient(circle at 85% 20%, rgba(65, 205, 42, 0.12), transparent 55%),
+      linear-gradient(180deg, #101015 0%, #0a0a0b 100%);
+    border-color: #1a1a1e;
+  }
+  .bcard.game-card .game-text {
+    flex: 0 0 36%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 36ch;
+  }
+  .bcard.game-card .game-text p {
+    font-size: 13px;
+    max-width: none;
+    color: #9a9aa0;
+  }
+  .game-score {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 10px 14px;
+    background: rgba(65, 205, 42, 0.08);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+    border-radius: 10px;
+    width: max-content;
+  }
+  .game-score .sc-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--db-primary-vivid, #41cd2a);
+  }
+  .game-score .sc-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: #f0f0f0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .game-arena {
+    flex: 1;
+    position: relative;
+    min-height: 280px;
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, #0e0e13 0%, #050507 100%);
+    border: 1px solid #1a1a1e;
+    overflow: hidden;
+    cursor: pointer;
+    outline: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .game-arena:focus-visible {
+    border-color: rgba(65, 205, 42, 0.45);
+    box-shadow: 0 0 0 3px rgba(65, 205, 42, 0.15);
+  }
+  .game-arena .arena-sky {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(65, 205, 42, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(65, 205, 42, 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(ellipse at center, #000 55%, transparent 95%);
+    pointer-events: none;
+  }
+  .game-arena .arena-hint {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #5a5a64;
+    pointer-events: none;
+    font-family: 'Inter', system-ui, sans-serif;
+    z-index: 6;
+  }
+
+  .game-arena .world {
+    position: relative;
+    max-width: 100%;
+  }
+  .game-arena :global(.world > *) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    will-change: transform;
+  }
+
+  /* Maze walls */
+  .game-arena :global(.wall) {
+    background:
+      linear-gradient(180deg, rgba(65, 205, 42, 0.18) 0%, rgba(65, 205, 42, 0.05) 100%);
+    border: 1px solid rgba(65, 205, 42, 0.55);
+    border-radius: 3px;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+      0 0 6px rgba(65, 205, 42, 0.15);
+  }
+
+  /* Database dots to collect */
+  .game-arena :global(.dot) {
+    width: 16px;
+    height: 16px;
+    color: var(--db-primary-vivid, #41cd2a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 0 4px rgba(65, 205, 42, 0.5));
+    z-index: 2;
+    animation: dotPulse 1.6s ease-in-out infinite;
+  }
+  .game-arena :global(.dot svg) { display: block; }
+  @keyframes dotPulse {
+    0%, 100% { opacity: 0.75; }
+    50% { opacity: 1; }
+  }
+  .game-arena :global(.dot.popped) {
+    animation: dotPop 0.26s ease-out forwards;
+  }
+  @keyframes dotPop {
+    0% { filter: drop-shadow(0 0 4px rgba(65, 205, 42, 0.5)); opacity: 1; }
+    100% { filter: drop-shadow(0 0 14px rgba(65, 205, 42, 0.9)) brightness(1.8); opacity: 0; }
+  }
+
+  /* Pac-dblumi */
+  .game-arena :global(.pacman) {
+    z-index: 5;
+    filter: drop-shadow(0 0 6px rgba(65, 205, 42, 0.6));
+    transition: transform 0.05s linear;
+  }
+  .game-arena :global(.pacman svg) { display: block; }
+  .game-arena :global(.pacman.dead) {
+    filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.7));
+    animation: pacDead 0.45s ease-out forwards;
+  }
+  @keyframes pacDead {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.6); }
+  }
+
+  /* Bugs */
+  .game-arena :global(.bug) {
+    z-index: 4;
+    filter: drop-shadow(0 2px 4px rgba(10, 10, 15, 0.5));
+  }
+  .game-arena :global(.bug svg) { display: block; }
+
+  .game-arena .arena-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(10, 10, 15, 0.72);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 5;
+  }
+  .game-arena .arena-overlay.shown { opacity: 1; }
+  .game-arena .arena-overlay .over-title {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #ef4444;
+    letter-spacing: -0.01em;
+  }
+  .game-arena .arena-overlay .over-sub {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #9a9aa0;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .game-arena { display: none; }
+  }
+
+  @media (max-width: 860px) {
+    .bcard.game-card {
+      flex-direction: column;
+      padding: 24px;
+    }
+    .bcard.game-card .game-text {
+      flex: none;
+      max-width: none;
+    }
+  }
+</style>

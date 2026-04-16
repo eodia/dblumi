@@ -1,0 +1,393 @@
+---
+import '../styles/landing.css';
+import Navbar from '../components/landing/Navbar.astro';
+import SiteFooter from '../components/landing/SiteFooter.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+type Endpoint = { method: string; path: string; desc: string; auth: boolean };
+type Group = { name: string; desc: string; endpoints: Endpoint[] };
+
+const groups: Group[] = [
+  {
+    name: 'Auth',
+    desc: 'Registration, login, sessions, OAuth, and password management.',
+    endpoints: [
+      { method: 'POST', path: '/api/v1/auth/register', desc: 'Create a new user account', auth: false },
+      { method: 'POST', path: '/api/v1/auth/login', desc: 'Authenticate and receive a JWT', auth: false },
+      { method: 'POST', path: '/api/v1/auth/logout', desc: 'Revoke the current session', auth: true },
+      { method: 'GET', path: '/api/v1/auth/me', desc: 'Get the authenticated user profile', auth: true },
+      { method: 'PATCH', path: '/api/v1/auth/language', desc: 'Update user language preference', auth: true },
+      { method: 'GET', path: '/api/v1/auth/ws-token', desc: 'Get a short-lived WebSocket token', auth: true },
+      { method: 'POST', path: '/api/v1/auth/password-change', desc: 'Change current password', auth: true },
+      { method: 'POST', path: '/api/v1/auth/request-password-reset', desc: 'Request a password-reset email', auth: false },
+      { method: 'POST', path: '/api/v1/auth/reset-password', desc: 'Reset password with a token', auth: false },
+      { method: 'GET', path: '/api/v1/auth/keycloak', desc: 'Initiate Keycloak/OIDC login', auth: false },
+      { method: 'GET', path: '/api/v1/auth/keycloak/callback', desc: 'Keycloak OAuth callback', auth: false },
+    ],
+  },
+  {
+    name: 'Connections',
+    desc: 'Manage database connections (Postgres, MySQL, Oracle, SQLite).',
+    endpoints: [
+      { method: 'GET', path: '/api/v1/connections', desc: 'List all connections', auth: true },
+      { method: 'POST', path: '/api/v1/connections', desc: 'Create a new connection', auth: true },
+      { method: 'POST', path: '/api/v1/connections/test-raw', desc: 'Test a connection before saving', auth: true },
+      { method: 'GET', path: '/api/v1/connections/:id', desc: 'Get a connection by ID', auth: true },
+      { method: 'PUT', path: '/api/v1/connections/:id', desc: 'Update a connection', auth: true },
+      { method: 'DELETE', path: '/api/v1/connections/:id', desc: 'Delete a connection', auth: true },
+      { method: 'POST', path: '/api/v1/connections/:id/test', desc: 'Test an existing connection', auth: true },
+      { method: 'GET', path: '/api/v1/connections/:id/schema', desc: 'Get full schema (tables, columns, relations)', auth: true },
+      { method: 'POST', path: '/api/v1/connections/:id/table-count', desc: 'Count rows in a table', auth: true },
+    ],
+  },
+  {
+    name: 'Query',
+    desc: 'Execute SQL queries with streaming results.',
+    endpoints: [
+      { method: 'POST', path: '/api/v1/query', desc: 'Execute a SQL query (SSE streaming)', auth: true },
+    ],
+  },
+  {
+    name: 'Saved Queries',
+    desc: 'Save, organize, share, and version queries.',
+    endpoints: [
+      { method: 'GET', path: '/api/v1/saved-queries', desc: 'List all saved queries', auth: true },
+      { method: 'POST', path: '/api/v1/saved-queries', desc: 'Create a saved query', auth: true },
+      { method: 'PATCH', path: '/api/v1/saved-queries/reorder', desc: 'Reorder saved queries', auth: true },
+      { method: 'GET', path: '/api/v1/saved-queries/:id', desc: 'Get a saved query', auth: true },
+      { method: 'PUT', path: '/api/v1/saved-queries/:id', desc: 'Update a saved query', auth: true },
+      { method: 'DELETE', path: '/api/v1/saved-queries/:id', desc: 'Delete a saved query', auth: true },
+      { method: 'GET', path: '/api/v1/saved-queries/:id/shares', desc: 'List sharing rules', auth: true },
+      { method: 'PUT', path: '/api/v1/saved-queries/:id/shares', desc: 'Update sharing rules', auth: true },
+      { method: 'GET', path: '/api/v1/saved-queries/:id/versions', desc: 'List version history', auth: true },
+      { method: 'PATCH', path: '/api/v1/saved-queries/:id/versions/:versionId', desc: 'Label a version', auth: true },
+      { method: 'GET', path: '/api/v1/saved-queries/:id/messages', desc: 'List collaboration messages', auth: true },
+    ],
+  },
+  {
+    name: 'AI Copilot',
+    desc: 'Schema-aware SQL generation from natural language.',
+    endpoints: [
+      { method: 'POST', path: '/api/v1/copilot', desc: 'Generate SQL from natural language (SSE streaming)', auth: true },
+    ],
+  },
+  {
+    name: 'Sharing & Groups',
+    desc: 'Group management and role-based access control.',
+    endpoints: [
+      { method: 'GET', path: '/api/v1/sharing/groups', desc: 'List groups you belong to', auth: true },
+      { method: 'GET', path: '/api/v1/sharing/users', desc: 'List users available for sharing', auth: true },
+    ],
+  },
+  {
+    name: 'Admin',
+    desc: 'User and group administration (admin role required).',
+    endpoints: [
+      { method: 'GET', path: '/api/v1/admin/users', desc: 'List all users', auth: true },
+      { method: 'PATCH', path: '/api/v1/admin/users/:id', desc: 'Update a user (role, status)', auth: true },
+      { method: 'DELETE', path: '/api/v1/admin/users/:id', desc: 'Delete a user', auth: true },
+      { method: 'GET', path: '/api/v1/admin/groups', desc: 'List all groups', auth: true },
+      { method: 'POST', path: '/api/v1/admin/groups', desc: 'Create a group', auth: true },
+      { method: 'PATCH', path: '/api/v1/admin/groups/:id', desc: 'Update a group', auth: true },
+      { method: 'DELETE', path: '/api/v1/admin/groups/:id', desc: 'Delete a group', auth: true },
+      { method: 'GET', path: '/api/v1/admin/groups/:id/members', desc: 'List group members', auth: true },
+      { method: 'POST', path: '/api/v1/admin/groups/:id/members', desc: 'Add a member to a group', auth: true },
+      { method: 'DELETE', path: '/api/v1/admin/groups/:id/members/:userId', desc: 'Remove a member', auth: true },
+    ],
+  },
+  {
+    name: 'Database Users',
+    desc: 'Manage users and privileges on the target database.',
+    endpoints: [
+      { method: 'GET', path: '/api/v1/connections/:id/db-users', desc: 'List database users', auth: true },
+      { method: 'GET', path: '/api/v1/connections/:id/db-users/:username/privileges', desc: 'Get user privileges', auth: true },
+      { method: 'POST', path: '/api/v1/connections/:id/db-users', desc: 'Create a database user', auth: true },
+      { method: 'PUT', path: '/api/v1/connections/:id/db-users/:username', desc: 'Update a database user', auth: true },
+      { method: 'DELETE', path: '/api/v1/connections/:id/db-users/:username', desc: 'Delete a database user', auth: true },
+    ],
+  },
+  {
+    name: 'Import & Sync',
+    desc: 'Bulk data import and cross-database synchronization.',
+    endpoints: [
+      { method: 'POST', path: '/api/v1/import', desc: 'Import data (CSV/SQL) into a table', auth: true },
+      { method: 'POST', path: '/api/v1/import/map-columns', desc: 'AI-powered column mapping', auth: true },
+      { method: 'POST', path: '/api/v1/sync', desc: 'Sync data between databases', auth: true },
+    ],
+  },
+  {
+    name: 'Settings',
+    desc: 'Instance-wide configuration.',
+    endpoints: [
+      { method: 'GET', path: '/api/v1/settings/auth-providers', desc: 'List configured auth providers', auth: false },
+      { method: 'GET', path: '/api/v1/settings/copilot-info', desc: 'Get copilot configuration status', auth: true },
+    ],
+  },
+  {
+    name: 'Health',
+    desc: 'API availability check.',
+    endpoints: [
+      { method: 'GET', path: '/api/health', desc: 'Returns 200 if the API is running', auth: false },
+    ],
+  },
+];
+
+const methodColors: Record<string, string> = {
+  GET: '#2563eb',
+  POST: '#16a34a',
+  PUT: '#d97706',
+  PATCH: '#8b5cf6',
+  DELETE: '#dc2626',
+};
+
+const total = groups.reduce((s, g) => s + g.endpoints.length, 0);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Reference — dblumi</title>
+    <meta name="description" content="dblumi REST API reference. All endpoints at a glance." />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <Navbar lang="en" />
+    <main class="api-page">
+      <h1>API Reference</h1>
+      <p class="intro">
+        A quick overview of dblumi's REST API — <strong>{total} endpoints</strong> across {groups.length} resource groups.
+        This is a static summary. For the full interactive spec with request/response schemas, open
+        <code>/api/docs/</code> (Swagger UI) inside your running dblumi instance.
+      </p>
+
+      <nav class="toc">
+        {groups.map((g) => (
+          <a href={`#${g.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+            {g.name}
+            <span class="toc-count">{g.endpoints.length}</span>
+          </a>
+        ))}
+      </nav>
+
+      {groups.map((g) => (
+        <section id={g.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')} class="ep-group">
+          <h2>{g.name}</h2>
+          <p class="ep-group-desc">{g.desc}</p>
+          <div class="ep-list">
+            {g.endpoints.map((ep) => (
+              <div class="ep">
+                <span class="method" style={`background: ${methodColors[ep.method] ?? '#6B6B76'}`}>{ep.method}</span>
+                <code class="path">{ep.path}</code>
+                <span class="desc">{ep.desc}</span>
+                {ep.auth && (
+                  <span class="lock" title="Requires authentication">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <div class="swagger-note">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Need the full spec?</strong>
+          <p>Start your dblumi instance and open <code>/api/docs/</code> for the interactive Swagger UI with request bodies, response schemas, and "Try it out" — powered by OpenAPI 3.0.</p>
+        </div>
+      </div>
+    </main>
+    <SiteFooter lang="en" />
+  </body>
+</html>
+
+<style>
+  .api-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 140px 40px 80px;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--db-text, #0A0A0B);
+    line-height: 1.7;
+  }
+  .api-page h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+  }
+  .api-page .intro {
+    font-size: 15px;
+    color: var(--db-muted-fg, #6B6B76);
+    margin: 0 0 32px;
+    max-width: 65ch;
+    line-height: 1.6;
+  }
+  .api-page .intro strong {
+    color: var(--db-text, #0A0A0B);
+    font-weight: 700;
+  }
+  .api-page .intro code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: rgba(65, 205, 42, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(65, 205, 42, 0.18);
+    color: var(--db-primary, #2DA31E);
+  }
+
+  /* TOC */
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--db-border, #E2E2E6);
+  }
+  .toc a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--db-text-soft, #3A3A42);
+    background: var(--db-muted, #F0F0F2);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .toc a:hover {
+    background: rgba(65, 205, 42, 0.12);
+    color: var(--db-primary, #2DA31E);
+  }
+  .toc .toc-count {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 100px;
+    padding: 1px 6px;
+    color: var(--db-muted-fg, #6B6B76);
+  }
+
+  /* Groups */
+  .ep-group {
+    margin-bottom: 40px;
+  }
+  .ep-group h2 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+  }
+  .ep-group-desc {
+    font-size: 13px;
+    color: var(--db-muted-fg, #6B6B76);
+    margin: 0 0 14px;
+  }
+  .ep-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ep {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid var(--db-border-subtle, #EDEDF0);
+    transition: border-color 0.15s;
+  }
+  .ep:hover {
+    border-color: var(--db-border, #E2E2E6);
+  }
+  .ep .method {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 800;
+    color: #fff;
+    padding: 3px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    min-width: 52px;
+    text-align: center;
+  }
+  .ep .path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--db-text, #0A0A0B);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .ep .desc {
+    font-size: 12px;
+    color: var(--db-muted-fg, #6B6B76);
+    margin-left: auto;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .ep .lock {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: rgba(65, 205, 42, 0.1);
+    color: var(--db-primary, #2DA31E);
+  }
+
+  .swagger-note {
+    display: flex;
+    gap: 14px;
+    padding: 20px 22px;
+    background: rgba(65, 205, 42, 0.06);
+    border: 1px solid rgba(65, 205, 42, 0.25);
+    border-radius: 12px;
+    margin-top: 32px;
+  }
+  .swagger-note svg {
+    flex-shrink: 0;
+    color: var(--db-primary, #2DA31E);
+    margin-top: 2px;
+  }
+  .swagger-note strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--db-text, #0A0A0B);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .swagger-note p {
+    font-size: 13px;
+    color: var(--db-muted-fg, #6B6B76);
+    margin: 0;
+    line-height: 1.55;
+  }
+  .swagger-note code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: rgba(65, 205, 42, 0.1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--db-primary, #2DA31E);
+  }
+
+  @media (max-width: 700px) {
+    .api-page { padding: 120px 20px 60px; }
+    .ep .desc { display: none; }
+    .ep .path { font-size: 11px; }
+  }
+</style>

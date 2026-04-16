@@ -1,0 +1,642 @@
+---
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].collab;
+
+const parts = t.headline.split('{{accent}}');
+const headBefore = parts[0] ?? '';
+const headAfter = parts[1] ?? '';
+---
+
+<section class="db-feat-collab">
+  <div class="wrap">
+    <div class="row">
+      <div class="text">
+        <span class="label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          {t.label}
+        </span>
+        <h2>{headBefore}<span class="kalam">{headAfter}</span></h2>
+        <p class="lead" set:html={t.lead}></p>
+        <ul class="bullets">
+          {t.bullets.map((b) => (
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="visual">
+        <div class="mock">
+          <div class="chrome">
+            <div class="d d1"></div><div class="d d2"></div><div class="d d3"></div>
+            <span class="path">eodia / active_users.sql</span>
+            <div class="presence" aria-label="3 teammates editing">
+              <div class="av av-marc" title="Marc">M</div>
+              <div class="av av-sarah" title="Sarah">S</div>
+              <div class="av av-julien" title="Julien">J</div>
+              <span class="presence-count">3 editing</span>
+            </div>
+          </div>
+          <div class="mock-body">
+            <div class="editor">
+              <div><span class="ln">1</span><span class="cm">-- Active users in the last 30 days</span></div>
+              <div><span class="ln">2</span><span class="kw">SELECT</span> u.name, u.email<span class="ghost sarah"><span class="tag">Sarah</span></span></div>
+              <div><span class="ln">3</span><span class="kw">FROM</span> users u<span class="ghost julien"><span class="tag">Julien</span></span></div>
+              <div><span class="ln">4</span><span class="kw">WHERE</span> u.<span class="cursor-bar"></span></div>
+
+              <div class="autocomplete">
+                <div class="ac-item">
+                  <span class="ic key">K</span>
+                  <span class="name">id</span>
+                  <span class="type">uuid</span>
+                </div>
+                <div class="ac-item">
+                  <span class="ic">c</span>
+                  <span class="name">name</span>
+                  <span class="type">text</span>
+                </div>
+                <div class="ac-item">
+                  <span class="ic">c</span>
+                  <span class="name">email</span>
+                  <span class="type">text</span>
+                </div>
+                <div class="ac-item selected">
+                  <span class="ic">c</span>
+                  <span class="name">last_seen</span>
+                  <span class="type">timestamp</span>
+                </div>
+                <div class="ac-item">
+                  <span class="ic">c</span>
+                  <span class="name">org_id</span>
+                  <span class="type">uuid</span>
+                </div>
+                <div class="ac-item">
+                  <span class="ic">c</span>
+                  <span class="name">created_at</span>
+                  <span class="type">timestamp</span>
+                </div>
+                <div class="ac-footer">
+                  <span><span class="kbd">↑↓</span> navigate</span>
+                  <span><span class="kbd">⏎</span> insert</span>
+                  <span style="margin-left:auto">6 columns</span>
+                </div>
+              </div>
+            </div>
+
+            <aside class="chat">
+              <div class="chat-head">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Team chat</span>
+                <span class="chat-count">3</span>
+              </div>
+              <div class="chat-msgs">
+                <div class="msg">
+                  <div class="msg-av av-sarah">S</div>
+                  <div class="msg-body">
+                    <div class="msg-meta"><b>Sarah</b><time>2m</time></div>
+                    <div class="msg-text">email is not unique across orgs — use <code>u.org_id</code></div>
+                  </div>
+                </div>
+                <div class="msg">
+                  <div class="msg-av av-marc">M</div>
+                  <div class="msg-body">
+                    <div class="msg-meta"><b>Marc</b><time>now</time></div>
+                    <div class="msg-text">good point, switching 👍</div>
+                  </div>
+                </div>
+                <div class="msg msg-typing">
+                  <div class="msg-av av-julien">J</div>
+                  <div class="msg-body">
+                    <div class="msg-meta"><b>Julien</b><span class="typing-label">is typing</span></div>
+                    <div class="typing-dots"><span></span><span></span><span></span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="chat-input">
+                <span>Reply to the team…</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </div>
+            </aside>
+          </div>
+          <div class="statusbar">
+            <span class="dot"></span>
+            eodia · postgresql · Ln 4, Col 11 · SQL
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+
+  .db-feat-collab {
+    padding: 96px 56px;
+    background: #fff;
+    margin: 0;
+  }
+  .db-feat-collab .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .db-feat-collab .row {
+    display: grid;
+    grid-template-columns: 0.9fr 1.2fr;
+    gap: 72px;
+    align-items: center;
+  }
+
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--db-primary, #2DA31E);
+    padding: 5px 10px;
+    border: 1px solid rgba(65, 205, 42, 0.3);
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.07);
+    margin-bottom: 22px;
+  }
+  h2 {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.025em;
+    margin: 0 0 20px;
+    color: var(--db-text, #0A0A0B);
+    max-width: 14ch;
+  }
+  h2 .kalam {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    color: var(--db-primary-vivid, #41cd2a);
+  }
+  p.lead {
+    font-size: 16px;
+    color: var(--db-muted-fg, #6B6B76);
+    line-height: 1.6;
+    max-width: 44ch;
+    margin: 0 0 24px;
+  }
+  p.lead :global(strong) {
+    color: var(--db-text, #0A0A0B);
+    font-weight: 600;
+    background: linear-gradient(180deg, transparent 58%, rgba(65, 205, 42, 0.28) 58%);
+    padding: 0 2px;
+    border-radius: 2px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  ul.bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  ul.bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    line-height: 1.45;
+  }
+  ul.bullets li svg {
+    flex-shrink: 0;
+    color: var(--db-primary, #2DA31E);
+    margin-top: 2px;
+  }
+
+  /* Generic mockup chrome */
+  .mock {
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 12px;
+    background: var(--db-card, #FFFFFF);
+    overflow: hidden;
+    box-shadow:
+      0 40px 80px -24px rgba(10, 10, 15, 0.20),
+      0 16px 32px -16px rgba(10, 10, 15, 0.12);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .chrome {
+    height: 28px;
+    background: #f7f7f6;
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+  }
+  .chrome .d { width: 10px; height: 10px; border-radius: 50%; }
+  .chrome .d1 { background: #ff5f57; }
+  .chrome .d2 { background: #febc2e; }
+  .chrome .d3 { background: #28c840; }
+  .chrome .path {
+    margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #9a9aa0;
+  }
+  .chrome .presence {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chrome .presence .av {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid #f7f7f6;
+    margin-left: -5px;
+    font-size: 8px;
+    font-weight: 700;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .chrome .presence .av:first-child { margin-left: 0; }
+  .chrome .presence .av-marc { background: #2DA31E; }
+  .chrome .presence .av-sarah { background: #EC4899; }
+  .chrome .presence .av-julien { background: #6366F1; }
+  .chrome .presence .presence-count {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--db-primary, #2DA31E);
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.10);
+    border: 1px solid rgba(65, 205, 42, 0.25);
+    margin-left: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chrome .presence .presence-count::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--db-primary-vivid, #41cd2a);
+    box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.25);
+    animation: presencePulse 2s ease-in-out infinite;
+  }
+  @keyframes presencePulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(65, 205, 42, 0.25); }
+    50% { box-shadow: 0 0 0 5px rgba(65, 205, 42, 0); }
+  }
+
+  /* Ghost cursors */
+  .ghost {
+    display: inline-block;
+    width: 2px;
+    height: 17px;
+    vertical-align: -3px;
+    position: relative;
+    margin: 0 1px 0 2px;
+  }
+  .ghost.sarah {
+    background: #EC4899;
+    animation: ghostTypeSarah 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .ghost.julien {
+    background: #6366F1;
+    animation: ghostTypeJulien 6.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @keyframes ghostTypeSarah {
+    0%, 60% { transform: translateX(0); }
+    65% { transform: translateX(3px); }
+    70% { transform: translateX(6px); }
+    75% { transform: translateX(10px); }
+    80% { transform: translateX(14px); }
+    85% { transform: translateX(12px) scaleY(0.85); }
+    90% { transform: translateX(6px); }
+    100% { transform: translateX(0); }
+  }
+  @keyframes ghostTypeJulien {
+    0%, 30% { transform: translateX(0); }
+    35% { transform: translateX(4px); }
+    40% { transform: translateX(9px); }
+    45% { transform: translateX(13px); }
+    50% { transform: translateX(8px) scaleY(0.9); }
+    55% { transform: translateX(0); }
+    100% { transform: translateX(0); }
+  }
+  .ghost .tag {
+    position: absolute;
+    top: -17px;
+    left: -1px;
+    padding: 2px 7px;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: 'Inter', system-ui, sans-serif;
+    border-radius: 4px 4px 4px 0;
+    white-space: nowrap;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    box-shadow: 0 2px 6px rgba(10, 10, 15, 0.12);
+  }
+  .ghost.sarah .tag { background: #EC4899; }
+  .ghost.julien .tag { background: #6366F1; }
+
+  /* Token colors */
+  .kw { color: #1e40af; font-weight: 500; }
+  .fn { color: #8b5cf6; }
+  .str { color: var(--db-primary, #2DA31E); }
+  .cm { color: #a0a0a0; font-style: italic; }
+  .num { color: #d97706; }
+
+  /* Editor + team chat grid */
+  .mock-body {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    min-height: 340px;
+    position: relative;
+  }
+  .editor {
+    padding: 22px 14px 28px;
+    background: #fff;
+    line-height: 1.95;
+    font-size: 13px;
+    color: var(--db-text-soft, #3A3A42);
+    position: relative;
+    border-right: 1px solid var(--db-border-subtle, #EDEDF0);
+  }
+  .editor .ln {
+    color: #c5c5ca;
+    display: inline-block;
+    width: 18px;
+    text-align: right;
+    margin-right: 14px;
+    user-select: none;
+    font-size: 11px;
+  }
+  .cursor-bar {
+    display: inline-block;
+    width: 2px;
+    height: 15px;
+    background: var(--db-primary-vivid, #41cd2a);
+    vertical-align: -2px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
+  }
+
+  .autocomplete {
+    position: absolute;
+    top: 122px;
+    left: 122px;
+    background: #fff;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 8px;
+    box-shadow:
+      0 20px 40px -12px rgba(10, 10, 15, 0.25),
+      0 8px 16px -8px rgba(10, 10, 15, 0.1);
+    width: 230px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    z-index: 10;
+  }
+  .autocomplete .ac-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    color: var(--db-text-soft, #3A3A42);
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+  }
+  .autocomplete .ac-item:last-child { border-bottom: 0; }
+  .autocomplete .ac-item.selected {
+    background: rgba(65, 205, 42, 0.10);
+    color: var(--db-primary, #2DA31E);
+  }
+  .autocomplete .ac-item .ic {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: var(--db-muted, #F0F0F2);
+    color: var(--db-muted-fg, #6B6B76);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .autocomplete .ac-item.selected .ic {
+    background: rgba(65, 205, 42, 0.15);
+    color: var(--db-primary, #2DA31E);
+  }
+  .autocomplete .ac-item .ic.key {
+    color: var(--db-warning, #F59E0B);
+    background: rgba(245, 158, 11, 0.12);
+  }
+  .autocomplete .ac-item .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    flex: 1;
+  }
+  .autocomplete .ac-item .type {
+    font-size: 9px;
+    color: #b0b0b6;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .autocomplete .ac-footer {
+    padding: 5px 10px;
+    font-size: 9px;
+    color: #9a9aa0;
+    background: #fdfdfc;
+    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
+    display: flex;
+    gap: 10px;
+  }
+  .autocomplete .ac-footer .kbd {
+    padding: 0 5px;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 3px;
+    background: #fff;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Team chat panel */
+  .chat {
+    background: #fafaf9;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', system-ui, sans-serif;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .chat-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--db-border-subtle, #EDEDF0);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--db-text-soft, #3A3A42);
+    background: #ffffff;
+  }
+  .chat-head svg { color: var(--db-primary, #2DA31E); flex-shrink: 0; }
+  .chat-head .chat-count {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 100px;
+    background: rgba(65, 205, 42, 0.10);
+    border: 1px solid rgba(65, 205, 42, 0.25);
+    color: var(--db-primary, #2DA31E);
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+  .chat-msgs {
+    flex: 1;
+    padding: 12px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .chat-msgs .msg { display: flex; align-items: flex-start; gap: 8px; }
+  .chat-msgs .msg-av {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .chat-msgs .av-sarah { background: #EC4899; }
+  .chat-msgs .av-marc { background: #2DA31E; }
+  .chat-msgs .av-julien { background: #6366F1; }
+  .chat-msgs .msg-body { min-width: 0; flex: 1; }
+  .chat-msgs .msg-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 10px;
+    color: #9a9aa0;
+    margin-bottom: 2px;
+  }
+  .chat-msgs .msg-meta b {
+    font-weight: 700;
+    color: var(--db-text, #0A0A0B);
+    font-size: 10.5px;
+  }
+  .chat-msgs .msg-meta time { font-weight: 500; color: #b0b0b6; }
+  .chat-msgs .msg-meta .typing-label { font-style: italic; color: #b0b0b6; }
+  .chat-msgs .msg-text {
+    font-size: 11px;
+    color: var(--db-text-soft, #3A3A42);
+    line-height: 1.45;
+    word-wrap: break-word;
+  }
+  .chat-msgs .msg-text code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(65, 205, 42, 0.12);
+    color: var(--db-primary, #2DA31E);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+  }
+  .chat-msgs .typing-dots {
+    display: inline-flex;
+    gap: 3px;
+    padding: 4px 0 0;
+  }
+  .chat-msgs .typing-dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #6366F1;
+    animation: chatTypingDots 1.2s ease-in-out infinite;
+  }
+  .chat-msgs .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .chat-msgs .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes chatTypingDots {
+    0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+  }
+  .chat-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
+    background: #ffffff;
+    font-size: 10.5px;
+    color: #b0b0b6;
+  }
+  .chat-input span { flex: 1; }
+  .chat-input svg {
+    color: #fff;
+    background: var(--db-primary, #2DA31E);
+    padding: 5px;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+
+  .mock .statusbar {
+    display: flex;
+    align-items: center;
+    padding: 7px 14px;
+    border-top: 1px solid var(--db-border-subtle, #EDEDF0);
+    background: #fdfdfc;
+    font-size: 10px;
+    color: var(--db-muted-fg, #6B6B76);
+    font-family: 'Inter', sans-serif;
+  }
+  .mock .statusbar .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--db-primary-vivid, #41cd2a);
+    margin-right: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ghost.sarah,
+    .ghost.julien { animation: none; }
+    .chat-msgs .typing-dots span { animation: none; }
+  }
+
+  @media (max-width: 980px) {
+    .db-feat-collab { padding: 56px 24px; }
+    .db-feat-collab .row { grid-template-columns: 1fr; gap: 36px; }
+    .mock-body { grid-template-columns: 1fr; }
+    .editor { border-right: 0; border-bottom: 1px solid var(--db-border-subtle, #EDEDF0); }
+  }
+</style>

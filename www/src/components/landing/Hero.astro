@@ -1,0 +1,1259 @@
+---
+import { strings, type Lang } from '../../content/landing-strings';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const t = strings[lang].hero;
+const m = t.mockup;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<section class="db-hero">
+  <!-- LEFT TEXT COLUMN -->
+  <div class="db-hero-text">
+    <div class="badge">
+      <span class="dot"></span>
+      {t.badge}
+    </div>
+    <h1>
+      <span class="l">{t.headline.line1}</span>
+      <span class="l">{t.headline.line2}</span>
+      <span class="l">{t.headline.line3}</span>
+      <span class="l"><span class="kalam brand">{t.headline.accent}</span></span>
+    </h1>
+    <p class="sub" set:html={t.lead}></p>
+    <div class="btns">
+      <a href={lang === 'fr' ? `${base}/fr/guides/installation/` : `${base}/guides/installation/`} class="btn-p">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        {t.ctaPrimary}
+      </a>
+      <a href={lang === 'fr' ? `${base}/fr/demo/` : `${base}/demo/`} class="btn-s">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        {t.ctaSecondary}
+      </a>
+    </div>
+    <div class="docker-bar">
+      <span class="docker-ic" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.186m0 2.716h2.118a.187.187 0 00.186-.186V6.29a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.887c0 .102.082.185.185.186m-2.93 0h2.12a.186.186 0 00.184-.186V6.29a.185.185 0 00-.185-.185H8.1a.185.185 0 00-.185.185v1.887c0 .102.083.185.185.186m-2.964 0h2.119a.186.186 0 00.185-.186V6.29a.185.185 0 00-.185-.185H5.136a.186.186 0 00-.186.185v1.887c0 .102.084.185.186.186m5.893 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m-2.93 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 00.185-.185V9.006a.185.185 0 00-.184-.186h-2.12a.186.186 0 00-.186.186v1.887c0 .102.084.185.186.185m-2.92 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.186.185v1.888c0 .102.083.185.186.185M23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-.23.97-.09 1.882.403 2.661-.595.332-1.55.413-1.744.42H.751a.751.751 0 00-.75.748 11.376 11.376 0 00.692 4.062c.545 1.428 1.355 2.48 2.41 3.124 1.18.723 3.1 1.137 5.275 1.137.983.003 1.963-.086 2.93-.266a12.248 12.248 0 003.823-1.389c.98-.567 1.86-1.288 2.61-2.136 1.252-1.418 1.998-2.997 2.553-4.4h.221c1.372 0 2.215-.549 2.68-1.009.309-.293.55-.65.707-1.046l.098-.288Z"/></svg>
+      </span>
+      <span class="prompt">$</span>
+      <code class="cmd">{t.dockerCmd}</code>
+      <button type="button" class="copy" data-cmd={t.dockerCmd} aria-label="Copy docker command">
+        <svg class="ic-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg class="ic-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="copy-label">Copy</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT APP MOCKUP -->
+  <div class="app-mock" id="db-hero-mock">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="wdots"><div class="d d1"></div><div class="d d2"></div><div class="d d3"></div></div>
+    </div>
+
+    <div class="body">
+      <aside class="sidebar">
+        <!-- Connection header -->
+        <div class="conn-hdr">
+          <span class="conn-dot"></span>
+          <svg class="pg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/>
+            <path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>
+          </svg>
+          <div class="conn-info">
+            <div class="conn-top">
+              <span class="conn-name">eodia</span>
+              <span class="env-pill">{m.envProd}</span>
+            </div>
+            <div class="conn-host">@db.eodia.net</div>
+          </div>
+          <svg class="chev-switch" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+        </div>
+
+        <!-- Database selector -->
+        <div class="db-selector">
+          <svg class="db-ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+          <span class="db-name">postgres</span>
+          <svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="sb-nav">
+          <div class="nav-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            {m.navProject}
+          </div>
+          <div class="nav-item" data-view="tables">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+            {m.navTables}
+          </div>
+          <div class="nav-item active" data-view="sql">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/></svg>
+            {m.navSqlEditor}
+          </div>
+        </nav>
+
+        <!-- SQL Editor view: Saved queries -->
+        <div class="sb-view sql-view active">
+          <div class="sq-hdr">
+            <span class="label">{m.savedQueriesLabel}</span>
+            <svg class="plus" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="sq-list">
+            <div class="sq-item active">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span class="name">regions_by_revenue</span>
+            </div>
+            <div class="sq-item">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span class="name">churn_cohort</span>
+            </div>
+            <div class="sq-item">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span class="name">top_customers</span>
+            </div>
+            <div class="sq-item">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span class="name">daily_mrr</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tables view: schema tree -->
+        <div class="sb-view tables-view">
+          <div class="search-row">
+            <div class="search-input">
+              <svg class="ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              {m.filterTables}
+            </div>
+            <span class="refresh-btn">
+              <svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </span>
+          </div>
+          <div class="section-hdr">
+            <svg class="ic chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg class="ic" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(220,38,38,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 7.5h18"/><path d="M3 12h18"/><path d="M3 16.5h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            <span>{m.tableSectionLabel}</span>
+            <span class="count">24</span>
+            <span class="plus">
+              <svg class="ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </span>
+          </div>
+          <!-- orders — expanded with columns -->
+          <div class="tbl-row is-table">
+            <span class="chev-btn"><svg class="ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            <div class="tbl-main">
+              <svg class="ic ic-main" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 7.5h18"/><path d="M3 12h18"/><path d="M3 16.5h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <span class="name">orders</span>
+              <span class="cnt">12</span>
+            </div>
+          </div>
+          <div class="tbl-cols">
+            <div class="col-row">
+              <svg class="ic ic-key" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              <span class="cname">id</span><span class="type">uuid</span>
+            </div>
+            <div class="col-row">
+              <svg class="ic ic-col" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <span class="cname">region</span><span class="type">text</span>
+            </div>
+            <div class="col-row">
+              <svg class="ic ic-col" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <span class="cname">total</span><span class="type">numeric</span>
+            </div>
+            <div class="col-row">
+              <svg class="ic ic-col" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <span class="cname">created_at</span><span class="type">timestamp</span>
+            </div>
+          </div>
+          <!-- customers — collapsed -->
+          <div class="tbl-row is-table">
+            <span class="chev-btn"><svg class="ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+            <div class="tbl-main">
+              <svg class="ic ic-main" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 7.5h18"/><path d="M3 12h18"/><path d="M3 16.5h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <span class="name">customers</span><span class="cnt">8</span>
+            </div>
+          </div>
+          <!-- products — collapsed -->
+          <div class="tbl-row is-table">
+            <span class="chev-btn"><svg class="ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+            <div class="tbl-main">
+              <svg class="ic ic-main" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 7.5h18"/><path d="M3 12h18"/><path d="M3 16.5h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <span class="name">products</span><span class="cnt">15</span>
+            </div>
+          </div>
+          <!-- invoices — collapsed -->
+          <div class="tbl-row is-table">
+            <span class="chev-btn"><svg class="ic" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+            <div class="tbl-main">
+              <svg class="ic ic-main" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 7.5h18"/><path d="M3 12h18"/><path d="M3 16.5h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <span class="name">invoices</span><span class="cnt">9</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-spacer"></div>
+
+        <!-- Account footer -->
+        <div class="sb-account">
+          <div class="avatar">M</div>
+          <div class="acc-info">
+            <div class="acc-name">{m.accountName}</div>
+            <div class="acc-email">{m.accountEmail}</div>
+          </div>
+          <svg class="chev-switch" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg>
+        </div>
+      </aside>
+
+      <!-- Main column -->
+      <div class="main-col">
+        <div class="tabs-row">
+          <div class="tab active">regions_by_revenue.sql <span class="close">×</span></div>
+          <div class="tab">churn_cohort.sql <span class="close">×</span></div>
+          <span class="newtab">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+          <div class="spacer"></div>
+          <div class="actions">
+            <button class="tab-btn">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              {m.tabSave}
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button class="tab-btn primary" id="btn-run">
+              <svg class="play-icon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+              <span class="spinner"></span>
+              {m.tabRun}
+            </button>
+            <button class="tab-btn copilot">{m.tabCopilot}</button>
+          </div>
+        </div>
+
+        <div class="below-tabs">
+          <div class="editor-area">
+            <div class="editor" id="db-hero-editor">
+              <div class="editor-empty" id="db-hero-editor-empty">
+                <div class="ee-mark">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </div>
+                <div class="ee-title">Start writing SQL</div>
+                <div class="ee-hint">
+                  <span>or press</span>
+                  <kbd>⌘K</kbd>
+                  <span>to ask the copilot</span>
+                </div>
+              </div>
+            </div>
+            <div class="results-wrap" id="db-hero-results">
+              <div class="results-toolbar">
+                <span class="stats">
+                  <svg class="check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  {m.statusRows}
+                </span>
+                <span class="ms">· {m.statusTime}</span>
+                <span style="flex:1"></span>
+                <span class="tool">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+                  {m.sort}
+                </span>
+                <span class="tool">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  {m.explain}
+                </span>
+              </div>
+              <div class="results-table-wrap">
+                <table class="results">
+                  <thead>
+                    <tr>
+                      <th style="width:28px">#</th>
+                      <th>region</th>
+                      <th class="num">revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td class="idx">1</td><td>North America</td><td class="num">1,245,320</td></tr>
+                    <tr><td class="idx">2</td><td>Europe</td><td class="num">987,410</td></tr>
+                    <tr><td class="idx">3</td><td>Asia Pacific</td><td class="num">754,192</td></tr>
+                    <tr><td class="idx">4</td><td>Latin America</td><td class="num">412,876</td></tr>
+                    <tr><td class="idx">5</td><td>Middle East</td><td class="num">298,540</td></tr>
+                    <tr><td class="idx">6</td><td>Africa</td><td class="num">187,320</td></tr>
+                    <tr><td class="idx">7</td><td>Oceania</td><td class="num">142,890</td></tr>
+                    <tr><td class="idx">8</td><td>Caribbean</td><td class="num">98,720</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="results-pagination">
+                <span class="per">
+                  {m.rowsPerPage}
+                  <span class="pill">100 ▾</span>
+                </span>
+                <span class="sep">·</span>
+                <span>{m.pageOf}</span>
+                <span class="right">
+                  <span class="nav">«</span>
+                  <span class="nav">‹</span>
+                  <span class="page active">1</span>
+                  <span class="page">2</span>
+                  <span class="page">3</span>
+                  <span class="nav">›</span>
+                  <span class="nav">»</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <aside class="cop-panel">
+            <div class="hdr">
+              <svg class="spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/></svg>
+              <span class="title">{m.tabCopilot}</span>
+              <span class="subtitle">{m.copilotSubtitle}</span>
+              <span class="spacer"></span>
+              <span class="close">×</span>
+            </div>
+            <div class="content">
+              <div class="empty-state" id="db-hero-empty-state">
+                <svg class="bot-icon" width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 8V4H8"/>
+                  <rect width="16" height="12" x="4" y="8" rx="2"/>
+                  <path d="M2 14h2"/>
+                  <path d="M20 14h2"/>
+                  <path d="M15 13v2"/>
+                  <path d="M9 13v2"/>
+                </svg>
+                <p class="prompt">{m.emptyPrompt}</p>
+                <div class="pills">
+                  <span class="pill">{m.pill1}</span>
+                  <span class="pill">{m.pill2}</span>
+                  <span class="pill">{m.pill3}</span>
+                  <span class="pill">{m.pill4}</span>
+                </div>
+              </div>
+              <div class="convo" id="db-hero-convo">
+                <div class="user-msg" id="db-hero-user-msg"></div>
+                <div class="typing" id="db-hero-typing"><span></span><span></span><span></span></div>
+                <div class="ai-msg" id="db-hero-ai-msg">
+                  <div class="bot-row"><span>✦</span> Suggestion</div>
+                  {m.animAiIntro}
+                </div>
+              </div>
+            </div>
+            <div class="input-bar">
+              <div class="input" id="db-hero-copilot-input" data-placeholder={m.inputPlaceholder}></div>
+              <span class="send">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </span>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mouse cursor SVG (positioned + animated by Task 14 script) -->
+    <svg class="mouse-cursor" id="db-hero-mouse" viewBox="0 0 24 24" fill="#fff" stroke="#0a0a0b" stroke-width="1.5" stroke-linejoin="round">
+      <path d="M5 3 L5 17 L9 13 L12 20 L14 19 L11 12 L17 12 Z"/>
+    </svg>
+  </div>
+</section>
+
+<style>
+  .db-hero {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #fff;
+    padding: 96px 48px 56px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 0.85fr 1.25fr;
+    gap: 52px;
+    align-items: center;
+    max-width: 1400px;
+  }
+
+  .db-hero .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 100px;
+    background: rgba(65, 205, 42, 0.08);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+    font-size: 12px; font-weight: 500; color: var(--db-primary);
+    margin-bottom: 22px;
+  }
+  .db-hero .badge .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--db-primary-vivid);
+    box-shadow: 0 0 0 3px rgba(65, 205, 42, 0.18);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(65, 205, 42, 0.18); }
+    50% { box-shadow: 0 0 0 6px rgba(65, 205, 42, 0.08); }
+  }
+  .db-hero h1 {
+    font-size: 58px; font-weight: 800;
+    line-height: 0.96; letter-spacing: -0.028em;
+    margin: 0; color: var(--db-text);
+  }
+  .db-hero h1 span.l { display: block; }
+  .kalam { font-family: 'Kalam', cursive; font-weight: 700; }
+  .brand { color: var(--db-primary-vivid); }
+  .db-hero p.sub {
+    color: var(--db-muted-fg);
+    font-size: 16px; max-width: 520px;
+    margin: 24px 0 28px; line-height: 1.55;
+  }
+  .db-hero p.sub :global(strong) {
+    color: var(--db-text);
+    font-weight: 600;
+    background: linear-gradient(180deg, transparent 58%, rgba(65, 205, 42, 0.28) 58%);
+    padding: 0 2px;
+    border-radius: 2px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  .btns { display: flex; gap: 10px; }
+  .btn-p {
+    background: var(--db-primary); color: #fff;
+    padding: 12px 22px; border-radius: 10px;
+    font-weight: 600; font-size: 14.5px; border: 0;
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 1px 3px rgba(45, 163, 30, 0.25), 0 0 0 1px rgba(45, 163, 30, 0.15);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .btn-s {
+    background: #fff; color: var(--db-text);
+    padding: 12px 22px; border-radius: 10px;
+    font-weight: 600; font-size: 14.5px;
+    border: 1px solid var(--db-border);
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  /* ── Docker command bar ── */
+  .db-hero .docker-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    margin-top: 22px;
+    padding: 7px 7px 7px 16px;
+    background: linear-gradient(180deg, #101015 0%, #0a0a0b 100%);
+    border: 1px solid #1f1f24;
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #e5e5ea;
+    box-shadow:
+      0 18px 40px -18px rgba(10, 10, 15, 0.6),
+      0 0 0 1px rgba(65, 205, 42, 0.08),
+      0 0 24px -4px rgba(65, 205, 42, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: box-shadow 0.25s, transform 0.25s;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .db-hero .docker-bar:hover {
+    box-shadow:
+      0 22px 48px -18px rgba(10, 10, 15, 0.7),
+      0 0 0 1px rgba(65, 205, 42, 0.22),
+      0 0 36px -4px rgba(65, 205, 42, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
+  }
+  .db-hero .docker-bar .docker-ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(65, 205, 42, 0.12);
+    color: var(--db-primary-vivid, #41cd2a);
+    flex-shrink: 0;
+  }
+  .db-hero .docker-bar .prompt {
+    color: var(--db-primary-vivid, #41cd2a);
+    font-weight: 600;
+  }
+  .db-hero .docker-bar .cmd {
+    font-family: inherit;
+    color: #f0f0f0;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .db-hero .docker-bar .copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 12px;
+    margin-left: 4px;
+    border-radius: 8px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0a0a0b;
+    background: var(--db-primary-vivid, #41cd2a);
+    border: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: 0 0 14px -2px rgba(65, 205, 42, 0.5);
+    transition: background 0.15s, transform 0.15s, box-shadow 0.2s;
+  }
+  .db-hero .docker-bar .copy:hover {
+    background: #5de847;
+    transform: translateY(-1px);
+    box-shadow: 0 0 18px -2px rgba(65, 205, 42, 0.7);
+  }
+  .db-hero .docker-bar .copy:active { transform: translateY(0); }
+  .db-hero .docker-bar .copy .ic-check { display: none; }
+  .db-hero .docker-bar .copy.copied { background: #9aefa0; }
+  .db-hero .docker-bar .copy.copied .ic-copy { display: none; }
+  .db-hero .docker-bar .copy.copied .ic-check { display: inline-block; }
+  .db-hero .docker-bar .copy.copied .copy-label { font-size: 0; }
+  .db-hero .docker-bar .copy.copied .copy-label::after {
+    content: 'Copied!';
+    font-size: 11px;
+  }
+
+  /* ── APP MOCKUP ── */
+  .app-mock {
+    position: relative;
+    border: 1px solid var(--db-border);
+    border-radius: 14px;
+    background: var(--db-card);
+    overflow: hidden;
+    box-shadow: 0 40px 80px -24px rgba(10, 10, 15, 0.18), 0 16px 32px -16px rgba(10, 10, 15, 0.10);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--db-text);
+  }
+  .app-mock svg.ic { flex-shrink: 0; display: block; }
+
+  .topbar {
+    height: 34px; background: var(--db-muted);
+    border-bottom: 1px solid var(--db-border-subtle);
+    display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  }
+  .wdots { display: flex; gap: 6px; }
+  .wdots .d { width: 11px; height: 11px; border-radius: 50%; }
+  .wdots .d1 { background: #ff5f57; } .wdots .d2 { background: #febc2e; } .wdots .d3 { background: #28c840; }
+
+  .body { display: grid; grid-template-columns: 178px 1fr; min-height: 460px; }
+
+  /* Sidebar */
+  .sidebar {
+    background: #fdfdfc;
+    border-right: 1px solid var(--db-border-subtle);
+    display: flex; flex-direction: column;
+    font-size: 12px;
+    overflow: hidden;
+  }
+  .sidebar .conn-hdr {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 10px 10px 14px;
+    border-bottom: 1px solid var(--db-border-subtle);
+    position: relative;
+  }
+  .sidebar .conn-hdr .conn-dot {
+    position: absolute; left: 5px; top: 14px;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--db-destructive);
+    box-shadow: 0 0 0 2px rgba(220,38,38,0.18);
+  }
+  .sidebar .conn-hdr .pg-icon {
+    width: 18px; height: 18px;
+    flex-shrink: 0;
+    color: #336791;
+  }
+  .sidebar .conn-hdr .conn-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .sidebar .conn-hdr .conn-top { display: flex; align-items: center; gap: 5px; }
+  .sidebar .conn-hdr .conn-name {
+    font-size: 12px; font-weight: 700; color: var(--db-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sidebar .conn-hdr .env-pill {
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 8px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    background: rgba(220, 38, 38, 0.08);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    color: var(--db-destructive);
+    line-height: 1;
+  }
+  .sidebar .conn-hdr .conn-host {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--db-muted-fg);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sidebar .conn-hdr .chev-switch { color: #b0b0b6; flex-shrink: 0; }
+
+  .sidebar .db-selector {
+    display: flex; align-items: center; gap: 6px;
+    margin: 6px 6px 2px;
+    padding: 5px 8px;
+    font-size: 11px;
+    color: var(--db-muted-fg);
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 5px;
+  }
+  .sidebar .db-selector:hover { background: var(--db-muted); }
+  .sidebar .db-selector .db-ic { color: #9a9aa0; flex-shrink: 0; }
+  .sidebar .db-selector .db-name { flex: 1; }
+  .sidebar .db-selector .chev { color: #c0c0c0; }
+
+  .sidebar .sb-nav {
+    padding: 2px 6px 0;
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .sidebar .sb-nav .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 8px;
+    border-radius: 5px;
+    font-size: 11.5px; font-weight: 500;
+    color: var(--db-text-soft);
+    cursor: pointer;
+  }
+  .sidebar .sb-nav .nav-item.active {
+    background: var(--db-muted);
+    color: var(--db-text);
+  }
+  .sidebar .sb-nav .nav-item svg { color: var(--db-muted-fg); flex-shrink: 0; }
+  .sidebar .sb-nav .nav-item.active svg { color: var(--db-text); }
+
+  /* Sidebar views (toggled by nav) */
+  .sidebar .sb-view { display: none; }
+  .sidebar .sb-view.active { display: block; }
+
+  /* Tables tree view */
+  .sidebar .tables-view .search-row { display: flex; align-items: center; gap: 4px; padding: 10px 6px 6px; }
+  .sidebar .tables-view .search-input {
+    flex: 1; height: 22px;
+    display: flex; align-items: center; gap: 5px;
+    padding: 0 7px; background: #fff;
+    border: 1px solid var(--db-border); border-radius: 5px;
+    font-size: 10.5px; color: #a0a0a0;
+  }
+  .sidebar .tables-view .refresh-btn {
+    width: 20px; height: 20px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #9a9a9a; border-radius: 4px;
+  }
+  .sidebar .tables-view .section-hdr {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 10px 3px;
+    font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: #9a9aa0;
+  }
+  .sidebar .tables-view .section-hdr .chev { width: 10px; color: #c0c0c0; }
+  .sidebar .tables-view .section-hdr .count { color: #c5c5ca; font-weight: 600; margin-left: 2px; }
+  .sidebar .tables-view .section-hdr .plus {
+    margin-left: auto; color: #b0b0b6;
+    width: 18px; height: 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .sidebar .tables-view .tbl-row {
+    display: flex; align-items: center; gap: 2px;
+    border-radius: 4px;
+    padding: 0 6px;
+    color: rgba(10,10,11,0.72);
+  }
+  .sidebar .tables-view .tbl-row:hover { background: var(--db-muted); color: var(--db-text); }
+  .sidebar .tables-view .tbl-row .chev-btn {
+    width: 16px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #b0b0b6; flex-shrink: 0;
+  }
+  .sidebar .tables-view .tbl-row .tbl-main {
+    flex: 1;
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 4px 3px 0;
+    min-width: 0;
+  }
+  .sidebar .tables-view .tbl-row .tbl-main .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1;
+  }
+  .sidebar .tables-view .tbl-row .tbl-main .cnt { font-size: 9.5px; color: #b0b0b6; font-variant-numeric: tabular-nums; }
+  .sidebar .tables-view .tbl-row.is-table svg.ic-main { color: rgba(220, 38, 38, 0.72); }
+  .sidebar .tables-view .tbl-cols { margin-left: 20px; padding-left: 8px; border-left: 1px solid var(--db-border-subtle); }
+  .sidebar .tables-view .col-row {
+    display: flex; align-items: center; gap: 5px;
+    padding: 2px 5px;
+    font-size: 10.5px; color: #9a9aa0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .sidebar .tables-view .col-row svg.ic-col { color: rgba(10,10,11,0.22); }
+  .sidebar .tables-view .col-row svg.ic-key { color: var(--db-warning); }
+  .sidebar .tables-view .col-row .cname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar .tables-view .col-row .type { font-size: 9px; color: #c5c5ca; }
+
+  .sidebar .sq-hdr {
+    display: flex; align-items: center;
+    padding: 12px 12px 4px;
+    margin-top: 4px;
+  }
+  .sidebar .sq-hdr .label {
+    flex: 1;
+    font-size: 10.5px; font-weight: 600; color: var(--db-text-soft);
+  }
+  .sidebar .sq-hdr .plus { color: #9a9aa0; flex-shrink: 0; }
+
+  .sidebar .sq-list {
+    padding: 0 6px;
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .sidebar .sq-list .sq-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: var(--db-text-soft);
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+  }
+  .sidebar .sq-list .sq-item svg { color: var(--db-primary-vivid); flex-shrink: 0; opacity: 0.85; }
+  .sidebar .sq-list .sq-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar .sq-list .sq-item.active {
+    background: rgba(65,205,42,0.10);
+    color: var(--db-primary);
+  }
+
+  .sidebar .sb-spacer { flex: 1; min-height: 8px; }
+
+  .sidebar .sb-account {
+    display: flex; align-items: center; gap: 9px;
+    padding: 10px 10px 10px 12px;
+    border-top: 1px solid var(--db-border-subtle);
+  }
+  .sidebar .sb-account .avatar {
+    width: 26px; height: 26px; border-radius: 6px;
+    background: rgba(65,205,42,0.12);
+    color: var(--db-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .sidebar .sb-account .acc-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .sidebar .sb-account .acc-name {
+    font-size: 11px; font-weight: 600; color: var(--db-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sidebar .sb-account .acc-email {
+    font-size: 9.5px; color: var(--db-muted-fg);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sidebar .sb-account .chev-switch { color: #b0b0b6; flex-shrink: 0; }
+
+  /* Main column */
+  .main-col { display: flex; flex-direction: column; min-width: 0; }
+
+  .tabs-row {
+    display: flex; align-items: stretch;
+    background: var(--db-muted);
+    border-bottom: 1px solid var(--db-border-subtle);
+    height: 32px;
+  }
+  .tab {
+    padding: 0 12px;
+    font-size: 10.5px;
+    color: var(--db-muted-fg);
+    display: flex; align-items: center; gap: 7px;
+    border-right: 1px solid var(--db-border-subtle);
+    font-family: 'JetBrains Mono', monospace;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .tab.active { background: #fff; color: var(--db-text); }
+  .tab.active::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--db-primary-vivid);
+  }
+  .tab .close { opacity: 0.4; font-size: 11px; }
+  .tabs-row .newtab {
+    width: 28px; display: flex; align-items: center; justify-content: center;
+    color: #b0b0b6;
+    border-right: 1px solid var(--db-border-subtle);
+  }
+  .tabs-row .spacer { flex: 1; }
+  .tabs-row .actions { display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+  .tab-btn {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    height: 22px; padding: 0 10px;
+    font-size: 10.5px; font-weight: 600;
+    font-family: inherit;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--db-border);
+    background: #fff;
+    color: var(--db-text-soft);
+    box-sizing: border-box;
+  }
+  .tab-btn > svg {
+    display: block !important;
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
+  .tab-btn.primary {
+    background: var(--db-primary);
+    border-color: var(--db-primary);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(45, 163, 30, 0.25);
+    position: relative;
+  }
+  .tab-btn.copilot {
+    color: var(--db-primary);
+    border-color: rgba(65, 205, 42, 0.4);
+    background: rgba(65, 205, 42, 0.08);
+  }
+  .tab-btn.copilot::before {
+    content: "✦";
+    font-size: 13px;
+    line-height: 1;
+    color: currentColor;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 1px;
+  }
+  .tab-btn.clicked { animation: btn-click 0.25s ease-out; }
+  @keyframes btn-click {
+    0% { transform: scale(1); }
+    35% { transform: scale(0.92); filter: brightness(1.15); }
+    100% { transform: scale(1); }
+  }
+  .tab-btn.primary .spinner {
+    display: none;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    animation: spin 0.7s linear infinite;
+  }
+  .tab-btn.primary.loading .spinner { display: inline-block; }
+  .tab-btn.primary.loading .play-icon { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .below-tabs {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .editor-area {
+    display: flex; flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--db-border-subtle);
+    background: #fff;
+  }
+  .editor {
+    flex: 1 1 auto;
+    min-height: 120px;
+    padding: 8px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--db-text-soft);
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+  }
+  .editor-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+    pointer-events: none;
+  }
+  .editor.has-content .editor-empty {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  .editor-empty .ee-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(65, 205, 42, 0.18), transparent 70%),
+      linear-gradient(135deg, rgba(65, 205, 42, 0.10), rgba(65, 205, 42, 0.02));
+    border: 1px solid rgba(65, 205, 42, 0.28);
+    color: var(--db-primary-vivid);
+    box-shadow:
+      0 6px 24px -6px rgba(65, 205, 42, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    animation: eeMarkFloat 3.5s ease-in-out infinite;
+  }
+  @keyframes eeMarkFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  .editor-empty .ee-title {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--db-text);
+    letter-spacing: -0.01em;
+  }
+  .editor-empty .ee-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10.5px;
+    color: var(--db-muted-fg);
+  }
+  .editor-empty kbd {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: #fafafa;
+    border: 1px solid var(--db-border);
+    border-bottom-width: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--db-text-soft);
+    line-height: 1.2;
+  }
+  /* Runtime-created elements need :global() since Astro scoping only tags build-time DOM */
+  .editor :global(.line) {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    white-space: nowrap;
+    min-height: 24px;
+    position: relative;
+  }
+  .editor :global(.line:hover) { background: rgba(65, 205, 42, 0.04); }
+  .editor :global(.ln) {
+    color: #b0b0b6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 44px;
+    padding: 0 14px 0 0;
+    flex-shrink: 0;
+    user-select: none;
+    font-size: 10.5px;
+    font-weight: 500;
+    border-right: 1px solid var(--db-border-subtle);
+    background: #fafaf9;
+    box-sizing: border-box;
+  }
+  .editor :global(.code) {
+    flex: 1;
+    position: relative;
+    padding: 2px 16px;
+    min-width: 0;
+    white-space: pre;
+    display: inline-flex;
+    align-items: center;
+  }
+  .editor :global(.code) > :global(span) { white-space: pre; }
+  .editor :global(.kw) { color: #c026d3; font-weight: 600; }
+  .editor :global(.fn) { color: #8b5cf6; font-weight: 500; }
+  .editor :global(.str) { color: #059669; }
+  .editor :global(.cm) { color: #94a3b8; font-style: italic; }
+  .editor :global(.cursor) {
+    display: inline-block;
+    width: 2px;
+    height: 15px;
+    background: var(--db-primary-vivid);
+    vertical-align: -3px;
+    margin-left: 1px;
+    animation: blink 1s step-end infinite;
+    box-shadow: 0 0 4px rgba(65, 205, 42, 0.4);
+  }
+  @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+  /* Results */
+  .results-wrap {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    border-top: 1px solid var(--db-border-subtle);
+    background: #fdfdfc;
+  }
+  .results-wrap.open { max-height: 240px; }
+  .results-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--db-border-subtle);
+    background: #fdfdfc;
+    font-size: 10.5px; color: var(--db-muted-fg);
+  }
+  .results-toolbar .stats { display: inline-flex; align-items: center; gap: 6px; }
+  .results-toolbar .check { color: var(--db-primary); }
+  .results-toolbar .ms { color: #b0b0b6; }
+  .results-toolbar .tool {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 5px; color: var(--db-text-soft);
+    font-size: 10px;
+  }
+  .results-table-wrap { max-height: 170px; overflow-y: auto; background: #fff; }
+  table.results { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; }
+  table.results th {
+    text-align: left;
+    padding: 5px 10px;
+    background: #fdfdfc;
+    border-bottom: 1px solid var(--db-border-subtle);
+    font-weight: 600;
+    color: var(--db-text-soft);
+    font-size: 10px;
+    position: sticky; top: 0;
+  }
+  table.results th.num { text-align: right; }
+  table.results td {
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--db-border-subtle);
+    color: var(--db-text-soft);
+  }
+  table.results td.idx { color: #c5c5ca; width: 28px; }
+  table.results td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--db-text); }
+
+  .results-pagination {
+    display: flex; align-items: center; gap: 10px;
+    padding: 5px 12px;
+    border-top: 1px solid var(--db-border-subtle);
+    background: #fdfdfc;
+    font-size: 10px; color: var(--db-muted-fg);
+  }
+  .results-pagination .per { display: inline-flex; align-items: center; gap: 4px; }
+  .results-pagination .per .pill { background: #fff; border: 1px solid var(--db-border); border-radius: 5px; padding: 1px 6px; }
+  .results-pagination .sep { color: #d0d0d6; }
+  .results-pagination .right { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+  .results-pagination .nav { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; color: #9a9aa0; }
+  .results-pagination .page { padding: 1px 6px; border-radius: 4px; color: var(--db-text); }
+  .results-pagination .page.active { background: var(--db-primary); color: #fff; }
+
+  /* Copilot */
+  .cop-panel { background: #fff; display: flex; flex-direction: column; font-size: 11px; min-height: 0; }
+  .cop-panel .hdr {
+    background: #0a0a0b;
+    color: #fff;
+    padding: 9px 12px;
+    display: flex; align-items: center; gap: 7px;
+    flex-shrink: 0;
+  }
+  .cop-panel .hdr .spark { color: var(--db-primary-vivid); }
+  .cop-panel .hdr .title { font-size: 11px; font-weight: 600; }
+  .cop-panel .hdr .subtitle { font-size: 9px; color: #9a9aa0; margin-left: 2px; }
+  .cop-panel .hdr .spacer { flex: 1; }
+  .cop-panel .hdr .close { color: #9a9aa0; font-size: 13px; }
+
+  .cop-panel .content {
+    flex: 1;
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Empty state (before user asks) */
+  .cop-panel .empty-state {
+    flex: 1;
+    min-height: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px;
+    padding: 20px 14px;
+    text-align: center;
+  }
+  .cop-panel .empty-state.hidden { display: none; }
+  .cop-panel .empty-state .bot-icon {
+    color: #b5b5bd;
+    opacity: 0.65;
+  }
+  .cop-panel .empty-state .prompt {
+    font-size: 10.5px;
+    color: var(--db-muted-fg);
+    line-height: 1.5;
+    max-width: 180px;
+    margin: 0;
+  }
+  .cop-panel .empty-state .pills {
+    display: flex; flex-direction: column; gap: 6px;
+    width: 100%;
+  }
+  .cop-panel .empty-state .pill {
+    padding: 5px 10px;
+    border: 1px solid var(--db-border);
+    border-radius: 100px;
+    font-size: 9.5px;
+    color: var(--db-text-soft);
+    background: #fff;
+    text-align: center;
+  }
+
+  .cop-panel .convo {
+    padding: 12px 10px 8px;
+    flex: 1;
+    display: none;
+    flex-direction: column; gap: 8px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .cop-panel .convo.show { display: flex; }
+  .cop-panel .user-msg {
+    align-self: flex-end;
+    background: var(--db-primary);
+    color: #fff;
+    border-radius: 10px 10px 2px 10px;
+    padding: 6px 10px;
+    max-width: 82%;
+    font-size: 10.5px;
+    opacity: 0; transform: translateY(6px);
+    display: none;
+  }
+  .cop-panel .user-msg.show { display: block; animation: fade-in 0.35s ease-out forwards; }
+
+  .cop-panel .typing {
+    display: none;
+    gap: 3px;
+    padding: 6px 8px;
+    background: #fff;
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 10px;
+    align-self: flex-start;
+  }
+  .cop-panel .typing.show { display: inline-flex; animation: fade-in 0.2s forwards; }
+  .cop-panel .typing span {
+    width: 4px; height: 4px; border-radius: 50%; background: var(--db-muted-fg);
+    animation: dots 1.2s ease-in-out infinite;
+  }
+  .cop-panel .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .cop-panel .typing span:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes dots { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+  @keyframes fade-in { to { opacity: 1; transform: translateY(0); } }
+
+  .cop-panel .ai-msg {
+    background: #fff;
+    border: 1px solid var(--db-border-subtle);
+    border-radius: 10px 10px 10px 2px;
+    padding: 8px 10px;
+    max-width: 92%;
+    font-size: 10px;
+    line-height: 1.45;
+    color: var(--db-text-soft);
+    align-self: flex-start;
+    opacity: 0; transform: translateY(6px);
+    display: none;
+  }
+  .cop-panel .ai-msg.show { display: block; animation: fade-in 0.35s ease-out forwards; }
+  .cop-panel .ai-msg .bot-row {
+    display: flex; align-items: center; gap: 5px;
+    margin-bottom: 4px;
+    font-size: 9px; font-weight: 600;
+    color: var(--db-primary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  .cop-panel .input-bar {
+    border-top: 1px solid var(--db-border-subtle);
+    padding: 8px;
+    display: flex; gap: 6px;
+    background: #fdfdfc;
+    flex-shrink: 0;
+  }
+  .cop-panel .input-bar .input {
+    flex: 1; background: #fff;
+    border: 1px solid var(--db-border); border-radius: 6px;
+    padding: 5px 8px; font-size: 10px; color: var(--db-text);
+    height: 22px;
+    display: flex; align-items: center;
+    font-family: inherit;
+    white-space: nowrap; overflow: hidden;
+  }
+  .cop-panel .input-bar .input:empty::before {
+    content: attr(data-placeholder);
+    color: #b0b0b6;
+  }
+  .cop-panel .input-bar .input .caret {
+    display: inline-block;
+    width: 1.2px; height: 10px;
+    background: var(--db-primary-vivid);
+    vertical-align: -1px;
+    margin-left: 1px;
+    animation: blink 1s step-end infinite;
+  }
+  .cop-panel .input-bar .send {
+    width: 24px; height: 24px;
+    background: var(--db-primary); border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff;
+  }
+
+  /* Mouse cursor */
+  .mouse-cursor {
+    position: absolute;
+    width: 18px; height: 18px;
+    pointer-events: none;
+    z-index: 30;
+    opacity: 0;
+    transition: left 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+                top  0.9s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.25s ease-out;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+  }
+  .mouse-cursor.visible { opacity: 1; }
+
+  @media (max-width: 980px) {
+    .db-hero { grid-template-columns: 1fr; padding: 36px 24px; }
+    .body { grid-template-columns: 148px 1fr; min-height: 420px; }
+    .below-tabs { grid-template-columns: 1fr 180px; }
+  }
+</style>
+
+<script>
+  import { startHeroAnimation } from '../landing-mock/hero-animation';
+  import { strings } from '../../content/landing-strings';
+
+  // Detect which language the page is running in by checking the URL path
+  const lang = window.location.pathname.startsWith('/fr/') || window.location.pathname === '/fr' ? 'fr' : 'en';
+  const m = strings[lang].hero.mockup;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    startHeroAnimation({
+      question: m.animUserQuestion,
+      aiIntro: m.animAiIntro,
+    });
+
+    const copyBtn = document.querySelector<HTMLButtonElement>('.db-hero .docker-bar .copy');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const cmd = copyBtn.dataset.cmd ?? '';
+        try {
+          await navigator.clipboard.writeText(cmd);
+          copyBtn.classList.add('copied');
+          setTimeout(() => copyBtn.classList.remove('copied'), 1500);
+        } catch {
+          /* clipboard unavailable */
+        }
+      });
+    }
+  });
+</script>

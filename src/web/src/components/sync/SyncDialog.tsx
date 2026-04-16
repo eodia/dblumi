@@ -20,6 +20,7 @@ import {
   CommandItem,
 } from '@/components/ui/command'
 import { Combobox } from '@/components/ui/combobox'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/i18n'
 import { connectionsApi, type Connection } from '@/api/connections'
 import { executeSync, type SyncProgress, type SyncOptions } from '@/api/data-sync'
@@ -132,9 +133,12 @@ function DatabasePicker({ connectionId, value, onChange }: { connectionId: strin
   const databases = data?.databases ?? []
 
   if (isLoading) return (
-    <div className="flex items-center gap-1.5 h-7 px-2 text-[11px] text-text-muted">
-      <Loader2 className="h-3 w-3 animate-spin" />
-      {t('common.loading')}
+    <div className="relative h-7">
+      <Skeleton className="h-7 w-full rounded-md" />
+      <div className="absolute inset-0 flex items-center gap-1.5 px-2 text-[11px] text-text-muted pointer-events-none">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        {t('common.loading')}
+      </div>
     </div>
   )
   if (databases.length === 0) return null

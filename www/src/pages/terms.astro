@@ -1,0 +1,231 @@
+---
+import '../styles/landing.css';
+import Navbar from '../components/landing/Navbar.astro';
+import SiteFooter from '../components/landing/SiteFooter.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Terms of Service — dblumi</title>
+    <meta name="description" content="dblumi terms of service." />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+  </head>
+  <body>
+    <Navbar lang="en" />
+    <main class="legal-page">
+
+      <div class="legal-hero">
+        <span class="legal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </span>
+        <h1>Terms of Service</h1>
+        <p class="updated">Last updated · April 2026</p>
+      </div>
+
+      <div class="tldr">
+        <strong>TL;DR —</strong> dblumi is AGPL-3.0 open source. You self-host it, you own your data. Use it freely, modify it freely. We provide enterprise support separately if you need it.
+      </div>
+
+      <div class="sections">
+        <section class="card">
+          <span class="num">1</span>
+          <div>
+            <h2>Acceptance</h2>
+            <p>By using dblumi, you agree to these terms. If you disagree, don't use the software — no hard feelings.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="num">2</span>
+          <div>
+            <h2>License</h2>
+            <p>dblumi is distributed under the <a href="https://github.com/eodia/dblumi/blob/main/LICENSE">GNU Affero General Public License v3.0 (AGPL-3.0)</a>. You may use, modify, and distribute the software under the terms of that license. All features are included — no "enterprise-only" gating.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="num">3</span>
+          <div>
+            <h2>Self-hosting</h2>
+            <p>When you self-host dblumi, you are responsible for your own infrastructure, data security, backups, and compliance with applicable laws. Eodia provides the software as-is and has <strong>no access to your deployment</strong>.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="num">4</span>
+          <div>
+            <h2>AI copilot</h2>
+            <p>The AI copilot connects to third-party providers using <strong>your own API keys</strong>. Eodia does not proxy, store, or access the prompts or responses exchanged between your instance and the AI provider. Usage is subject to their respective terms.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="num">5</span>
+          <div>
+            <h2>Enterprise support</h2>
+            <p>Enterprise support agreements (managed hosting, SLA, priority fixes) are governed by a separate contract. Contact <a href="mailto:contact@eodia.fr">contact@eodia.fr</a> for details.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="num">6</span>
+          <div>
+            <h2>Disclaimer of warranties</h2>
+            <p>dblumi is provided <strong>"as is"</strong>, without warranty of any kind, express or implied. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="num">7</span>
+          <div>
+            <h2>Changes</h2>
+            <p>We may update these terms. Continued use of dblumi after changes constitutes acceptance of the updated terms.</p>
+          </div>
+        </section>
+      </div>
+
+      <div class="contact-bar">
+        Questions? Email <a href="mailto:contact@eodia.fr">contact@eodia.fr</a>
+      </div>
+
+    </main>
+    <SiteFooter lang="en" />
+  </body>
+</html>
+
+<style>
+  .legal-page {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 140px 40px 80px;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--db-text, #0A0A0B);
+    line-height: 1.7;
+  }
+
+  .legal-hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .legal-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(65, 205, 42, 0.3), transparent 70%),
+      linear-gradient(135deg, #fff 0%, #f5f7f4 100%);
+    border: 1px solid rgba(65, 205, 42, 0.28);
+    color: var(--db-primary, #2DA31E);
+    box-shadow: 0 12px 32px -10px rgba(65, 205, 42, 0.35), 0 0 0 6px rgba(65, 205, 42, 0.05);
+    margin-bottom: 18px;
+  }
+  .legal-hero h1 {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0 0 6px;
+  }
+  .legal-hero .updated {
+    font-size: 13px;
+    color: var(--db-muted-fg, #6B6B76);
+  }
+
+  .tldr {
+    padding: 18px 22px;
+    border-radius: 12px;
+    background: rgba(65, 205, 42, 0.06);
+    border: 1px solid rgba(65, 205, 42, 0.22);
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    margin-bottom: 36px;
+    line-height: 1.6;
+  }
+  .tldr strong {
+    color: var(--db-primary, #2DA31E);
+    font-weight: 700;
+  }
+
+  .sections {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+  .card {
+    display: flex;
+    gap: 18px;
+    padding: 22px 24px;
+    border: 1px solid var(--db-border, #E2E2E6);
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    border-color: rgba(65, 205, 42, 0.3);
+    box-shadow: 0 8px 24px -12px rgba(65, 205, 42, 0.12);
+  }
+  .num {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--db-muted, #F0F0F2);
+    color: var(--db-muted-fg, #6B6B76);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 800;
+    margin-top: 2px;
+  }
+  .card h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .card p {
+    font-size: 14px;
+    color: var(--db-text-soft, #3A3A42);
+    margin: 0;
+    line-height: 1.6;
+  }
+  .card strong {
+    color: var(--db-text, #0A0A0B);
+    font-weight: 600;
+  }
+  .card a {
+    color: var(--db-primary, #2DA31E);
+    text-decoration: underline;
+    text-decoration-color: rgba(65, 205, 42, 0.35);
+    text-underline-offset: 3px;
+  }
+
+  .contact-bar {
+    text-align: center;
+    padding: 18px;
+    border-radius: 10px;
+    background: var(--db-muted, #F0F0F2);
+    font-size: 14px;
+    color: var(--db-muted-fg, #6B6B76);
+  }
+  .contact-bar a {
+    color: var(--db-primary, #2DA31E);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(65, 205, 42, 0.35);
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 700px) {
+    .legal-page { padding: 120px 20px 60px; }
+    .card { flex-direction: column; gap: 10px; padding: 18px; }
+  }
+</style>
