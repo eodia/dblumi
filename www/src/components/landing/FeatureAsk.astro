@@ -52,6 +52,12 @@ const headAfter = parts[1] ?? '';
                 </svg>
               </div>
               <p class="prompt" set:html={strings[lang].hero.mockup.emptyPrompt}></p>
+              <div class="suggestions">
+                <span class="sug-pill">{strings[lang].hero.mockup.pill1}</span>
+                <span class="sug-pill">{strings[lang].hero.mockup.pill2}</span>
+                <span class="sug-pill">{strings[lang].hero.mockup.pill3}</span>
+                <span class="sug-pill">{strings[lang].hero.mockup.pill4}</span>
+              </div>
             </div>
 
             <div class="user-msg m1">Monthly active users by country, last quarter</div>
@@ -106,7 +112,7 @@ const headAfter = parts[1] ?? '';
             <div class="user-msg m4">🙌 perfect, running it now</div>
           </div>
           <div class="input-bar">
-            <div class="input">{strings[lang].hero.mockup.inputPlaceholder}</div>
+            <div class="input" data-placeholder={strings[lang].hero.mockup.inputPlaceholder}></div>
             <span class="send">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </span>
@@ -319,6 +325,29 @@ const headAfter = parts[1] ?? '';
     color: var(--db-text, #0A0A0B);
     font-weight: 600;
   }
+  .cop-mock .convo .empty-state .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    max-width: 300px;
+    margin-top: 4px;
+  }
+  .cop-mock .convo .empty-state .sug-pill {
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 100px;
+    background: #fff;
+    border: 1px solid var(--db-border, #E2E2E6);
+    color: var(--db-text-soft, #3A3A42);
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .cop-mock .convo .empty-state .sug-pill:hover {
+    border-color: rgba(65, 205, 42, 0.4);
+    color: var(--db-primary, #2DA31E);
+    background: rgba(65, 205, 42, 0.06);
+  }
 
   /* Messages and typing dots start hidden; JS toggles .shown to reveal */
   .cop-mock .convo .user-msg,
@@ -489,10 +518,40 @@ const headAfter = parts[1] ?? '';
     border-radius: 7px;
     padding: 6px 10px;
     font-size: 11px;
-    color: #b0b0b6;
+    color: var(--db-text, #0A0A0B);
     height: 26px;
     display: flex;
     align-items: center;
+    font-family: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    min-width: 0;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .cop-mock .input-bar .input:empty::before {
+    content: attr(data-placeholder);
+    color: #b0b0b6;
+  }
+  .cop-mock .input-bar .input:not(:empty) {
+    border-color: rgba(65, 205, 42, 0.35);
+    box-shadow: 0 0 0 3px rgba(65, 205, 42, 0.08);
+  }
+  .cop-mock .input-bar .input .typed-text {
+    color: var(--db-primary, #2DA31E);
+    font-weight: 500;
+  }
+  .cop-mock .input-bar .input .caret {
+    display: inline-block;
+    width: 1.5px;
+    height: 11px;
+    background: var(--db-primary-vivid, #41cd2a);
+    vertical-align: -1px;
+    margin-left: 1px;
+    animation: askCaretBlink 1s step-end infinite;
+  }
+  @keyframes askCaretBlink {
+    0%, 50% { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
   }
   .cop-mock .input-bar .send {
     width: 28px;
@@ -503,6 +562,16 @@ const headAfter = parts[1] ?? '';
     align-items: center;
     justify-content: center;
     color: #fff;
+    flex-shrink: 0;
+    transition: transform 0.15s, filter 0.15s;
+  }
+  .cop-mock .input-bar .send.clicked {
+    animation: askSendClick 0.35s ease-out;
+  }
+  @keyframes askSendClick {
+    0% { transform: scale(1); filter: brightness(1); }
+    35% { transform: scale(0.88); filter: brightness(1.25); }
+    100% { transform: scale(1); filter: brightness(1); }
   }
 
   /* ── Typing indicator ── */
@@ -560,9 +629,15 @@ const headAfter = parts[1] ?? '';
 
 <script>
   // Progressive chat simulation — drives the Ask mockup's conversation loop.
-  // Runs entirely client-side, respects prefers-reduced-motion.
-  document.querySelectorAll<HTMLElement>('.db-feat-ask .cop-mock .convo').forEach((convo) => {
+  // User message texts are typed char-by-char in the bottom input, then
+  // "sent" by clicking the green send button, then rendered in the convo.
+  document.querySelectorAll<HTMLElement>('.db-feat-ask .cop-mock').forEach((mock) => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const convo = mock.querySelector<HTMLElement>('.convo');
+    const input = mock.querySelector<HTMLElement>('.input-bar .input');
+    const sendBtn = mock.querySelector<HTMLElement>('.input-bar .send');
+    if (!convo || !input || !sendBtn) return;
 
     const q = <T extends HTMLElement = HTMLElement>(sel: string) => convo.querySelector<T>(sel);
     const empty = q('.empty-state');
@@ -583,19 +658,17 @@ const headAfter = parts[1] ?? '';
     const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
     function scrollToBottom() {
-      // Auto-scroll only if the user is already near the bottom
-      const nearBottom = convo.scrollTop + convo.clientHeight >= convo.scrollHeight - 120;
-      if (nearBottom) {
-        convo.scrollTo({ top: convo.scrollHeight, behavior: 'smooth' });
-      }
+      convo!.scrollTo({ top: convo!.scrollHeight, behavior: 'smooth' });
     }
 
     function show(el: HTMLElement | null) {
       if (!el) return;
       el.classList.add('shown');
       requestAnimationFrame(() => {
-        // Wait a tick for layout, then scroll
-        requestAnimationFrame(scrollToBottom);
+        requestAnimationFrame(() => {
+          scrollToBottom();
+          setTimeout(scrollToBottom, 380);
+        });
       });
     }
 
@@ -607,7 +680,32 @@ const headAfter = parts[1] ?? '';
     function reset() {
       empty!.classList.remove('hidden');
       msgs.forEach((m) => m!.classList.remove('shown'));
-      convo.scrollTop = 0;
+      input!.innerHTML = '';
+      convo!.scrollTop = 0;
+    }
+
+    async function typeInInput(text: string) {
+      input!.innerHTML = '';
+      const textSpan = document.createElement('span');
+      textSpan.className = 'typed-text';
+      const caret = document.createElement('span');
+      caret.className = 'caret';
+      input!.appendChild(textSpan);
+      input!.appendChild(caret);
+      for (let i = 0; i < text.length; i++) {
+        textSpan.textContent += text[i];
+        await sleep(28 + Math.random() * 24);
+      }
+      await sleep(350);
+    }
+
+    async function submitInput() {
+      // Flash the send button, then clear the input
+      sendBtn!.classList.add('clicked');
+      await sleep(140);
+      input!.innerHTML = '';
+      await sleep(180);
+      sendBtn!.classList.remove('clicked');
     }
 
     async function loop() {
@@ -618,8 +716,11 @@ const headAfter = parts[1] ?? '';
         empty!.classList.add('hidden');
         await sleep(500);
 
+        // Message 1
+        await typeInInput('Monthly active users by country, last quarter');
+        await submitInput();
         show(m1);
-        await sleep(1400);
+        await sleep(700);
 
         show(t1);
         await sleep(1400);
@@ -627,10 +728,13 @@ const headAfter = parts[1] ?? '';
         await sleep(200);
 
         show(a1);
-        await sleep(3500);
+        await sleep(3200);
 
+        // Message 2
+        await typeInInput('Exclude our internal team (@eodia.fr) and sort by MAU desc');
+        await submitInput();
         show(m2);
-        await sleep(1400);
+        await sleep(700);
 
         show(t2);
         await sleep(1400);
@@ -638,10 +742,13 @@ const headAfter = parts[1] ?? '';
         await sleep(200);
 
         show(a2);
-        await sleep(3500);
+        await sleep(3200);
 
+        // Message 3
+        await typeInInput('Which countries are growing the fastest?');
+        await submitInput();
         show(m3);
-        await sleep(1400);
+        await sleep(700);
 
         show(t3);
         await sleep(1400);
@@ -649,8 +756,11 @@ const headAfter = parts[1] ?? '';
         await sleep(200);
 
         show(a3);
-        await sleep(3200);
+        await sleep(3000);
 
+        // Final thumbs-up
+        await typeInInput('🙌 perfect, running it now');
+        await submitInput();
         show(m4);
         await sleep(4500);
       }
