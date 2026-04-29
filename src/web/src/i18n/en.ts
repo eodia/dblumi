@@ -170,6 +170,7 @@ export const en = {
   'results.explain': 'Explain',
   'results.perPage': 'Rows per page',
   'results.all': 'All',
+  'results.statement': 'Result {n}',
 
   // ── Table mode ──
   'table.filter': 'Filter',

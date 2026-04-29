@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
 import { readSSE } from '../api/client'
+import { splitSqlStatements } from '../lib/sql-split'
 
 export type QueryStatus = 'idle' | 'running' | 'done' | 'error'
 
@@ -60,6 +61,14 @@ export type QueryTab = {
   sql: string
   originalSql: string
   result: TabResult
+  /**
+   * Per-statement results when the executed SQL contains more than one
+   * statement. Empty (`[]`) for single-statement runs — the regular
+   * `result` field is then the only source of truth.
+   * When non-empty, `result` mirrors `panels[activePanelIndex]`.
+   */
+  panels: TabResult[]
+  activePanelIndex: number
   savedQueryId: string | null
   functionParams: FunctionParam[]
   connectionId: string | null
@@ -130,6 +139,8 @@ type EditorState = {
   confirmClose: (action: 'save' | 'discard' | 'cancel') => void
   requestBulkClose: (tabIds: string[]) => void
 
+  setActivePanel: (idx: number) => void
+
   chatOpen: boolean
   setChatOpen: (open: boolean) => void
   incrementUnread: (tabId: string) => void
@@ -137,7 +148,7 @@ type EditorState = {
 }
 
 function makeQueryTab(n: number, connectionId: string | null = null): QueryTab {
-  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', originalSql: '', result: emptyResult(), savedQueryId: null, functionParams: [], connectionId, collaborative: false, unreadChat: 0, filters: [] }
+  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', originalSql: '', result: emptyResult(), panels: [], activePanelIndex: 0, savedQueryId: null, functionParams: [], connectionId, collaborative: false, unreadChat: 0, filters: [] }
 }
 
 function makeTableTab(tableName: string, connectionId: string | null = null): QueryTab {
@@ -155,6 +166,8 @@ function makeTableTab(tableName: string, connectionId: string | null = null): Qu
     unreadChat: 0,
     filters: [],
     result: emptyResult(),
+    panels: [],
+    activePanelIndex: 0,
   }
 }
 
@@ -279,6 +292,134 @@ async function runSse(
   }
 }
 
+/**
+ * Runs a list of SQL statements sequentially, materialising one panel
+ * (`TabResult`) per statement. The active panel auto-advances to the
+ * statement currently running, but the user can switch back at any time;
+ * subsequent stream events for inactive panels still update their slot
+ * without disturbing the visible `result`.
+ */
+async function runMultiStatementSse(
+  connectionId: string,
+  statements: string[],
+  tabId: string,
+  pageSize: number,
+  getTabs: () => QueryTab[],
+  setTabs: (tabs: QueryTab[]) => void,
+  force = false,
+) {
+  const initialPanels = statements.map(() => emptyResult())
+  setTabs(
+    getTabs().map((t) =>
+      t.id === tabId
+        ? { ...t, panels: initialPanels, activePanelIndex: 0, result: { ...initialPanels[0]!, pageSize } }
+        : t,
+    ),
+  )
+
+  for (let i = 0; i < statements.length; i++) {
+    const sql = statements[i]!
+
+    // Advance the active panel: snapshot the previous active panel's result
+    // (preserves any sort/page state the user may have triggered) and load
+    // the slot we are about to populate.
+    setTabs(
+      getTabs().map((t) => {
+        if (t.id !== tabId) return t
+        const savedPanels = t.panels.map((p, idx) =>
+          idx === t.activePanelIndex ? t.result : p,
+        )
+        return {
+          ...t,
+          panels: savedPanels,
+          activePanelIndex: i,
+          result: { ...(savedPanels[i] ?? emptyResult()), pageSize },
+        }
+      }),
+    )
+
+    const patchPanel = (
+      patch: Partial<TabResult> | ((r: TabResult) => Partial<TabResult>),
+    ) => {
+      setTabs(
+        getTabs().map((t) => {
+          if (t.id !== tabId) return t
+          const target = t.panels[i] ?? emptyResult()
+          const p = typeof patch === 'function' ? patch(target) : patch
+          const updatedPanel = { ...target, ...p }
+          const newPanels = t.panels.map((pn, idx) => (idx === i ? updatedPanel : pn))
+          // Mirror to the visible result only if this panel is currently active
+          const newResult = t.activePanelIndex === i ? updatedPanel : t.result
+          return { ...t, panels: newPanels, result: newResult }
+        }),
+      )
+    }
+
+    patchPanel({
+      status: 'running',
+      error: null,
+      guardrail: null,
+      columns: [],
+      rows: [],
+      rowCount: 0,
+      totalCount: null,
+      page: 0,
+      pageSize,
+      durationMs: 0,
+      executedSql: sql,
+      sortBy: null,
+      sortMulti: [],
+    })
+
+    try {
+      for await (const { event, data } of readSSE('/query', {
+        connectionId,
+        sql,
+        limit: pageSize,
+        offset: 0,
+        force,
+      })) {
+        if (event === '__http') {
+          const resp = data as { status: number; body: Record<string, unknown> }
+          const b = resp.body
+          if (resp.status === 422 && b['type'] === 'guardrail') {
+            patchPanel({
+              status: 'idle',
+              guardrail: {
+                level: b['level'] as 1 | 2 | 3 | 4,
+                message: b['message'] as string,
+                details: b['details'] as string,
+              },
+            })
+          } else {
+            const msg = (b['message'] ?? b['title'] ?? 'Unknown error') as string
+            patchPanel({ status: 'error', error: msg })
+            showSqlErrorToast(msg)
+          }
+          break
+        }
+
+        if (event === 'columns') {
+          patchPanel({ columns: data as QueryColumn[] })
+        } else if (event === 'rows') {
+          patchPanel((r) => ({ rows: [...r.rows, ...(data as Record<string, unknown>[])] }))
+        } else if (event === 'done') {
+          const d = data as { rowCount: number; durationMs: number }
+          patchPanel({ status: 'done', rowCount: d.rowCount, durationMs: d.durationMs })
+        } else if (event === 'error') {
+          const d = data as { message: string; detail?: string }
+          const msg = d.message || 'Query execution failed'
+          patchPanel({ status: 'error', error: msg })
+          showSqlErrorToast(msg, d.detail)
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      patchPanel({ status: 'error', error: msg })
+    }
+  }
+}
+
 /** Lighter page fetch — keeps columns, only replaces rows */
 async function fetchPageSse(
   connectionId: string,
@@ -373,6 +514,8 @@ function partialize(state: EditorState): PersistedState {
     tabs: state.tabs.map((t) => ({
       ...t,
       result: { ...emptyResult(), sortBy: t.result.sortBy, sortMulti: t.result.sortMulti },
+      panels: [],
+      activePanelIndex: 0,
       unreadChat: 0,
       collaborative: false,
     })),
@@ -463,6 +606,8 @@ export const useEditorStore = create<EditorState>()(
       name: displayName,
       savedQueryId: savedQueryId ?? null,
       collaborative: collaborative ?? false,
+      panels: [],
+      activePanelIndex: 0,
     }
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
   },
@@ -499,6 +644,8 @@ export const useEditorStore = create<EditorState>()(
       kind: 'function',
       sql: source,
       result: emptyResult(),
+      panels: [],
+      activePanelIndex: 0,
       savedQueryId: null,
       functionParams: params.map((p) => ({ ...p, value: '' })),
       connectionId: activeConnectionId,
@@ -573,14 +720,41 @@ export const useEditorStore = create<EditorState>()(
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !tab?.sql.trim()) return
     const { pageSize } = tab.result
-    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, totalCount: null, sortBy: null, sortMulti: [], executedSql: tab.sql }) })
+
+    const statements = splitSqlStatements(tab.sql)
+
+    if (statements.length > 1) {
+      await runMultiStatementSse(activeConnectionId, statements, activeTabId, pageSize, () => get().tabs, (tabs) => set({ tabs }), force)
+      const final = get().tabs.find((t) => t.id === activeTabId)
+      final?.panels.forEach((p, i) => {
+        if (p.status === 'done' && statements[i]) {
+          saveQueryHistory(statements[i]!, activeConnectionId, p.durationMs)
+        }
+      })
+      return
+    }
+
+    const singleSql = statements[0] ?? tab.sql
+    // Single-statement run: clear any leftover panels from a previous multi-run
+    set({
+      tabs: get().tabs.map((t) =>
+        t.id === activeTabId
+          ? {
+              ...t,
+              panels: [],
+              activePanelIndex: 0,
+              result: { ...t.result, page: 0, totalCount: null, sortBy: null, sortMulti: [], executedSql: singleSql },
+            }
+          : t,
+      ),
+    })
     await Promise.all([
-      runSse(activeConnectionId, tab.sql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), force),
-      fetchTotalCount(activeConnectionId, tab.sql, activeTabId, get, set),
+      runSse(activeConnectionId, singleSql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), force),
+      fetchTotalCount(activeConnectionId, singleSql, activeTabId, get, set),
     ])
     const done = get().tabs.find((t) => t.id === activeTabId)
     if (done?.result.status === 'done') {
-      saveQueryHistory(tab.sql, activeConnectionId, done.result.durationMs)
+      saveQueryHistory(singleSql, activeConnectionId, done.result.durationMs)
     }
   },
 
@@ -589,10 +763,30 @@ export const useEditorStore = create<EditorState>()(
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !selection.trim()) return
     const { pageSize } = tab?.result ?? { pageSize: 100 }
-    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, totalCount: null, sortBy: null, sortMulti: [], executedSql: selection }) })
+
+    const statements = splitSqlStatements(selection)
+
+    if (statements.length > 1) {
+      await runMultiStatementSse(activeConnectionId, statements, activeTabId, pageSize, () => get().tabs, (tabs) => set({ tabs }), true)
+      return
+    }
+
+    const singleSql = statements[0] ?? selection
+    set({
+      tabs: get().tabs.map((t) =>
+        t.id === activeTabId
+          ? {
+              ...t,
+              panels: [],
+              activePanelIndex: 0,
+              result: { ...t.result, page: 0, totalCount: null, sortBy: null, sortMulti: [], executedSql: singleSql },
+            }
+          : t,
+      ),
+    })
     await Promise.all([
-      runSse(activeConnectionId, selection, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
-      fetchTotalCount(activeConnectionId, selection, activeTabId, get, set),
+      runSse(activeConnectionId, singleSql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
+      fetchTotalCount(activeConnectionId, singleSql, activeTabId, get, set),
     ])
   },
 
@@ -601,10 +795,30 @@ export const useEditorStore = create<EditorState>()(
     const tab = tabs.find((t) => t.id === activeTabId)
     if (!activeConnectionId || !sql.trim()) return
     const { pageSize } = tab?.result ?? { pageSize: 100 }
-    set({ tabs: patchResult(get().tabs, activeTabId, { page: 0, totalCount: null, sortBy: null, sortMulti: [], executedSql: sql }) })
+
+    const statements = splitSqlStatements(sql)
+
+    if (statements.length > 1) {
+      await runMultiStatementSse(activeConnectionId, statements, activeTabId, pageSize, () => get().tabs, (tabs) => set({ tabs }), true)
+      return
+    }
+
+    const singleSql = statements[0] ?? sql
+    set({
+      tabs: get().tabs.map((t) =>
+        t.id === activeTabId
+          ? {
+              ...t,
+              panels: [],
+              activePanelIndex: 0,
+              result: { ...t.result, page: 0, totalCount: null, sortBy: null, sortMulti: [], executedSql: singleSql },
+            }
+          : t,
+      ),
+    })
     await Promise.all([
-      runSse(activeConnectionId, sql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
-      fetchTotalCount(activeConnectionId, sql, activeTabId, get, set),
+      runSse(activeConnectionId, singleSql, activeTabId, pageSize, 0, () => get().tabs, (tabs) => set({ tabs }), true),
+      fetchTotalCount(activeConnectionId, singleSql, activeTabId, get, set),
     ])
   },
 
@@ -697,7 +911,33 @@ export const useEditorStore = create<EditorState>()(
 
   clearResults: () => {
     const { tabs, activeTabId } = get()
-    set({ tabs: patchResult(tabs, activeTabId, emptyResult()) })
+    set({
+      tabs: tabs.map((t) =>
+        t.id === activeTabId
+          ? { ...t, result: emptyResult(), panels: [], activePanelIndex: 0 }
+          : t,
+      ),
+    })
+  },
+
+  setActivePanel: (idx) => {
+    const { tabs, activeTabId } = get()
+    const tab = tabs.find((t) => t.id === activeTabId)
+    if (!tab || tab.panels.length === 0 || idx < 0 || idx >= tab.panels.length || idx === tab.activePanelIndex) return
+    set({
+      tabs: tabs.map((t) => {
+        if (t.id !== activeTabId) return t
+        // Save the current visible result back into the slot we are leaving,
+        // so that user-driven sort/page state is preserved on switch-back.
+        const savedPanels = t.panels.map((p, i) => (i === t.activePanelIndex ? t.result : p))
+        return {
+          ...t,
+          panels: savedPanels,
+          activePanelIndex: idx,
+          result: savedPanels[idx]!,
+        }
+      }),
+    })
   },
 
   setTabFilters: (filters) => {
@@ -763,9 +1003,20 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name: 'dblumi:editor-tabs',
-      version: 1,
+      version: 2,
       partialize,
-      migrate: (persisted, _fromVersion) => persisted as PersistedState,
+      migrate: (persisted, _fromVersion) => {
+        const p = persisted as Partial<PersistedState> | null | undefined
+        const tabs = (p?.tabs ?? [fallbackTab]).map((t) => ({
+          ...t,
+          panels: [],
+          activePanelIndex: 0,
+        }))
+        return {
+          tabs,
+          activeTabId: p?.activeTabId ?? tabs[0]!.id,
+        }
+      },
     },
   ),
 )

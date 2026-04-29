@@ -64,6 +64,7 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet'
 import { Label } from '@/components/ui/label'
+import { ResultsPanelTabs } from '@/components/results/ResultsPanelTabs'
 
 const DEFAULT_COL_W = 180
 const MIN_COL_W = 60
@@ -1214,36 +1215,49 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
   // ── Empty / loading / error states ──────
   if (status === 'idle' && rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-2 text-text-muted bg-background">
-        <TableIcon className="h-8 w-8 opacity-20" /><span className="text-xs">{t('editor.resultsHere')}</span>
-        <span className="text-[11px] text-text-muted/60">{t('editor.ctrlEnter')}</span>
+      <div className="flex flex-col h-full bg-background">
+        <ResultsPanelTabs />
+        <div className="flex flex-col items-center justify-center flex-1 gap-2 text-text-muted">
+          <TableIcon className="h-8 w-8 opacity-20" /><span className="text-xs">{t('editor.resultsHere')}</span>
+          <span className="text-[11px] text-text-muted/60">{t('editor.ctrlEnter')}</span>
+        </div>
       </div>
     )
   }
   if (status === 'running' && rows.length === 0) {
-    return (<div className="flex items-center justify-center h-full gap-2 text-muted-foreground bg-background"><Loader2 className="h-4 w-4 animate-spin text-primary" /><span className="text-xs">{t('editor.running')}</span></div>)
+    return (
+      <div className="flex flex-col h-full bg-background">
+        <ResultsPanelTabs />
+        <div className="flex items-center justify-center flex-1 gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" /><span className="text-xs">{t('editor.running')}</span>
+        </div>
+      </div>
+    )
   }
   if (status === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 px-6 bg-background">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
-          <span className="text-xs text-destructive">{error ?? t('results.error')}</span>
+      <div className="flex flex-col h-full bg-background">
+        <ResultsPanelTabs />
+        <div className="flex flex-col items-center justify-center flex-1 gap-3 px-6">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+            <span className="text-xs text-destructive">{error ?? t('results.error')}</span>
+          </div>
+          {activeConnectionId && error && (
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-primary hover:bg-primary/10 transition-colors border border-primary/20"
+              onClick={() => {
+                const sql = result?.executedSql ?? tab?.sql ?? ''
+                const message = t('copilot.explainError.prompt', { sql, error })
+                explainError(activeConnectionId, message)
+                onOpenCopilot?.()
+              }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {t('copilot.explainError.button')}
+            </button>
+          )}
         </div>
-        {activeConnectionId && error && (
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-primary hover:bg-primary/10 transition-colors border border-primary/20"
-            onClick={() => {
-              const sql = result?.executedSql ?? tab?.sql ?? ''
-              const message = t('copilot.explainError.prompt', { sql, error })
-              explainError(activeConnectionId, message)
-              onOpenCopilot?.()
-            }}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            {t('copilot.explainError.button')}
-          </button>
-        )}
       </div>
     )
   }
@@ -1251,14 +1265,17 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
   // INSERT / UPDATE / DELETE success — no columns/rows returned
   if (status === 'done' && columns.length === 0 && rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-2 bg-background">
-        <CheckCircle2 className="h-8 w-8 text-success opacity-40" />
-        <span className="text-sm text-muted-foreground">
-          {t('results.success')}
-        </span>
-        <span className="text-xs text-text-muted tabular-nums">
-          {rowCount} {rowCount !== 1 ? t('results.affected_plural') : t('results.affected')} · {durationMs} ms
-        </span>
+      <div className="flex flex-col h-full bg-background">
+        <ResultsPanelTabs />
+        <div className="flex flex-col items-center justify-center flex-1 gap-2">
+          <CheckCircle2 className="h-8 w-8 text-success opacity-40" />
+          <span className="text-sm text-muted-foreground">
+            {t('results.success')}
+          </span>
+          <span className="text-xs text-text-muted tabular-nums">
+            {rowCount} {rowCount !== 1 ? t('results.affected_plural') : t('results.affected')} · {durationMs} ms
+          </span>
+        </div>
       </div>
     )
   }
@@ -1267,6 +1284,7 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Status / Action bar */}
       <div className="flex items-center gap-2 h-8 px-3 border-b border-border-subtle bg-surface flex-shrink-0">
+        <ResultsPanelTabs variant="inline" />
         {isTableMode && someSelected ? (<>
           <Button variant="outline" size="sm" className="h-6 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteMultiConfirm({ count: selected.size, action: handleDeleteSelected })}>
             <Trash2 className="h-3 w-3" />{t('sel.delete')} {selected.size} {selected.size !== 1 ? t('sel.deleteLines') : t('sel.deleteLine')}

@@ -170,6 +170,7 @@ export const fr = {
   'results.explain': 'Expliquer',
   'results.perPage': 'Lignes par page',
   'results.all': 'Tout',
+  'results.statement': 'Requête {n}',
 
   // ── Table mode ──
   'table.filter': 'Filtrer',
