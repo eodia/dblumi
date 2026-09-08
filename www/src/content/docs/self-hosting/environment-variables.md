@@ -28,7 +28,11 @@ title: Environment variables
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | No | — | Anthropic API key for Claude models |
+| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-20250514` | Anthropic model name |
+| `MISTRAL_API_KEY` | No | — | Mistral API key (used through Mistral's OpenAI-compatible API) |
+| `MISTRAL_MODEL` | No | `mistral-large-latest` | Mistral model name |
 | `OPENAI_API_KEY` | No | — | OpenAI API key |
+| `OPENAI_MODEL` | No | `gpt-4o` | OpenAI model name |
 | `AZURE_OPENAI_API_KEY` | No | — | Azure OpenAI API key |
 | `AZURE_OPENAI_ENDPOINT` | No | — | Azure OpenAI endpoint URL |
 | `AZURE_OPENAI_DEPLOYMENT` | No | — | Azure OpenAI deployment name |

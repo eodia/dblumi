@@ -38,16 +38,20 @@ const ORACLE_SERVER_PRIVS = [
 ]
 const ORACLE_TABLE_PRIVS = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'ALTER', 'INDEX', 'REFERENCES', 'EXECUTE']
 
+// Drivers without a privilege model exposed here (sqlite, trino) get an empty list
+// instead of silently falling back to the Oracle one.
 function serverPrivsList(driver: DbDriver): string[] {
   if (driver === 'mysql') return MYSQL_SERVER_PRIVS
   if (driver === 'postgresql') return PG_SERVER_PRIVS
-  return ORACLE_SERVER_PRIVS
+  if (driver === 'oracle') return ORACLE_SERVER_PRIVS
+  return []
 }
 
 function tablePrivsList(driver: DbDriver): string[] {
   if (driver === 'mysql') return MYSQL_TABLE_PRIVS
   if (driver === 'postgresql') return PG_TABLE_PRIVS
-  return ORACLE_TABLE_PRIVS
+  if (driver === 'oracle') return ORACLE_TABLE_PRIVS
+  return []
 }
 
 // ── Types ────────────────────────────────────────

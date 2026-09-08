@@ -28,7 +28,7 @@ const groups: Group[] = [
   },
   {
     name: 'Connections',
-    desc: 'Manage database connections (Postgres, MySQL, Oracle, SQLite).',
+    desc: 'Manage database connections (Postgres, MySQL, Oracle, SQLite, Trino).',
     endpoints: [
       { method: 'GET', path: '/api/v1/connections', desc: 'List all connections', auth: true },
       { method: 'POST', path: '/api/v1/connections', desc: 'Create a new connection', auth: true },
@@ -98,7 +98,7 @@ const groups: Group[] = [
   },
   {
     name: 'Database Users',
-    desc: 'Manage users and privileges on the target database.',
+    desc: 'Manage users and privileges on the target database. Not supported on Trino connections.',
     endpoints: [
       { method: 'GET', path: '/api/v1/connections/:id/db-users', desc: 'List database users', auth: true },
       { method: 'GET', path: '/api/v1/connections/:id/db-users/:username/privileges', desc: 'Get user privileges', auth: true },
@@ -109,7 +109,7 @@ const groups: Group[] = [
   },
   {
     name: 'Import & Sync',
-    desc: 'Bulk data import and cross-database synchronization.',
+    desc: 'Bulk data import and cross-database synchronization. Not supported on Trino connections.',
     endpoints: [
       { method: 'POST', path: '/api/v1/import', desc: 'Import data (CSV/SQL) into a table', auth: true },
       { method: 'POST', path: '/api/v1/import/map-columns', desc: 'AI-powered column mapping', auth: true },

@@ -1,0 +1,7 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Federated "T": a full crossbar (the source catalogs) feeding a single stem
+       (the query engine). Solid shapes only — the icon also renders at 14px in the
+       driver picker, where any gap thinner than 1px turns into a grey smear. -->
+  <rect x="3" y="5" width="26" height="7" rx="2" fill="#ff3fbe"/>
+  <rect x="12.5" y="5" width="7" height="22" rx="2" fill="#dd00a1"/>
+</svg>

@@ -33,11 +33,13 @@ export function DbUsersModal({ connectionId, open, onOpenChange }: Props) {
     staleTime: 5 * 60_000,
   })
   const driver = connList?.connections.find((c) => c.id === connectionId)?.driver ?? 'mysql'
+  // Trino has no database user catalog: the API answers 501 and the list/form would render empty.
+  const unsupported = driver === 'trino'
 
   const { data, isLoading } = useQuery({
     queryKey: ['db-users', connectionId],
     queryFn: () => dbUsersApi.list(connectionId),
-    enabled: open,
+    enabled: open && !unsupported,
     retry: false,
     staleTime: 30_000,
   })
@@ -68,6 +70,11 @@ export function DbUsersModal({ connectionId, open, onOpenChange }: Props) {
           <DialogTitle className="text-base">{t('dbusers.title')}</DialogTitle>
         </DialogHeader>
 
+        {unsupported ? (
+          <div className="flex flex-1 items-center justify-center px-6 text-center">
+            <p className="text-sm text-muted-foreground">{t('dbusers.notSupported')}</p>
+          </div>
+        ) : (
         <div className="flex flex-1 overflow-hidden">
           {/* Left panel — user list */}
           <div className="w-56 flex-shrink-0 overflow-hidden">
@@ -108,6 +115,7 @@ export function DbUsersModal({ connectionId, open, onOpenChange }: Props) {
             />
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   )

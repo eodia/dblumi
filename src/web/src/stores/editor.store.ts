@@ -52,7 +52,7 @@ export type FunctionParam = { name: string; type: string; value: string }
 
 export type FilterRow = { column: string; operator: string; value: string }
 
-export type PendingClose = { tabId: string; remainingIds?: string[] } | null
+export type PendingClose = { tabId: string; remainingIds?: string[] | undefined } | null
 
 export type QueryTab = {
   id: string

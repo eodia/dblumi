@@ -4,6 +4,7 @@ import mysqlSvg from '@/assets/icon-mysql.svg'
 import mongodbSvg from '@/assets/icon-mongodb.svg'
 import oracleSvg from '@/assets/icon-oracle.svg'
 import sqliteSvg from '@/assets/icon-sqlite.svg'
+import trinoSvg from '@/assets/icon-trino.svg'
 
 const driverIcons: Record<string, string> = {
   postgresql: postgresqlSvg,
@@ -11,6 +12,7 @@ const driverIcons: Record<string, string> = {
   mongodb: mongodbSvg,
   oracle: oracleSvg,
   sqlite: sqliteSvg,
+  trino: trinoSvg,
 }
 
 function envDotClass(env?: string | null): string {

@@ -2,6 +2,7 @@ import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
 import type { Pool as OraclePool } from 'oracledb'
 import type { Client as LibSQLClient } from '@libsql/client'
+import type { Trino } from 'trino-client'
 import { logger } from '../logger.js'
 
 type PoolEntry =
@@ -9,6 +10,10 @@ type PoolEntry =
   | { driver: 'mysql'; pool: MySQLPool }
   | { driver: 'oracle'; pool: OraclePool }
   | { driver: 'sqlite'; client: LibSQLClient }
+  // `database` records the target the live client was built with. Trino is the
+  // only driver whose introspection is driven by that value instead of by the
+  // pool itself, so `switch-database` (runtime only) must be observable here.
+  | { driver: 'trino'; client: Trino; database?: string | undefined }
 
 /**
  * Singleton manager — one pool/client per active connection ID.
@@ -17,15 +22,20 @@ type PoolEntry =
 class ConnectionManager {
   private readonly pools = new Map<string, PoolEntry>()
 
-  async getPool(id: string, opts: PoolOptions): Promise<PgPool | MySQLPool | OraclePool | LibSQLClient> {
+  async getPool(
+    id: string,
+    opts: PoolOptions,
+  ): Promise<PgPool | MySQLPool | OraclePool | LibSQLClient | Trino> {
     const existing = this.pools.get(id)
     if (existing) {
-      return existing.driver === 'sqlite' ? existing.client : existing.pool
+      return existing.driver === 'sqlite' || existing.driver === 'trino'
+        ? existing.client
+        : existing.pool
     }
 
     const entry = await this.createPool(id, opts)
     this.pools.set(id, entry)
-    return entry.driver === 'sqlite' ? entry.client : entry.pool
+    return entry.driver === 'sqlite' || entry.driver === 'trino' ? entry.client : entry.pool
   }
 
   async release(id: string): Promise<void> {
@@ -35,6 +45,9 @@ class ConnectionManager {
     try {
       if (entry.driver === 'sqlite') {
         entry.client.close()
+      } else if (entry.driver === 'trino') {
+        // Stateless HTTP client: nothing to close. The `finally` block below
+        // removes the Map entry, which is the whole lifecycle for Trino.
       } else if (entry.driver === 'oracle') {
         await (entry.pool as OraclePool).close(0)
       } else {
@@ -50,6 +63,19 @@ class ConnectionManager {
 
   has(id: string): boolean {
     return this.pools.has(id)
+  }
+
+  /**
+   * Trino target ("catalog" or "catalog/schema") of the LIVE client.
+   *
+   * `POST /:id/switch-database` re-creates the client without persisting the new
+   * value on the connection row, so every Trino route must read the target from
+   * here first — reading `poolOpts.database` alone would keep returning the
+   * stored (possibly empty) catalog and make the switcher a no-op.
+   */
+  trinoTarget(id: string): string | undefined {
+    const entry = this.pools.get(id)
+    return entry?.driver === 'trino' ? entry.database : undefined
   }
 
   async releaseAll(): Promise<void> {
@@ -108,7 +134,12 @@ class ConnectionManager {
       })
       logger.info({ connectionId: id, driver: 'oracle' }, 'Pool created')
       return { driver: 'oracle', pool }
-    } else {
+    } else if (opts.driver === 'trino') {
+      const { createTrinoClient } = await import('./trino.js')
+      const client = createTrinoClient(opts)
+      logger.info({ connectionId: id, driver: 'trino' }, 'Trino client created')
+      return { driver: 'trino', client, ...(opts.database ? { database: opts.database } : {}) }
+    } else if (opts.driver === 'sqlite') {
       // SQLite via @libsql/client
       const { createClient } = await import('@libsql/client')
       const filePath = opts.filePath ?? ''
@@ -116,15 +147,21 @@ class ConnectionManager {
       const client = createClient({ url })
       logger.info({ connectionId: id, driver: 'sqlite', filePath }, 'SQLite client created')
       return { driver: 'sqlite', client }
+    } else {
+      // Exhaustiveness guard: a driver added to the enum without a branch here
+      // used to silently build a libsql `file:` client with an empty path.
+      const unsupported: never = opts.driver
+      throw new Error(`Driver non supporté : ${String(unsupported)}`)
     }
   }
 }
 
 export type PoolOptions = {
-  driver: 'postgresql' | 'mysql' | 'oracle' | 'sqlite'
-  // PostgreSQL / MySQL / Oracle
+  driver: 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'trino'
+  // PostgreSQL / MySQL / Oracle / Trino
   host?: string | undefined
   port?: number | undefined
+  /** PostgreSQL/MySQL/Oracle: database name. Trino: "catalog" or "catalog/schema". */
   database?: string | undefined
   username?: string | undefined
   password?: string | undefined

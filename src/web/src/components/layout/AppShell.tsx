@@ -179,6 +179,13 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
   const { t } = useI18n()
   const { data: connListData } = useQuery({ queryKey: ['connections'], queryFn: connectionsApi.list, staleTime: 5 * 60 * 1000 })
   const isProd = connListData?.connections.find((c) => c.id === connectionId)?.environment?.toLowerCase() === 'prod'
+  const activeDriver = connListData?.connections.find((c) => c.id === connectionId)?.driver
+  // TableStructureEditor only emits PostgreSQL/MySQL DDL (see the cast on the Sheet below).
+  // Hide every structure-editing entry point for Trino rather than generating wrong DDL.
+  const supportsStructureEditor = activeDriver !== 'trino'
+  // The API refuses data import and sync for Trino (400): don't offer a wizard
+  // that can only fail on its last step.
+  const supportsDataTransfer = activeDriver !== 'trino'
   const qcSchema = useQueryClient()
   const [tableSearch, setTableSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -186,7 +193,7 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
   const [dropTarget, setDropTarget] = useState<{ name: string; type: 'table' | 'view' | 'function' | 'procedure' } | null>(null)
   const [structureTable, setStructureTable] = useState<SchemaTable | null>(null)
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['schema', connectionId],
     queryFn: () => connectionsApi.schema(connectionId),
     staleTime: 5 * 60 * 1000,
@@ -263,6 +270,23 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
           </>
         )}
 
+        {isError && !isLoading && (
+          // Without this the sidebar shows "no table found" for a failed query:
+          // a Trino connection with no catalog answers 502 with an explanatory
+          // French message that the user would otherwise never see.
+          <div className="mx-2 my-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+            <p className="text-xs text-destructive break-words">
+              {error instanceof Error ? error.message : t('common.schemaError')}
+            </p>
+            <button
+              onClick={() => void refetch()}
+              className="mt-1.5 text-xs text-text-muted underline hover:text-foreground"
+            >
+              {t('common.retry')}
+            </button>
+          </div>
+        )}
+
         {(() => {
           const onlyTables = tables?.filter((item) => item.type !== 'view') ?? []
           const onlyViews = tables?.filter((item) => item.type === 'view') ?? []
@@ -322,20 +346,24 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                     {t('sq.open')}
                   </ContextMenuItem>
                   {!isView && (<>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem className="gap-2 text-xs" onClick={() => setStructureTable(item)}>
-                      <Settings2 className="h-3.5 w-3.5" />
-                      {t('table.modifyStructure')}
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem className="gap-2 text-xs" onClick={() => { void openTable(item.name); setPendingCsvImport(item.name) }}>
-                      <Upload className="h-3.5 w-3.5" />
-                      {t('table.importCsv')}
-                    </ContextMenuItem>
-                    <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
-                      <FileUp className="h-3.5 w-3.5" />
-                      {t('import.title')}
-                    </ContextMenuItem>
+                    {supportsStructureEditor && (<>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem className="gap-2 text-xs" onClick={() => setStructureTable(item)}>
+                        <Settings2 className="h-3.5 w-3.5" />
+                        {t('table.modifyStructure')}
+                      </ContextMenuItem>
+                    </>)}
+                    {supportsDataTransfer && (<>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem className="gap-2 text-xs" onClick={() => { void openTable(item.name); setPendingCsvImport(item.name) }}>
+                        <Upload className="h-3.5 w-3.5" />
+                        {t('table.importCsv')}
+                      </ContextMenuItem>
+                      <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
+                        <FileUp className="h-3.5 w-3.5" />
+                        {t('import.title')}
+                      </ContextMenuItem>
+                    </>)}
                   </>)}
                   <ContextMenuSeparator />
                   <ContextMenuSub>
@@ -380,35 +408,42 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                         <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Tables</span>
                         <span className="text-[10px] text-text-muted/50 tabular-nums">{onlyTables.length}</span>
                       </button>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}
-                            className="p-1 rounded text-text-muted hover:text-foreground hover:bg-sidebar-accent transition-colors">
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">{t('table.newTable')}</TooltipContent>
-                      </Tooltip>
+                      {supportsStructureEditor && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}
+                              className="p-1 rounded text-text-muted hover:text-foreground hover:bg-sidebar-accent transition-colors">
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">{t('table.newTable')}</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                     {sectionsOpen.tables && onlyTables.map(renderItem)}
                   </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-48">
-                  <ContextMenuItem className="gap-2 text-xs" onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}>
-                    <Plus className="h-3.5 w-3.5" />
-                    {t('table.newTable')}
-                  </ContextMenuItem>
-                  <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
-                    <FileUp className="h-3.5 w-3.5" />
-                    {t('import.title')}
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem className="gap-2 text-xs" onClick={onSync}>
-                    <ArrowLeftRight className="h-3.5 w-3.5" />
-                    {t('sync.title')}
-                  </ContextMenuItem>
-                  {onlyTables.length > 0 && (<>
+                  {supportsStructureEditor && (
+                    <ContextMenuItem className="gap-2 text-xs" onClick={() => setStructureTable({ name: '', type: 'table', columns: [] })}>
+                      <Plus className="h-3.5 w-3.5" />
+                      {t('table.newTable')}
+                    </ContextMenuItem>
+                  )}
+                  {supportsDataTransfer && (<>
+                    <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
+                      <FileUp className="h-3.5 w-3.5" />
+                      {t('import.title')}
+                    </ContextMenuItem>
                     <ContextMenuSeparator />
+                    <ContextMenuItem className="gap-2 text-xs" onClick={onSync}>
+                      <ArrowLeftRight className="h-3.5 w-3.5" />
+                      {t('sync.title')}
+                    </ContextMenuItem>
+                  </>)}
+                  {onlyTables.length > 0 && (<>
+                    {/* Both blocks above are hidden on Trino: no leading separator. */}
+                    {(supportsStructureEditor || supportsDataTransfer) && <ContextMenuSeparator />}
                     <ContextMenuSub>
                       <ContextMenuSubTrigger className="gap-2 text-xs">
                         <Download className="h-3.5 w-3.5" />
@@ -501,7 +536,7 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                 </div>
               )}
 
-              {onlyTables.length === 0 && onlyViews.length === 0 && functions.length === 0 && !isLoading && (
+              {onlyTables.length === 0 && onlyViews.length === 0 && functions.length === 0 && !isLoading && !isError && (
                 <p className="px-3 py-2 text-xs text-text-muted">{t('common.noTableFound')}</p>
               )}
 
@@ -1102,8 +1137,10 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
 
 // ── Inner shell — needs useSidebar() which requires SidebarProvider ─────
 // ── Database switcher (shown below connection selector) ──────────────────
-function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
+function DatabaseSwitcher({ connectionId, driver }: { connectionId: string; driver?: string | undefined }) {
   const { t } = useI18n()
+  // Trino exposes catalogs, not databases: there is no CREATE DATABASE at catalog level.
+  const supportsCreateDatabase = driver !== 'trino'
   const qc = useQueryClient()
   const [selectedDb, setSelectedDb] = useState<string>('')
   const [dbSearch, setDbSearch] = useState('')
@@ -1190,14 +1227,16 @@ function DatabaseSwitcher({ connectionId }: { connectionId: string }) {
               <div className="px-2 py-2 text-xs text-muted-foreground text-center">{t('table.noResults')}</div>
             )}
           </div>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="gap-2 text-xs cursor-pointer"
-            onClick={() => { setNewDbName(''); setCreateOpen(true) }}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t('db.createTooltip')}
-          </DropdownMenuItem>
+          {supportsCreateDatabase && (<>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-2 text-xs cursor-pointer"
+              onClick={() => { setNewDbName(''); setCreateOpen(true) }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t('db.createTooltip')}
+            </DropdownMenuItem>
+          </>)}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -1429,7 +1468,7 @@ function AppShellInner({
 
         {/* ═══ Database switcher — only for server-level connections (no database configured) ═══ */}
         {activeConnectionId && active && !active.database && (
-          <DatabaseSwitcher connectionId={activeConnectionId} />
+          <DatabaseSwitcher connectionId={activeConnectionId} driver={active.driver} />
         )}
 
         {/* ═══ Content — Navigation + inline schema/queries ═══ */}

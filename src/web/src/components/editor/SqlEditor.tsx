@@ -232,6 +232,9 @@ function buildFunctionCompletions(functions: SchemaFunction[]): (ctx: Completion
 function getDialect(driver: string | undefined) {
   if (driver === 'mysql') return MySQL
   if (driver === 'postgresql') return PostgreSQL
+  // @codemirror/lang-sql v6 ships no Trino (nor SQLite) dialect. PostgreSQL is the
+  // closest match — ANSI-ish grammar, double-quoted identifiers. Deliberate default,
+  // not a fallthrough.
   return PostgreSQL
 }
 
@@ -609,7 +612,9 @@ export function SqlEditor({ onSave }: Props) {
     const targetTo = hasSelection ? to : view.state.doc.length
     const text = view.state.sliceDoc(targetFrom, targetTo)
     try {
-      const language = activeConnection?.driver === 'mysql' ? 'mysql' : 'postgresql'
+      const d = activeConnection?.driver
+      // sql-formatter v15 ships a native Trino dialect
+      const language = d === 'mysql' ? 'mysql' : d === 'trino' ? 'trino' : 'postgresql'
       const formatted = formatSql(text, { language, tabWidth: 2, keywordCase: 'upper' })
       view.dispatch({ changes: { from: targetFrom, to: targetTo, insert: formatted } })
     } catch {

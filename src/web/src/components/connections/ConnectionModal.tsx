@@ -42,9 +42,18 @@ function envBadgeStyle(env: string): string {
   }
 }
 
+// Default port per server-based driver (SQLite is file-based and has none).
+const DEFAULT_PORTS: Record<string, number> = {
+  postgresql: 5432,
+  mysql: 3306,
+  oracle: 1521,
+  trino: 8080,
+}
+
 // ── Parse connection string ─────────────────────
 // Supports: postgresql://user:pass@host:port/db?sslmode=require
 //           mysql://user:pass@host:port/db
+//           trino://user@host:port/catalog/schema?ssl=true  (password optional)
 function parseConnectionString(raw: string): Partial<CreateConnectionInput> | null {
   const trimmed = raw.trim()
   if (!trimmed.includes('://')) return null
@@ -56,17 +65,25 @@ function parseConnectionString(raw: string): Partial<CreateConnectionInput> | nu
 
     let driver: DbDriver = 'postgresql'
     if (url.protocol === 'mysql:') driver = 'mysql'
+    else if (url.protocol === 'trino:' || url.protocol === 'trinos:') driver = 'trino'
     else if (url.protocol !== 'postgresql:') return null
 
-    const defaultPort = driver === 'postgresql' ? 5432 : 3306
-    const ssl = url.searchParams.get('sslmode') === 'require' ||
-                url.searchParams.get('ssl') === 'true'
+    const defaultPort = DEFAULT_PORTS[driver] ?? 5432
+    // Trino has no `sslmode` param: TLS just means an https coordinator, carried
+    // by `ssl=true`. `trinos:` is still accepted as a legacy input form.
+    const ssl =
+      url.protocol === 'trinos:' ||
+      url.searchParams.get('sslmode') === 'require' ||
+      url.searchParams.get('ssl') === 'true'
+
+    // Trino: the path holds the target as "catalog" or "catalog/schema" — keep it verbatim.
+    const path = url.pathname.replace(/^\//, '')
 
     return {
       driver,
       host: url.hostname,
       port: url.port ? Number(url.port) : defaultPort,
-      database: url.pathname.replace(/^\//, '') || (driver === 'postgresql' ? 'postgres' : ''),
+      database: driver === 'trino' ? path : path || (driver === 'postgresql' ? 'postgres' : ''),
       username: decodeURIComponent(url.username),
       password: decodeURIComponent(url.password),
       ssl,
@@ -138,14 +155,19 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
 
   const buildConnectionString = (): string => {
     if (form.driver === 'sqlite') return `sqlite://${form.filePath ?? ''}`
-    const scheme = form.driver === 'mysql' ? 'mysql' : form.driver === 'oracle' ? 'oracle' : 'postgresql'
+    const isTrinoDriver = form.driver === 'trino'
+    const scheme = form.driver === 'mysql' ? 'mysql' : form.driver === 'oracle' ? 'oracle' : isTrinoDriver ? 'trino' : 'postgresql'
     const user = encodeURIComponent(form.username ?? '')
     const pwd = form.password ? encodeURIComponent(form.password) : '<password>'
-    const auth = user ? `${user}:${pwd}@` : ''
+    // Trino authentication is optional: without a password the user is sent alone.
+    const auth = user ? (isTrinoDriver && !form.password ? `${user}@` : `${user}:${pwd}@`) : ''
     const host = form.host ?? ''
     const port = form.port != null ? `:${form.port}` : ''
     const db = form.database ? `/${form.database}` : ''
-    const ssl = form.ssl ? '?sslmode=require' : ''
+    // Trino has no `sslmode` parameter (TLS just means an https coordinator), and
+    // no `trinos://` scheme exists in any Trino client — so TLS travels as `ssl=true`,
+    // which parseConnectionString understands for every driver.
+    const ssl = form.ssl ? (isTrinoDriver ? '?ssl=true' : '?sslmode=require') : ''
     return `${scheme}://${auth}${host}${port}${db}${ssl}`
   }
 
@@ -473,31 +495,35 @@ function ManualFields({
   t: (key: TranslationKey, replacements?: Record<string, string | number>) => string
 }) {
   const isSQLite = form.driver === 'sqlite'
+  const isTrino = form.driver === 'trino'
 
   return (
     <>
       {/* Driver toggle */}
       <div className="space-y-1.5">
         <Label>{t('conn.parsedDriver')}</Label>
-        <div className="inline-flex w-full rounded-md border border-border-strong overflow-hidden">
-          {(['postgresql', 'mysql', 'oracle', 'sqlite'] as const).map((d, i, arr) => (
+        <div className="grid w-full grid-cols-5 rounded-md border border-border-strong overflow-hidden">
+          {(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'] as const).map((d, i, arr) => (
             <button
               key={d}
               type="button"
               onClick={() => {
                 set('driver', d)
-                if (d !== 'sqlite') set('port', d === 'postgresql' ? 5432 : d === 'mysql' ? 3306 : 1521)
+                if (d !== 'sqlite') set('port', DEFAULT_PORTS[d] ?? 5432)
               }}
               className={cn(
-                'flex-1 h-9 text-xs font-medium transition-colors',
+                // 5 drivers in a ~400px dialog: stack icon over label so nothing is clipped
+                'flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 min-w-0 text-[10px] font-medium leading-none transition-colors',
                 form.driver === d
                   ? 'bg-surface-overlay text-foreground'
                   : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-raised',
                 i < arr.length - 1 && 'border-r border-border-strong',
               )}
             >
-              <DriverIcon driver={d} className="h-3.5 w-3.5 inline-block mr-1" />
-              {d === 'postgresql' ? 'PostgreSQL' : d === 'mysql' ? 'MySQL' : d === 'oracle' ? 'Oracle' : 'SQLite'}
+              <DriverIcon driver={d} className="h-3.5 w-3.5" />
+              <span className="w-full truncate text-center">
+                {d === 'postgresql' ? 'PostgreSQL' : d === 'mysql' ? 'MySQL' : d === 'oracle' ? 'Oracle' : d === 'sqlite' ? 'SQLite' : 'Trino'}
+              </span>
             </button>
           ))}
         </div>
@@ -533,10 +559,19 @@ function ManualFields({
             </div>
           </div>
 
-          {/* Database */}
+          {/* Database — for Trino this field carries the target "catalog" or "catalog/schema" */}
           <div className="space-y-1.5">
-            <Label>{t('conn.database')} <span className="text-text-muted font-normal text-xs">{t('conn.databaseHint')}</span></Label>
-            <Input value={form.database ?? ''} onChange={(e) => set('database', e.target.value)} placeholder={t('conn.databasePlaceholder')} />
+            <Label>
+              {isTrino ? t('conn.catalog') : t('conn.database')}{' '}
+              <span className="text-text-muted font-normal text-xs">
+                {isTrino ? t('conn.catalogHint') : t('conn.databaseHint')}
+              </span>
+            </Label>
+            <Input
+              value={form.database ?? ''}
+              onChange={(e) => set('database', e.target.value)}
+              placeholder={isTrino ? t('conn.catalogPlaceholder') : t('conn.databasePlaceholder')}
+            />
           </div>
 
           {/* Username + Password */}
@@ -546,7 +581,11 @@ function ManualFields({
               <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label>{t('conn.password')}</Label>
+              <Label>
+                {t('conn.password')}{' '}
+                {/* Trino clusters may run without an authenticator: an empty password is valid */}
+                {isTrino && <span className="text-text-muted font-normal text-xs">{t('conn.environmentOptional')}</span>}
+              </Label>
               <Input
                 type="password"
                 value={form.password ?? ''}

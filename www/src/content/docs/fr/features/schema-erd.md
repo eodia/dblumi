@@ -16,7 +16,7 @@ Cliquez sur **Parcourir** sur une table pour voir ses lignes, modifier des valeu
 
 ## Editeur de structure
 
-Modifiez votre schema directement depuis dblumi : ajoutez, modifiez ou supprimez des colonnes. Supporte les types de donnees specifiques a PostgreSQL, MySQL et Oracle.
+Modifiez votre schema directement depuis dblumi : ajoutez, modifiez ou supprimez des colonnes. Supporte les types de donnees specifiques a PostgreSQL, MySQL et Oracle. Non disponible sur les connexions Trino.
 
 ## Diagramme ERD
 

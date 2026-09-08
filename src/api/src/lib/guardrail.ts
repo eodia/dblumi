@@ -25,6 +25,22 @@ const SAFE_STARTERS = [
   'SAVEPOINT',
   'RELEASE',
   'WITH',    // CTEs — assumed to be SELECT-based
+  // Read-only / session statements (Trino, also valid on other engines).
+  // CALL and ANALYZE are deliberately absent: `CALL <cat>.system.<proc>`
+  // (expire_snapshots, vacuum, remove_orphan_files...) is destructive.
+  // `USE` is deliberately absent too: it is not read-only, and it gets its own
+  // branch in `detectGuardrail` below (a generic "unrecognised statement" would
+  // be a lie). Verified against Trino 483: on a connection that pins a catalog
+  // but no schema, `USE <cat>.<sch>` makes the coordinator answer with
+  // `X-Trino-Set-Schema`, which trino-client writes back into the shared client
+  // headers — every later query of every user borrowing that connection then
+  // resolves against the new schema.
+  'DESCRIBE',
+  'DESC',
+  'VALUES',
+  'PREPARE',
+  'DEALLOCATE',
+  'RESET',
   '--',
   '/*',
 ]
@@ -32,6 +48,7 @@ const SAFE_STARTERS = [
 const CRITICAL_PATTERNS = [
   /\bDROP\s+(DATABASE|SCHEMA)\b/i,
   /\bDROP\s+ALL\b/i,
+  /\bDROP\s+CATALOG\b/i,
 ]
 
 const DANGER_PATTERNS = [
@@ -43,6 +60,12 @@ const DANGER_PATTERNS = [
   /\bALTER\s+TABLE\b/i,
   /\bCREATE\s+(OR\s+REPLACE\s+)?TABLE\b/i,
   /\bCREATE\s+(OR\s+REPLACE\s+)?FUNCTION\b/i,
+  /\bCREATE\s+CATALOG\b/i,
+  /\bDROP\s+MATERIALIZED\s+VIEW\b/i,
+  /\bCREATE\s+(OR\s+REPLACE\s+)?MATERIALIZED\s+VIEW\b/i,
+  /\bREFRESH\s+MATERIALIZED\s+VIEW\b/i,
+  /\bALTER\s+(SCHEMA|VIEW|MATERIALIZED\s+VIEW)\b/i,
+  /\bCALL\s+[\w."]*system\.\w+/i,
 ]
 
 export function detectGuardrail(sql: string): GuardrailResult {
@@ -71,6 +94,18 @@ export function detectGuardrail(sql: string): GuardrailResult {
     }
   }
 
+  // MERGE — checked before the UPDATE heuristic below, which would otherwise
+  // match the `WHEN MATCHED THEN UPDATE` clause and report a misleading
+  // "UPDATE sans clause WHERE".
+  if (/\bMERGE\s+INTO\b/i.test(trimmed)) {
+    return {
+      level: 2,
+      message: 'MERGE — fusion de données',
+      details:
+        'Cette requête insère, met à jour ou supprime des lignes selon la source fusionnée.',
+    }
+  }
+
   // Level 2 — UPDATE/DELETE without WHERE
   if (/\bUPDATE\b/i.test(trimmed) && !hasWhereClause(upper)) {
     return {
@@ -94,6 +129,18 @@ export function detectGuardrail(sql: string): GuardrailResult {
       level: 1,
       message: `${op} — modification de données`,
       details: 'Cette requête va modifier des données en base.',
+    }
+  }
+
+  // `USE` — recognised, but confirmed rather than silently run. It re-binds the
+  // catalog/schema of the CONNECTION (Trino replies with `X-Trino-Set-Catalog` /
+  // `X-Trino-Set-Schema`), so it leaks to every other user of that connection.
+  if (/^USE\b/i.test(trimmed)) {
+    return {
+      level: 2,
+      message: 'USE — changement de catalogue/schéma',
+      details:
+        "Cette instruction re-cible la connexion partagée : les requêtes suivantes, y compris celles des autres utilisateurs de cette connexion, s'exécuteront sur le nouveau catalogue/schéma.",
     }
   }
 

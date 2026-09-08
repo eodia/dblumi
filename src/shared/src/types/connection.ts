@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const DbDriverSchema = z.enum(['postgresql', 'mysql', 'oracle', 'sqlite'])
+export const DbDriverSchema = z.enum(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'])
 export type DbDriver = z.infer<typeof DbDriverSchema>
 
 export const ConnectionSchema = z.object({
@@ -9,6 +9,7 @@ export const ConnectionSchema = z.object({
   driver: DbDriverSchema,
   host: z.string().min(1).optional(),
   port: z.number().int().min(1).max(65535).optional(),
+  // PostgreSQL/MySQL/Oracle: database name. Trino: target "catalog" or "catalog/schema".
   database: z.string().optional(),
   username: z.string().min(1).optional(),
   filePath: z.string().min(1).optional(),

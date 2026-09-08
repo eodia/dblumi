@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
+import type { Trino } from 'trino-client'
 
 const copilotRouter = new Hono<AuthVariables>()
 copilotRouter.use('*', authMiddleware)
@@ -54,7 +55,7 @@ function groupByTable(rows: SchemaRow[]) {
   return Array.from(map.values())
 }
 
-async function fetchSchema(pool: unknown, driver: string) {
+async function fetchSchema(pool: unknown, driver: string, database?: string | null) {
   if (driver === 'postgresql') {
     const pgPool = pool as PgPool
     const client = await pgPool.connect()
@@ -77,6 +78,29 @@ async function fetchSchema(pool: unknown, driver: string) {
     } finally {
       client.release()
     }
+  } else if (driver === 'trino') {
+    // Trino: single introspection query on the catalog information_schema.
+    // Table names are bare when the connection pins a schema, `schema.table` otherwise —
+    // same rule as the schema browser, so generated SQL stays runnable.
+    const { runTrino, parseTrinoTarget, quoteTrinoIdent, quoteTrinoString } = await import('../lib/trino.js')
+    const { catalog, schema } = parseTrinoTarget(database)
+    if (!catalog) return []
+    const cat = quoteTrinoIdent(catalog)
+    const nameExpr = schema ? 'c.table_name' : `c.table_schema || '.' || c.table_name`
+    // Same "system schema" definition as the schema browser (connections.ts),
+    // otherwise the prompt gets tables the user never sees in the sidebar.
+    const where = schema
+      ? `c.table_schema = ${quoteTrinoString(schema)}`
+      : `c.table_schema NOT IN ('information_schema', 'pg_catalog', 'sys')`
+    const r = await runTrino(pool as Trino, `
+      SELECT ${nameExpr} AS table_name, c.column_name, c.data_type, c.is_nullable,
+             false AS is_primary_key
+      FROM ${cat}.information_schema.columns c
+      JOIN ${cat}.information_schema.tables t
+        ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+      WHERE ${where} AND t.table_type = 'BASE TABLE'
+      ORDER BY 1, c.ordinal_position`)
+    return groupByTable(r.rows as unknown as SchemaRow[])
   } else {
     const mysqlPool = pool as MySQLPool
     const conn = await mysqlPool.getConnection()
@@ -125,9 +149,13 @@ copilotRouter.post(
     // Fetch schema + functions for context
     let schema: Awaited<ReturnType<typeof fetchSchema>> = []
     let functions: Array<{ name: string; kind: string; return_type: string; arguments: string }> = []
+    let database = poolOpts.database ?? ''
     try {
       const pool = await connectionManager.getPool(connectionId, poolOpts)
-      schema = await fetchSchema(pool, poolOpts.driver)
+      // Trino: `switch-database` re-targets the live client without persisting it,
+      // so the connection manager holds the truth (see connections.ts).
+      database = connectionManager.trinoTarget(connectionId) ?? database
+      schema = await fetchSchema(pool, poolOpts.driver, database)
 
       // Fetch functions/procedures
       if (poolOpts.driver === 'postgresql') {
@@ -146,6 +174,9 @@ copilotRouter.post(
           `)
           functions = rows as typeof functions
         } finally { client.release() }
+      } else if (poolOpts.driver === 'trino') {
+        // Trino exposes no user-defined functions or stored procedures.
+        functions = []
       } else {
         const mysqlPool = pool as MySQLPool
         const conn = await mysqlPool.getConnection()
@@ -175,7 +206,7 @@ copilotRouter.post(
           schema,
           functions,
           poolOpts.driver,
-          poolOpts.database ?? '',
+          database,
           lang,
           context,
         )) {

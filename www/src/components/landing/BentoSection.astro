@@ -104,17 +104,20 @@ const [gameBefore, gameAfter] = accent(t.cards.game.title);
           <div class="core">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
           </div>
-          <div class="chip-orbit" style="--angle: 45deg; --delay: 0s;">
+          <div class="chip-orbit" style="--angle: 0deg; --delay: 0s;">
             <div class="chip"><span class="logo l-pg">PG</span><span class="name">Postgres</span></div>
           </div>
-          <div class="chip-orbit" style="--angle: 135deg; --delay: 0.3s;">
+          <div class="chip-orbit" style="--angle: 72deg; --delay: 0.3s;">
             <div class="chip"><span class="logo l-my">My</span><span class="name">MySQL</span></div>
           </div>
-          <div class="chip-orbit" style="--angle: 225deg; --delay: 0.6s;">
+          <div class="chip-orbit" style="--angle: 144deg; --delay: 0.6s;">
             <div class="chip"><span class="logo l-or">O</span><span class="name">Oracle</span></div>
           </div>
-          <div class="chip-orbit" style="--angle: 315deg; --delay: 0.9s;">
+          <div class="chip-orbit" style="--angle: 216deg; --delay: 0.9s;">
             <div class="chip"><span class="logo l-sq">SL</span><span class="name">SQLite</span></div>
+          </div>
+          <div class="chip-orbit" style="--angle: 288deg; --delay: 1.2s;">
+            <div class="chip"><span class="logo l-tr">Tr</span><span class="name">Trino</span></div>
           </div>
         </div>
       </div>
@@ -790,7 +793,7 @@ const [gameBefore, gameAfter] = accent(t.cards.game.title);
   .magnetic {
     position: relative;
     width: 100%;
-    height: 170px;
+    height: 195px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -824,7 +827,7 @@ const [gameBefore, gameAfter] = accent(t.cards.game.title);
   .magnetic .chip-orbit {
     position: absolute;
     top: 50%; left: 50%;
-    transform: translate(-50%, -50%) rotate(var(--angle)) translateX(92px) rotate(calc(-1 * var(--angle)));
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateX(85px) rotate(calc(-1 * var(--angle)));
     transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 1;
   }
@@ -858,6 +861,7 @@ const [gameBefore, gameAfter] = accent(t.cards.game.title);
   .magnetic .chip .l-my { background: #f29111; }
   .magnetic .chip .l-or { background: #c74634; }
   .magnetic .chip .l-sq { background: #003b57; }
+  .magnetic .chip .l-tr { background: #dd00a1; }
   .magnetic .chip .name { font-size: 10.5px; font-weight: 600; color: var(--db-text); }
 
   @media (prefers-reduced-motion: reduce) {

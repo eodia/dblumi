@@ -17,8 +17,10 @@ import { DbUsersModal } from './DbUsersModal'
 
 type Props = { onNavigate: (page: 'sql-editor' | 'tables') => void }
 
-function ConnectionStatusBar({ connectionId }: { connectionId: string }) {
+function ConnectionStatusBar({ connectionId, driver }: { connectionId: string; driver?: string | undefined }) {
   const { t } = useI18n()
+  // Trino delegates authentication to the coordinator: it exposes no database user catalog.
+  const supportsDbUsers = driver !== 'trino'
   const [checking, setChecking] = useState(false)
   const [latency, setLatency] = useState<number | null>(null)
   const [usersOpen, setUsersOpen] = useState(false)
@@ -58,26 +60,28 @@ function ConnectionStatusBar({ connectionId }: { connectionId: string }) {
           <span>{stats?.version ?? '—'}</span>
         </div>
         <div className="flex gap-2">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setUsersOpen(true)}
-                  className="flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-medium transition-colors bg-surface-raised text-muted-foreground hover:text-foreground hover:bg-surface-overlay border border-border"
-                >
-                  <Users className="h-3 w-3" />
-                  <span>{t('overview.dbUsers')}</span>
-                  {usersData?.count != null && (
-                    <span className="bg-indigo-500/20 text-indigo-400 rounded-full px-1.5 py-px text-[10px] font-semibold">
-                      {usersData.count}
-                    </span>
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t('overview.dbUsersTooltip')}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {supportsDbUsers && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setUsersOpen(true)}
+                    className="flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-medium transition-colors bg-surface-raised text-muted-foreground hover:text-foreground hover:bg-surface-overlay border border-border"
+                  >
+                    <Users className="h-3 w-3" />
+                    <span>{t('overview.dbUsers')}</span>
+                    {usersData?.count != null && (
+                      <span className="bg-indigo-500/20 text-indigo-400 rounded-full px-1.5 py-px text-[10px] font-semibold">
+                        {usersData.count}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('overview.dbUsersTooltip')}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -103,11 +107,13 @@ function ConnectionStatusBar({ connectionId }: { connectionId: string }) {
           </TooltipProvider>
         </div>
       </div>
-      <DbUsersModal
-        connectionId={connectionId}
-        open={usersOpen}
-        onOpenChange={setUsersOpen}
-      />
+      {supportsDbUsers && (
+        <DbUsersModal
+          connectionId={connectionId}
+          open={usersOpen}
+          onOpenChange={setUsersOpen}
+        />
+      )}
     </>
   )
 }
@@ -155,7 +161,7 @@ export function OverviewPage({ onNavigate }: Props) {
         )}
       </div>
 
-      <ConnectionStatusBar connectionId={activeConnectionId} />
+      <ConnectionStatusBar connectionId={activeConnectionId} driver={activeConn?.driver} />
       <StatsCards connectionId={activeConnectionId} />
       <div className="grid grid-cols-2 gap-3">
         <QuickAccessCard connectionId={activeConnectionId} environment={activeConn?.environment ?? null} onNavigate={onNavigate} />

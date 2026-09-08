@@ -438,6 +438,21 @@ function sqlError(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+/**
+ * Problem Details (RFC 9457) body for drivers that have no notion of database
+ * users. Trino delegates authentication and authorization to the coordinator,
+ * so none of the five routes below can be served for it.
+ */
+function unsupportedDriver(driver: string) {
+  return {
+    type: 'https://dblumi.dev/errors/501',
+    title: `Gestion des utilisateurs non supportée pour le driver ${driver}.`,
+    status: 501,
+    detail:
+      "Trino délègue l'authentification et les droits au coordinateur (file-based access control, LDAP/OAuth2) : il n'expose ni CREATE USER ni catalogue de comptes.",
+  }
+}
+
 // ── GET / ─ list users + count ───────────────────
 dbUsersRouter.get('/', async (c) => {
   const connectionId = c.req.param('connectionId')!
@@ -448,6 +463,8 @@ dbUsersRouter.get('/', async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
+  // Refuse before opening any pool: Trino has no user catalog at all.
+  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     const result =
@@ -473,6 +490,8 @@ dbUsersRouter.get('/:username/privileges', async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
+  // Refuse before opening any pool: Trino has no user catalog at all.
+  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     const result =
@@ -497,6 +516,8 @@ dbUsersRouter.post('/', zValidator('json', CreateSchema), async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
+  // Refuse before opening any pool: Trino has no user catalog at all.
+  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     if (poolOpts.driver === 'postgresql') await createUserPg(pool as PgPool, input)
@@ -521,6 +542,8 @@ dbUsersRouter.put('/:username', zValidator('json', UpdateSchema), async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
+  // Refuse before opening any pool: Trino has no user catalog at all.
+  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     if (poolOpts.driver === 'postgresql') await updateUserPg(pool as PgPool, username, input)
@@ -545,6 +568,8 @@ dbUsersRouter.delete('/:username', async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
+  // Refuse before opening any pool: Trino has no user catalog at all.
+  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     if (poolOpts.driver === 'postgresql') await dropUserPg(pool as PgPool, username)

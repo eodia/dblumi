@@ -64,7 +64,7 @@ const spec = {
         properties: {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
-          driver: { type: 'string', enum: ['postgresql', 'mysql', 'oracle'] },
+          driver: { type: 'string', enum: ['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'] },
           host: { type: 'string' },
           port: { type: 'integer' },
           database: { type: 'string' },
@@ -76,15 +76,28 @@ const spec = {
       },
       ConnectionInput: {
         type: 'object',
-        required: ['name', 'driver', 'host', 'port', 'username', 'password'],
+        // host/port/username are required for server drivers only (not SQLite); password is optional for Trino.
+        required: ['name', 'driver'],
         properties: {
           name: { type: 'string', minLength: 1, maxLength: 100 },
-          driver: { type: 'string', enum: ['postgresql', 'mysql', 'oracle'] },
+          driver: { type: 'string', enum: ['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'] },
           host: { type: 'string' },
           port: { type: 'integer', minimum: 1, maximum: 65535 },
-          database: { type: 'string', default: '' },
-          username: { type: 'string' },
-          password: { type: 'string' },
+          database: {
+            type: 'string',
+            default: '',
+            description: 'Database name. For Trino: target catalog ("hive") or catalog/schema ("hive/default").',
+          },
+          username: {
+            type: 'string',
+            description:
+              'Required for every server driver (PostgreSQL, MySQL, Oracle, Trino). Unused for SQLite.',
+          },
+          password: {
+            type: 'string',
+            description:
+              'Required for PostgreSQL/MySQL/Oracle. Optional for Trino (omit or leave empty for a cluster without authentication). Unused for SQLite.',
+          },
           ssl: { type: 'boolean', default: false },
           color: { type: 'string' },
           environment: { type: 'string', maxLength: 50 },

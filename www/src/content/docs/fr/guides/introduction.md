@@ -10,10 +10,10 @@ title: Introduction
 
 - **Ecrire et executer du SQL** avec coloration syntaxique, auto-completion et streaming des resultats en temps reel
 - **Rester en securite** grace aux garde-fous integres qui detectent les requetes destructrices avant leur execution
-- **Obtenir l'aide de l'IA** pour generer, expliquer et optimiser vos requetes — avec Claude, OpenAI, Azure OpenAI ou Ollama
+- **Obtenir l'aide de l'IA** pour generer, expliquer et optimiser vos requetes — avec Claude, OpenAI, Azure OpenAI, Mistral ou Ollama
 - **Sauvegarder et organiser** vos requetes dans des dossiers, les partager avec vos collegues ou groupes
 - **Parcourir votre schema** avec un explorateur de tables interactif et un diagramme ERD
-- **Se connecter a plusieurs bases** — PostgreSQL, MySQL, Oracle — avec un controle d'acces par connexion
+- **Se connecter a plusieurs bases** — PostgreSQL, MySQL, Oracle, SQLite, Trino — avec un controle d'acces par connexion
 
 ## A qui s'adresse dblumi ?
 

@@ -16,7 +16,7 @@ Click **Browse** on a table to see its rows, edit values, insert new rows, or de
 
 ## Table structure editor
 
-Modify your schema directly from dblumi: add, edit, or remove columns. Supports database-specific data types for PostgreSQL, MySQL, and Oracle.
+Modify your schema directly from dblumi: add, edit, or remove columns. Supports database-specific data types for PostgreSQL, MySQL, and Oracle. Not available on Trino connections.
 
 ## ERD diagram
 

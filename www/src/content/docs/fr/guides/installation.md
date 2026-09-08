@@ -7,7 +7,7 @@ dblumi est auto-heberge. La methode recommandee est d'utiliser Docker.
 ## Prerequis
 
 - Docker et Docker Compose
-- Une base de donnees PostgreSQL, MySQL ou Oracle a laquelle se connecter
+- Une base de donnees PostgreSQL, MySQL, Oracle, SQLite ou Trino a laquelle se connecter
 
 ## Docker Compose (recommande)
 

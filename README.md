@@ -29,7 +29,7 @@ dblumi is a **self-hosted database client** that gives your team a fast, secure,
 ## Features
 
 **SQL Editor**
-- Syntax highlighting & auto-complete for PostgreSQL, MySQL, Oracle
+- Syntax highlighting & auto-complete for PostgreSQL, MySQL, Oracle, SQLite, Trino (the PostgreSQL grammar is used for SQLite and Trino)
 - 4 levels of safety guardrails (destructive query detection + confirmation)
 - EXPLAIN plan analysis, streaming results, multi-tab
 - Export to CSV, JSON, SQL
@@ -37,7 +37,7 @@ dblumi is a **self-hosted database client** that gives your team a fast, secure,
 **AI Copilot**
 - Generate SQL from natural language, explain & optimize queries
 - Schema-aware context for accurate suggestions
-- Supports Anthropic Claude, OpenAI, Azure OpenAI
+- Supports Anthropic Claude, OpenAI, Azure OpenAI, Mistral, and local Ollama
 - Bring your own API key - your data stays private
 
 **Team Collaboration**
@@ -123,7 +123,7 @@ dblumi/
 |----------|-------|
 | Frontend | React, TypeScript, CodeMirror, TanStack Query, Tailwind CSS, shadcn/ui |
 | Backend  | Hono.js, Drizzle ORM, SQLite (app data) |
-| DB Drivers | pg, mysql2, oracledb |
+| DB Drivers | pg, mysql2, oracledb, @libsql/client, trino-client |
 | Infra    | Docker, Node.js 22 |
 
 ## Environment Variables
@@ -156,6 +156,8 @@ See the full reference in the [docs](https://eodia.github.io/dblumi/self-hosting
 | PostgreSQL | `pg`     | Stable |
 | MySQL      | `mysql2` | Stable |
 | Oracle     | `oracledb` | Stable |
+| SQLite     | `@libsql/client` | Stable |
+| Trino      | `trino-client` | Stable |
 
 ## Development
 

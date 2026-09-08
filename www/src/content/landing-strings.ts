@@ -200,22 +200,22 @@ const en: LandingStrings = {
   write: {
     label: "SQL Editor",
     headline: "Write SQL {{accent}}fluently.",
-    lead: "A keyboard-first editor that <strong>knows your schema</strong>. Tab-complete columns, joins, and relationships — then multi-tab across <strong>postgres, mysql, oracle and sqlite</strong> in the same window.",
+    lead: "A keyboard-first editor that <strong>knows your schema</strong>. Tab-complete columns, joins, and relationships — then multi-tab across <strong>postgres, mysql, oracle, sqlite and trino</strong> in the same window.",
     bullets: [
       "Schema-aware autocomplete on tables, columns, joins",
       "Multi-tab with per-connection contexts",
-      "4 drivers supported — postgres, mysql, oracle, sqlite",
-      "CSV import & SQL dump built-in",
+      "5 drivers supported — postgres, mysql, oracle, sqlite, trino",
+      "SQL dump built-in, CSV import on postgres, mysql and oracle",
     ],
   },
   ask: {
     label: "AI Copilot",
     headline: "Your database {{accent}}talks back.",
-    lead: "The copilot <strong>sees your whole schema</strong> — every table, column, relationship — and writes queries that actually run. Bring your own key: <strong>Anthropic, OpenAI, Azure or Ollama</strong>.",
+    lead: "The copilot <strong>sees your whole schema</strong> — every table, column, relationship — and writes queries that actually run. Bring your own key: <strong>Anthropic, OpenAI, Azure, Mistral or Ollama</strong>.",
     bullets: [
       "Natural language → working SQL, grounded in your schema",
       "Explain, optimize, or debug any query in-place",
-      "BYOK — Claude, GPT, Azure OpenAI, or local Ollama",
+      "BYOK — Claude, GPT, Azure OpenAI, Mistral, or local Ollama",
       "Your data never leaves your infra",
     ],
   },
@@ -233,7 +233,7 @@ const en: LandingStrings = {
   bento: {
     eyebrow: "Everything else",
     headline: "All the plumbing, {{accent}}included.",
-    lead: "REST endpoints, MCP server, self-hosting, 4 drivers, ERD, guardrails and i18n — every feature that matters for a production workflow.",
+    lead: "REST endpoints, MCP server, self-hosting, 5 drivers, ERD, guardrails and i18n — every feature that matters for a production workflow.",
     cards: {
       rest: {
         label: "REST API",
@@ -251,9 +251,9 @@ const en: LandingStrings = {
         desc: "Docker Compose in 30 seconds. AGPL-3.0 — every feature, forever free. Your data never leaves your network.",
       },
       drivers: {
-        label: "4 drivers",
-        title: "One UI, {{accent}}four databases.",
-        desc: "Postgres, MySQL, Oracle, SQLite. Switch between flavours without breaking a sweat.",
+        label: "5 drivers",
+        title: "One UI, {{accent}}five databases.",
+        desc: "Postgres, MySQL, Oracle, SQLite, Trino. Switch between flavours without breaking a sweat.",
       },
       erd: {
         label: "Schema ERD",
@@ -308,7 +308,7 @@ const en: LandingStrings = {
         desc: "The full product. Every feature, every driver, no limits. AGPL-3.0.",
         bullets: [
           "Unlimited connections and queries",
-          "BYOK for AI copilot (Anthropic, OpenAI, Azure, Ollama)",
+          "BYOK for AI copilot (Anthropic, OpenAI, Azure, Mistral, Ollama)",
           "REST API & MCP server",
           "Real-time collaboration + version history",
           "Community support on GitHub Discussions",
@@ -339,11 +339,11 @@ const en: LandingStrings = {
       },
       {
         q: "Does my data leave my infrastructure?",
-        a: "No. dblumi is self-hosted, and the AI copilot uses your own API key (Anthropic, OpenAI, Azure, or local Ollama). Your queries, results, and schema never leave your network.",
+        a: "No. dblumi is self-hosted, and the AI copilot uses your own API key (Anthropic, OpenAI, Azure, Mistral, or local Ollama). Your queries, results, and schema never leave your network.",
       },
       {
         q: "Which AI providers are supported?",
-        a: "Anthropic Claude, OpenAI, Azure OpenAI, and local Ollama. Bring your own API key — we never proxy requests through our servers.",
+        a: "Anthropic Claude, OpenAI, Azure OpenAI, Mistral, and local Ollama. Bring your own API key — we never proxy requests through our servers.",
       },
       {
         q: "How does the MCP server work?",
@@ -462,22 +462,22 @@ const fr: LandingStrings = {
   write: {
     label: "Éditeur SQL",
     headline: "Écris du SQL {{accent}}couramment.",
-    lead: "Un éditeur clavier d'abord qui <strong>connaît ton schéma</strong>. Autocomplétion sur les colonnes, jointures et relations — et multi-onglets sur <strong>postgres, mysql, oracle et sqlite</strong> dans la même fenêtre.",
+    lead: "Un éditeur clavier d'abord qui <strong>connaît ton schéma</strong>. Autocomplétion sur les colonnes, jointures et relations — et multi-onglets sur <strong>postgres, mysql, oracle, sqlite et trino</strong> dans la même fenêtre.",
     bullets: [
       "Autocomplétion schema-aware sur tables, colonnes et jointures",
       "Multi-onglets avec contextes par connexion",
-      "4 drivers supportés — postgres, mysql, oracle, sqlite",
-      "Import CSV et dump SQL inclus",
+      "5 drivers supportés — postgres, mysql, oracle, sqlite, trino",
+      "Dump SQL inclus, import CSV sur postgres, mysql et oracle",
     ],
   },
   ask: {
     label: "Copilot IA",
     headline: "Ta base de données {{accent}}te répond.",
-    lead: "Le copilot <strong>voit tout ton schéma</strong> — chaque table, colonne, relation — et écrit des requêtes qui tournent vraiment. Ta clé, ton IA : <strong>Anthropic, OpenAI, Azure ou Ollama</strong>.",
+    lead: "Le copilot <strong>voit tout ton schéma</strong> — chaque table, colonne, relation — et écrit des requêtes qui tournent vraiment. Ta clé, ton IA : <strong>Anthropic, OpenAI, Azure, Mistral ou Ollama</strong>.",
     bullets: [
       "Langage naturel → SQL qui fonctionne, grounded sur ton schéma",
       "Explique, optimise ou débogue n'importe quelle requête sur place",
-      "BYOK — Claude, GPT, Azure OpenAI, ou Ollama local",
+      "BYOK — Claude, GPT, Azure OpenAI, Mistral, ou Ollama local",
       "Tes données ne quittent jamais ton infra",
     ],
   },
@@ -495,7 +495,7 @@ const fr: LandingStrings = {
   bento: {
     eyebrow: "Tout le reste",
     headline: "Toute la plomberie, {{accent}}incluse.",
-    lead: "REST endpoints, serveur MCP, auto-hébergement, 4 drivers, ERD, guardrails et i18n — toutes les features qui comptent pour un workflow de production.",
+    lead: "REST endpoints, serveur MCP, auto-hébergement, 5 drivers, ERD, guardrails et i18n — toutes les features qui comptent pour un workflow de production.",
     cards: {
       rest: {
         label: "REST API",
@@ -513,9 +513,9 @@ const fr: LandingStrings = {
         desc: "Docker Compose en 30 secondes. AGPL-3.0 — toutes les features, gratuit à jamais. Tes données ne quittent jamais ton réseau.",
       },
       drivers: {
-        label: "4 drivers",
-        title: "Une UI, {{accent}}quatre bases.",
-        desc: "Postgres, MySQL, Oracle, SQLite. Passe d'une saveur à l'autre sans broncher.",
+        label: "5 drivers",
+        title: "Une UI, {{accent}}cinq bases.",
+        desc: "Postgres, MySQL, Oracle, SQLite, Trino. Passe d'une saveur à l'autre sans broncher.",
       },
       erd: {
         label: "Schéma ERD",
@@ -570,7 +570,7 @@ const fr: LandingStrings = {
         desc: "Le produit complet. Toutes les features, tous les drivers, aucune limite. AGPL-3.0.",
         bullets: [
           "Connexions et requêtes illimitées",
-          "BYOK pour le copilot IA (Anthropic, OpenAI, Azure, Ollama)",
+          "BYOK pour le copilot IA (Anthropic, OpenAI, Azure, Mistral, Ollama)",
           "REST API et serveur MCP",
           "Collaboration temps réel + historique",
           "Support communautaire sur GitHub Discussions",
@@ -601,11 +601,11 @@ const fr: LandingStrings = {
       },
       {
         q: "Mes données quittent-elles mon infrastructure ?",
-        a: "Non. dblumi est auto-hébergé, et le copilot IA utilise ta propre clé API (Anthropic, OpenAI, Azure, ou Ollama local). Tes requêtes, résultats et schéma ne quittent jamais ton réseau.",
+        a: "Non. dblumi est auto-hébergé, et le copilot IA utilise ta propre clé API (Anthropic, OpenAI, Azure, Mistral, ou Ollama local). Tes requêtes, résultats et schéma ne quittent jamais ton réseau.",
       },
       {
         q: "Quels fournisseurs d'IA sont supportés ?",
-        a: "Anthropic Claude, OpenAI, Azure OpenAI, et Ollama local. Tu apportes ta clé — on ne proxy jamais les requêtes par nos serveurs.",
+        a: "Anthropic Claude, OpenAI, Azure OpenAI, Mistral, et Ollama local. Tu apportes ta clé — on ne proxy jamais les requêtes par nos serveurs.",
       },
       {
         q: "Comment fonctionne le serveur MCP ?",

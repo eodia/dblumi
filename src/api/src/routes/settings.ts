@@ -26,6 +26,8 @@ settingsRouter.get('/copilot-info', authMiddleware, (c) => {
     ? (config.OPENAI_MODEL ?? 'gpt-4o')
     : provider === 'azure-openai'
     ? (config.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o')
+    : provider === 'mistral'
+    ? (config.MISTRAL_MODEL ?? 'mistral-large-latest')
     : (config.ANTHROPIC_MODEL ?? 'claude-sonnet-4')
   return c.json({ provider, model })
 })

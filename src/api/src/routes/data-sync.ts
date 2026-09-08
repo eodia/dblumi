@@ -43,8 +43,20 @@ dataSyncRouter.post(
       return c.json({ type: 'error', message: 'Target connection not found.' }, 404)
     }
 
-    if (sourceOpts.driver === 'sqlite' || targetOpts.driver === 'sqlite') {
-      return c.json({ type: 'error', message: 'Sync non supporté pour SQLite.' }, 400)
+    // Refuse before opening any pool: executeSync() silently falls back to its
+    // Oracle branches for unknown drivers, on both the source and target sides.
+    const hasTrino = sourceOpts.driver === 'trino' || targetOpts.driver === 'trino'
+    const hasSqlite = sourceOpts.driver === 'sqlite' || targetOpts.driver === 'sqlite'
+    if (hasTrino || hasSqlite) {
+      return c.json(
+        {
+          type: 'error',
+          message: hasTrino
+            ? 'Synchronisation non supportée pour Trino.'
+            : 'Sync non supporté pour SQLite.',
+        },
+        400,
+      )
     }
 
     const sourcePool = await connectionManager.getPool(sourceConnectionId, sourceOpts)

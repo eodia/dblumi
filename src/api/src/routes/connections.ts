@@ -22,6 +22,16 @@ import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
 import type { Pool as OraclePool } from 'oracledb'
 import type { Client as LibSQLClient } from '@libsql/client'
+import type { Trino } from 'trino-client'
+import {
+  runTrino,
+  pingTrino,
+  parseTrinoTarget,
+  quoteTrinoIdent,
+  quoteTrinoString,
+  quoteTrinoTable,
+  TRINO_PING_TIMEOUT_MS,
+} from '../lib/trino.js'
 
 const connectionsRouter = new Hono<AuthVariables>()
 
@@ -34,7 +44,7 @@ connectionsRouter.use('*', authMiddleware)
 
 const CreateSchema = z.object({
   name: z.string().min(1).max(100),
-  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite']),
+  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino']),
   host: z.string().min(1).optional(),
   port: z.number().int().min(1).max(65535).optional(),
   database: z.string().optional(),
@@ -56,7 +66,7 @@ const CreateSchema = z.object({
 
 const UpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite']).optional(),
+  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino']).optional(),
   host: z.string().min(1).optional(),
   port: z.number().int().min(1).max(65535).optional(),
   database: z.string().optional(),
@@ -179,7 +189,7 @@ connectionsRouter.post('/:id/test', async (c) => {
 // ──────────────────────────────────────────────
 
 const TestRawSchema = z.object({
-  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite']),
+  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino']),
   host: z.string().min(1).optional(),
   port: z.number().int().optional(),
   database: z.string().optional(),
@@ -213,6 +223,11 @@ connectionsRouter.post(
       } else if (opts.driver === 'sqlite') {
         const client = pool as import('@libsql/client').Client
         await client.execute('SELECT 1')
+      } else if (opts.driver === 'trino') {
+        // `pingTrino` also resolves the catalog AND the schema, so a typo in
+        // either half of the Catalog field fails here instead of surfacing
+        // later as a silently empty schema browser.
+        await pingTrino(pool as Trino, parseTrinoTarget(opts.database), TRINO_PING_TIMEOUT_MS)
       } else {
         const oraclePool = pool as OraclePool
         const conn = await oraclePool.getConnection()
@@ -599,6 +614,95 @@ async function getOracleSchema(pool: OraclePool) {
   }
 }
 
+/**
+ * Effective Trino target of a connection.
+ *
+ * `POST /:id/switch-database` re-creates the client with a new catalog WITHOUT
+ * persisting it on the row, so the stored `database` alone would keep every
+ * Trino metadata route pinned to the original (often empty) catalog and turn the
+ * database switcher into a no-op.
+ */
+/** Schemas introspected in one pass when no schema is pinned on the connection. */
+const TRINO_MAX_SCHEMAS = 50
+
+function trinoTargetOf(connectionId: string, stored?: string | null): string | null {
+  return connectionManager.trinoTarget(connectionId) ?? stored ?? null
+}
+
+/**
+ * Trino introspection through the catalog's `information_schema`.
+ *
+ * Two modes, driven by the connection target ("catalog" or "catalog/schema"):
+ *  - pinned schema  -> bare table names (`orders`)
+ *  - catalog only   -> qualified names (`default.orders`), because the front-end
+ *                      builds `SELECT * FROM ${tableName}` without qualification.
+ *
+ * Trino exposes no primary keys, no indexes, no foreign keys and no user routines:
+ * those collections are always returned empty.
+ */
+async function getTrinoSchema(client: Trino, target?: string | null) {
+  const { catalog, schema } = parseTrinoTarget(target)
+  if (!catalog) {
+    throw new Error(
+      'Aucun catalogue Trino défini : renseignez le champ Catalogue (ex. hive ou hive/default).',
+    )
+  }
+  const cat = quoteTrinoIdent(catalog)
+  const SYSTEM_SCHEMAS = new Set(['information_schema', 'pg_catalog', 'sys'])
+
+  let where: string
+  let nameExpr: string
+  if (schema) {
+    where = `c.table_schema = ${quoteTrinoString(schema)}`
+    nameExpr = 'c.table_name'
+  } else {
+    // `SHOW SCHEMAS` + `IN (...)` is pushed down to the connector, while a
+    // `NOT IN (...)` filter makes Trino enumerate metadata for the whole catalog.
+    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`)
+    const all = shown.data
+      .map((r) => String(r[0] ?? ''))
+      .filter((s) => s && !SYSTEM_SCHEMAS.has(s.toLowerCase()))
+    const schemas = all.slice(0, TRINO_MAX_SCHEMAS) // guardrail against over-scanning
+    if (all.length > schemas.length) {
+      logger.warn(
+        { catalog, total: all.length, kept: schemas.length },
+        'Trino schema list truncated — pin a schema on the connection to browse the rest',
+      )
+    }
+    if (schemas.length === 0) return { tables: [] as SchemaItem[], functions: [] as FunctionRow[] }
+    where = `c.table_schema IN (${schemas.map(quoteTrinoString).join(', ')})`
+    nameExpr = `c.table_schema || '.' || c.table_name`
+  }
+
+  // A single columns query: every Trino statement costs several HTTP round-trips.
+  const sql = `
+    SELECT ${nameExpr} AS table_name, c.column_name, c.data_type, c.is_nullable,
+           t.table_type, false AS is_primary_key, CAST(NULL AS varchar) AS table_comment
+    FROM ${cat}.information_schema.columns c
+    JOIN ${cat}.information_schema.tables t
+      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+    WHERE ${where}
+    ORDER BY 1, c.ordinal_position`
+  const result = await runTrino(client, sql)
+
+  // An empty result is ambiguous: an empty schema, or a schema that does not
+  // exist at all (`information_schema.columns` simply matches nothing). Resolve
+  // it here — only on that path, so the normal case keeps its single query.
+  if (result.rows.length === 0 && schema) {
+    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`)
+    const wanted = schema.toLowerCase()
+    const known = shown.data.some((r) => String(r[0] ?? '').toLowerCase() === wanted)
+    if (!known) {
+      throw new Error(
+        `Schéma '${schema}' introuvable dans le catalogue '${catalog}' : corrigez le champ Catalogue de la connexion.`,
+      )
+    }
+  }
+
+  const map = groupByTable(result.rows as unknown as SchemaRow[])
+  return { ...mergeForeignKeys(map, []), functions: [] as FunctionRow[] }
+}
+
 connectionsRouter.get('/:id/schema', async (c) => {
   const userId = c.get('userId')
   const connectionId = c.req.param('id')
@@ -623,6 +727,8 @@ connectionsRouter.get('/:id/schema', async (c) => {
         ? await getMySQLSchema(pool as MySQLPool)
         : poolOpts.driver === 'sqlite'
         ? await getSQLiteSchema(pool as LibSQLClient)
+        : poolOpts.driver === 'trino'
+        ? await getTrinoSchema(pool as Trino, trinoTargetOf(connectionId, poolOpts.database))
         : await getOracleSchema(pool as OraclePool)
     return c.json(schema)
   } catch (err) {
@@ -676,6 +782,14 @@ connectionsRouter.post(
       } else if (poolOpts.driver === 'sqlite') {
         const result = await (pool as import('@libsql/client').Client).execute(`SELECT COUNT(*) AS count FROM ${JSON.stringify(table)}`)
         count = Number(result.rows[0]?.[0] ?? 0)
+      } else if (poolOpts.driver === 'trino') {
+        // `table` may be `schema.table` (see getTrinoSchema): quote each segment.
+        const r = await runTrino(
+          pool as Trino,
+          `SELECT COUNT(*) AS c FROM ${quoteTrinoTable(table)}`,
+          parseTrinoTarget(trinoTargetOf(connectionId, poolOpts.database)),
+        )
+        count = Number(r.data[0]?.[0] ?? 0)
       } else {
         const conn = await (pool as OraclePool).getConnection()
         try {
@@ -707,6 +821,11 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
     poolOpts = await getPoolOptions(connectionId, userId)
   } catch {
     return c.json(problem(404, 'Connexion introuvable.'), 404)
+  }
+
+  // Trino exposes no user-defined functions or procedures: never fall through to Oracle.
+  if (poolOpts.driver === 'trino') {
+    return c.json(problem(501, 'Introspection de fonctions non supportée par Trino.'), 501)
   }
 
   const pool = await connectionManager.getPool(connectionId, poolOpts)
@@ -849,6 +968,23 @@ connectionsRouter.get('/:id/databases', async (c) => {
       } finally {
         conn.release()
       }
+    } else if (poolOpts.driver === 'trino') {
+      // Returned values must be re-injectable into POST /:id/switch-database,
+      // hence the `catalog/schema` shape once a catalog is known.
+      const { catalog } = parseTrinoTarget(trinoTargetOf(connectionId, poolOpts.database))
+      if (!catalog) {
+        const r = await runTrino(pool as Trino, 'SHOW CATALOGS')
+        return c.json({ databases: r.data.map((row) => String(row[0] ?? '')) })
+      }
+      const r = await runTrino(
+        pool as Trino,
+        `SELECT schema_name FROM ${quoteTrinoIdent(catalog)}.information_schema.schemata ORDER BY 1`,
+      )
+      const dbs = r.data
+        .map((row) => String(row[0] ?? ''))
+        .filter((s) => s && s !== 'information_schema')
+        .map((s) => `${catalog}/${s}`)
+      return c.json({ databases: dbs })
     } else {
       const oraclePool = pool as OraclePool
       const conn = await oraclePool.getConnection()
@@ -1000,11 +1136,16 @@ connectionsRouter.put(
   },
 )
 
-async function getDbStats(pool: PgPool | MySQLPool | OraclePool | LibSQLClient, driver: string) {
+async function getDbStats(pool: PgPool | MySQLPool | OraclePool | LibSQLClient | Trino, driver: string) {
   if (driver === 'sqlite') {
     const client = pool as LibSQLClient
     const r = await client.execute('SELECT sqlite_version() AS v')
     return { version: `SQLite ${String(r.rows[0]?.[0] ?? '')}`, encoding: 'UTF-8', timezone: null, sizePretty: null, sizeBytes: null }
+  }
+  if (driver === 'trino') {
+    // Trino has no catalog-level size metric.
+    const r = await runTrino(pool as Trino, 'SELECT version()')
+    return { version: `Trino ${String(r.data[0]?.[0] ?? '')}`, encoding: 'UTF-8', timezone: null, sizePretty: null, sizeBytes: null }
   }
   let version: string | null = null
   let encoding: string | null = null
@@ -1144,7 +1285,7 @@ connectionsRouter.post(
 )
 
 async function dumpTable(
-  pool: PgPool | MySQLPool | OraclePool | LibSQLClient,
+  pool: PgPool | MySQLPool | OraclePool | LibSQLClient | Trino,
   driver: string,
   table: string,
   includeData: boolean,
@@ -1155,6 +1296,8 @@ async function dumpTable(
     return dumpMySQL(pool as MySQLPool, table, includeData)
   } else if (driver === 'postgresql') {
     return dumpPg(pool as PgPool, table, includeData)
+  } else if (driver === 'trino') {
+    return dumpTrino(pool as Trino, table, includeData)
   } else {
     return dumpOracle(pool as OraclePool, table, includeData)
   }
@@ -1288,11 +1431,48 @@ async function dumpOracle(pool: OraclePool, table: string, includeData: boolean)
   }
 }
 
+/**
+ * Trino dump. Rows come back POSITIONALLY (like dumpSQLite), not as objects.
+ * `SHOW CREATE TABLE` fails on a view — the error surfaces as an explicit 502.
+ *
+ * Catalog/schema are not passed explicitly: `runTrino` applies the target the
+ * client was created with as a per-query override.
+ */
+const TRINO_DUMP_MAX_ROWS = 100_000
+
+async function dumpTrino(client: Trino, table: string, includeData: boolean): Promise<string> {
+  const ident = quoteTrinoTable(table)
+  const parts: string[] = [`-- Table: ${table}`]
+  const ddl = await runTrino(client, `SHOW CREATE TABLE ${ident}`)
+  parts.push(`${String(ddl.data[0]?.[0] ?? '')};`)
+  if (includeData) {
+    // Hard row cap: a Trino table is typically a data-lake table, and the whole
+    // result set is materialised in memory before being serialised.
+    const rows = await runTrino(client, `SELECT * FROM ${ident}`, undefined, {
+      maxRows: TRINO_DUMP_MAX_ROWS,
+    })
+    const cols = rows.columns.map((col) => quoteTrinoIdent(col.name)).join(', ')
+    for (const row of rows.data) {
+      parts.push(`INSERT INTO ${ident} (${cols}) VALUES (${row.map(escapeValue).join(', ')});`)
+    }
+    if (rows.truncated) {
+      parts.push(`-- data truncated at ${TRINO_DUMP_MAX_ROWS} rows`)
+    }
+  }
+  return parts.join('\n')
+}
+
 function escapeValue(v: unknown): string {
   if (v === null || v === undefined) return 'NULL'
   if (typeof v === 'number' || typeof v === 'bigint') return String(v)
   if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'
   if (v instanceof Date) return `'${v.toISOString()}'`
+  // Binary columns (pg `bytea`, mysql BLOB/BINARY, oracle RAW, sqlite BLOB) reach
+  // this function as Buffers. They must keep their historical text rendering —
+  // the object branch below would emit `{"type":"Buffer","data":[...]}`.
+  if (v instanceof Uint8Array) return `'${Buffer.from(v).toString().replace(/'/g, "''")}'`
+  // Trino ARRAY/MAP/ROW/JSON values arrive as objects — String(v) would yield "[object Object]".
+  if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'`
   return `'${String(v).replace(/'/g, "''")}'`
 }
 

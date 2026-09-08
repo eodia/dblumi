@@ -118,6 +118,9 @@ export const en = {
   'conn.database': 'Database',
   'conn.databaseHint': '(optional — entire server)',
   'conn.databasePlaceholder': 'Leave empty for the entire server',
+  'conn.catalog': 'Catalog',
+  'conn.catalogHint': '(catalog or catalog/schema — required for the schema browser)',
+  'conn.catalogPlaceholder': 'hive or hive/default',
   'conn.username': 'Username',
   'conn.password': 'Password',
   'conn.passwordUnchanged': '(unchanged)',
@@ -299,6 +302,7 @@ export const en = {
   'copilot.errorContact': 'Unable to contact the copilot.',
   'copilot.subtitleOpenai': 'OpenAI',
   'copilot.subtitleAzure': 'Azure OpenAI',
+  'copilot.subtitleMistral': 'Mistral',
   'copilot.regenerate': 'Regenerate',
   'copilot.clear': 'Clear conversation',
   'copilot.explainError.button': 'Explain with Copilot',
@@ -373,6 +377,8 @@ export const en = {
   'common.loading': 'Loading...',
   'common.init': 'Initializing...',
   'common.noTableFound': 'No tables found.',
+  'common.schemaError': 'Could not load the schema.',
+  'common.retry': 'Retry',
   'common.filterTables': 'Filter tables...',
   'common.schema': 'Schema',
   // ── Admin ──
@@ -477,6 +483,7 @@ export const en = {
   'dbusers.plugin': 'Plugin',
   'dbusers.status': 'Status',
   'dbusers.noUsers': 'No users found',
+  'dbusers.notSupported': 'Database user management is not supported by Trino.',
 
   // ── Data Import ──
   'import.title': 'Import data',

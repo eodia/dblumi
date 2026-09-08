@@ -1,6 +1,6 @@
 import { api } from './client'
 
-export type DbDriver = 'postgresql' | 'mysql' | 'oracle' | 'sqlite'
+export type DbDriver = 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'trino'
 
 export type Connection = {
   id: string

@@ -271,6 +271,8 @@ export function CopilotPanel({ onClose }: { onClose: () => void }) {
             ? t('copilot.subtitleOpenai')
             : copilotInfo?.provider === 'azure-openai'
             ? t('copilot.subtitleAzure')
+            : copilotInfo?.provider === 'mistral'
+            ? t('copilot.subtitleMistral')
             : t('copilot.subtitle')}
           {copilotInfo?.model && (
             <span className="ml-1 opacity-60">· {copilotInfo.model}</span>

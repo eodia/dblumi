@@ -44,8 +44,19 @@ dataImportRouter.post(
       )
     }
 
-    if (poolOpts.driver === 'sqlite') {
-      return c.json({ type: 'error', message: 'Import non supporté pour SQLite.' }, 400)
+    // Refuse before opening any pool: executeImport() falls back to its Oracle
+    // branch for unknown drivers and TYPE_MAP has no entry for Trino.
+    if (poolOpts.driver === 'sqlite' || poolOpts.driver === 'trino') {
+      return c.json(
+        {
+          type: 'error',
+          message:
+            poolOpts.driver === 'trino'
+              ? 'Import non supporté pour Trino.'
+              : 'Import non supporté pour SQLite.',
+        },
+        400,
+      )
     }
 
     const pool = await connectionManager.getPool(connectionId, poolOpts)

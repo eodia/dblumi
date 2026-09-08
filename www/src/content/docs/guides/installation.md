@@ -7,7 +7,7 @@ dblumi is self-hosted. The recommended way to run it is with Docker.
 ## Requirements
 
 - Docker and Docker Compose
-- A PostgreSQL, MySQL, or Oracle database to connect to
+- A PostgreSQL, MySQL, Oracle, SQLite, or Trino database to connect to
 
 ## Docker Compose (recommended)
 

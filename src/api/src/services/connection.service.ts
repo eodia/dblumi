@@ -222,6 +222,9 @@ export async function updateConnection(
   if (input.ssl !== undefined) updates.ssl = input.ssl
   if (input.color !== undefined) updates.color = input.color
   if (input.environment !== undefined) updates.environment = input.environment
+  // Known limitation: an empty string means "unchanged", never "clear it". A Trino
+  // connection created with a password therefore cannot be switched back to
+  // anonymous from the UI — it has to be deleted and recreated.
   if (input.password !== undefined && input.password !== '' && input.driver !== 'sqlite') {
     updates.passwordEncrypted = encrypt(input.password)
   }
@@ -295,6 +298,16 @@ export async function testConnection(
       const conn = await oraclePool.getConnection()
       await conn.execute('SELECT 1 FROM dual')
       await conn.close()
+    } else if (row.driver === 'trino') {
+      // `pingTrino` runs SELECT 1 then resolves the catalog AND the schema, so a
+      // typo in either half fails here rather than later as an empty schema browser.
+      // `runTrino` already converts transport failures into French messages.
+      const { pingTrino, parseTrinoTarget, TRINO_PING_TIMEOUT_MS } = await import('../lib/trino.js')
+      await pingTrino(
+        pool as import('trino-client').Trino,
+        parseTrinoTarget(row.database),
+        TRINO_PING_TIMEOUT_MS,
+      )
     } else {
       // SQLite
       const client = pool as import('@libsql/client').Client

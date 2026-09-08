@@ -2,7 +2,9 @@ import type { Pool as PgPool, QueryResult } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
 import type { Pool as OraclePool } from 'oracledb'
 import type { Client as LibSQLClient } from '@libsql/client'
+import type { Trino } from 'trino-client'
 import type { QueryColumn } from '@dblumi/shared'
+import { runTrino } from './trino.js'
 
 export type ExecutionResult = {
   columns: QueryColumn[]
@@ -151,6 +153,35 @@ export async function executeSQLite(
   }
 }
 
+// ──────────────────────────────
+// Trino execution
+// ──────────────────────────────
+
+export async function executeTrino(
+  client: Trino,
+  sql: string,
+  limit: number,
+  offset = 0,
+): Promise<ExecutionResult> {
+  const start = Date.now()
+  const wrappedSql = injectTrinoLimit(sql, limit, offset)
+  // runTrino already zips columns × data, maps the raw Trino data types, and
+  // applies the client's catalog/schema as a per-query override.
+  const result = await runTrino(client, wrappedSql)
+
+  return {
+    columns: result.columns,
+    rows: result.rows,
+    // A DML statement returns no rows: report the coordinator's updateCount so
+    // the editor does not claim "0 row" after a successful write.
+    rowCount:
+      result.columns.length === 0 && result.updateCount !== undefined
+        ? result.updateCount
+        : result.rowCount,
+    durationMs: Date.now() - start,
+  }
+}
+
 function sqliteAffinityToType(affinity: string): string {
   const upper = affinity.toUpperCase()
   if (upper === 'INTEGER' || upper === 'INT') return 'integer'
@@ -190,6 +221,66 @@ function injectOracleLimit(sql: string, limit: number, offset = 0): string {
   }
 
   let result = `${clean}\nOFFSET ${offset} ROWS FETCH NEXT ${effectiveLimit} ROWS ONLY`
+  return result
+}
+
+/**
+ * Trino pagination. The grammar imposes OFFSET BEFORE LIMIT:
+ *   [ORDER BY ...] [OFFSET n [ROW|ROWS]] [ LIMIT n | FETCH FIRST n ROWS ONLY ]
+ * `LIMIT n OFFSET m` is a Trino parse error, so `injectLimit` cannot be reused.
+ * `LIMIT` and `FETCH FIRST` are mutually exclusive alternatives of the same
+ * production, so an existing `FETCH` must be stripped, never complemented.
+ *
+ * Every clause is matched ANCHORED AT THE END of the statement. A free-floating
+ * `/\bLIMIT\s+\d+/` would grab the LIMIT of a CTE or of a subquery — moving it
+ * out of its scope and leaving a second LIMIT behind (a Trino parse error) — and
+ * would also mutilate a `LIMIT` appearing inside a string literal.
+ */
+export function injectTrinoLimit(sql: string, limit: number, offset = 0): string {
+  // /v1/statement refuses a trailing ';', even on non-SELECT statements.
+  const trimmed = sql.trim().replace(/;+$/, '')
+  const upper = trimmed.toUpperCase()
+
+  if (!upper.startsWith('SELECT') && !upper.startsWith('WITH')) {
+    return trimmed
+  }
+
+  let clean = trimmed
+  let userLimit: number | null = null
+
+  const limitTail = clean.match(/\s+LIMIT\s+(\d+)\s*$/i)
+  if (limitTail) {
+    userLimit = parseInt(limitTail[1]!, 10)
+    clean = clean.slice(0, limitTail.index).trimEnd()
+  } else {
+    const fetchTail = clean.match(
+      /\s+FETCH\s+(?:FIRST|NEXT)\s+(?:(\d+)\s+)?ROWS?\s+(?:ONLY|WITH\s+TIES)\s*$/i,
+    )
+    if (fetchTail) {
+      // `FETCH FIRST ROW ONLY` without a count means one row.
+      userLimit = fetchTail[1] ? parseInt(fetchTail[1], 10) : 1
+      clean = clean.slice(0, fetchTail.index).trimEnd()
+    }
+  }
+
+  // OFFSET sits before LIMIT/FETCH, so it is only reachable once those are gone.
+  let userOffset: number | null = null
+  const offsetTail = clean.match(/\s+OFFSET\s+(\d+)(?:\s+ROWS?)?\s*$/i)
+  if (offsetTail) {
+    userOffset = parseInt(offsetTail[1]!, 10)
+    clean = clean.slice(0, offsetTail.index).trimEnd()
+  }
+
+  // Use the smaller of user LIMIT and pagination LIMIT
+  const effectiveLimit = userLimit !== null ? Math.min(userLimit, limit) : limit
+  // Pagination wins; the user OFFSET is kept when the grid asks for page 1.
+  const effectiveOffset = offset > 0 ? offset : (userOffset ?? 0)
+  // 10000 = "all" sentinel — don't inject LIMIT unless the user specified one
+  const noLimit = effectiveLimit >= 10000 && userLimit === null
+
+  let result = clean
+  if (effectiveOffset > 0) result += `\nOFFSET ${effectiveOffset}`
+  if (!noLimit) result += `\nLIMIT ${effectiveLimit}`
   return result
 }
 

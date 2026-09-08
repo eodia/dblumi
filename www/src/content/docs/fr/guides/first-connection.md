@@ -7,10 +7,14 @@ Une fois dblumi lance, connectez-le a votre base de donnees.
 ## Ajouter une connexion
 
 1. Cliquez sur **Nouvelle connexion** dans la barre laterale
-2. Selectionnez votre pilote : **PostgreSQL**, **MySQL** ou **Oracle**
+2. Selectionnez votre pilote : **PostgreSQL**, **MySQL**, **Oracle**, **SQLite** ou **Trino**
 3. Renseignez les details de connexion : hote, port, nom de la base, identifiant, mot de passe
 4. Etiquetez l'environnement : `prod`, `staging`, `dev` ou `local`
 5. Cliquez sur **Tester la connexion** pour verifier, puis **Enregistrer**
+
+Pour **Trino**, le port par defaut est `8080` et le champ base de donnees porte la cible : `hive` pour un catalogue, `hive/default` pour un catalogue et un schema.
+
+Le mot de passe est optionnel sur Trino — laissez-le vide pour un cluster sans authentification. La gestion des utilisateurs de base et l'import/synchronisation de donnees ne sont pas disponibles sur les connexions Trino.
 
 ## Visibilite de la connexion
 

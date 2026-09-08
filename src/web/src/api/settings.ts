@@ -1,7 +1,7 @@
 import { api } from './client'
 
 export type CopilotInfo = {
-  provider: 'anthropic' | 'openai' | 'azure-openai' | 'ollama'
+  provider: 'anthropic' | 'openai' | 'azure-openai' | 'ollama' | 'mistral'
   model: string
 }
 
