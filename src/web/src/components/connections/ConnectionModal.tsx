@@ -20,6 +20,7 @@ import { connectionsApi, type Connection, type CreateConnectionInput, type DbDri
 import { sharingApi } from '@/api/sharing'
 import { useAuthStore } from '@/stores/auth.store'
 import { useI18n, type TranslationKey } from '@/i18n'
+import { DEFAULT_PORTS, DRIVER_LABELS } from '@/lib/drivers'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -42,29 +43,120 @@ function envBadgeStyle(env: string): string {
   }
 }
 
-// Default port per server-based driver (SQLite is file-based and has none).
-const DEFAULT_PORTS: Record<string, number> = {
-  postgresql: 5432,
-  mysql: 3306,
-  oracle: 1521,
-  trino: 8080,
+const DRIVERS: DbDriver[] = ['postgresql', 'mysql', 'oracle', 'mssql', 'sqlite', 'trino', 'snowflake', 'mongodb', 'redis']
+
+/** Options without their empty entries (a cleared Warehouse field). */
+function filledOptions(options: Record<string, string> | null | undefined): Record<string, string> {
+  return Object.fromEntries(Object.entries(options ?? {}).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v))
+}
+
+const isMongoUri = (host: string | undefined) => !!host && /^mongodb(\+srv)?:\/\//i.test(host.trim())
+const isRedisUrl = (host: string | undefined) => !!host && /^rediss?:\/\//i.test(host.trim())
+
+const MONGO_URI = /^(mongodb(?:\+srv)?):\/\/(.*)$/is
+
+/**
+ * mongodb:// and mongodb+srv:// strings. `new URL()` rejects multi-host URIs,
+ * hence the manual parse. A single plain host is split into host + port; anything
+ * else (SRV, replica set, options) stays a credential-free URI in the host field.
+ */
+function parseMongoConnectionString(raw: string): Partial<CreateConnectionInput> | null {
+  const m = raw.match(MONGO_URI)
+  if (!m) return null
+  const scheme = m[1]!.toLowerCase()
+  const rest = m[2] ?? ''
+  const queryAt = rest.indexOf('?')
+  const query = queryAt === -1 ? '' : rest.slice(queryAt)
+  const beforeQuery = queryAt === -1 ? rest : rest.slice(0, queryAt)
+  // Hosts never contain '@': credentials end at the LAST one, so a password
+  // with an unescaped '@' or '/' is still split out whole.
+  const at = beforeQuery.lastIndexOf('@')
+  const userinfo = at === -1 ? '' : beforeQuery.slice(0, at)
+  const hostPath = beforeQuery.slice(at + 1)
+  const slash = hostPath.indexOf('/')
+  const hosts = slash === -1 ? hostPath : hostPath.slice(0, slash)
+  const rawDb = slash === -1 ? '' : hostPath.slice(slash + 1)
+  const sep = userinfo.indexOf(':')
+  const user = sep === -1 ? userinfo : userinfo.slice(0, sep)
+  const pass = sep === -1 ? '' : userinfo.slice(sep + 1)
+  if (!hosts) return null
+  const decode = (v: string) => { try { return decodeURIComponent(v) } catch { return v } }
+  const params = new URLSearchParams(query.replace(/^\?/, ''))
+  const database = decode(rawDb)
+  // A URI authenticates against its path database: keep that once the path
+  // becomes the "database" field.
+  if (database && user && !params.has('authSource')) params.set('authSource', database)
+  const ssl = scheme === 'mongodb+srv' || params.get('tls') === 'true' || params.get('ssl') === 'true'
+  params.delete('tls')
+  params.delete('ssl')
+
+  const single = hosts.match(/^([^,:[\]]+|\[[^\]]+\])(?::(\d+))?$/)
+  const plain = scheme === 'mongodb' && single && [...params.keys()].length === 0
+  const qs = params.toString()
+  return {
+    driver: 'mongodb',
+    host: plain ? single[1]!.replace(/^\[|\]$/g, '') : `${scheme}://${hosts}/${qs ? `?${qs}` : ''}`,
+    port: plain && single[2] ? Number(single[2]) : 27017,
+    database,
+    username: decode(user),
+    password: decode(pass),
+    ssl,
+  }
+}
+
+/** snowflake://user:pass@account/database/schema?warehouse=WH&role=ROLE (the SQLAlchemy form). */
+function parseSnowflakeConnectionString(url: URL): Partial<CreateConnectionInput> {
+  const decode = (v: string) => { try { return decodeURIComponent(v) } catch { return v } }
+  const options: Record<string, string> = {}
+  const warehouse = url.searchParams.get('warehouse')
+  const role = url.searchParams.get('role')
+  if (warehouse) options['warehouse'] = warehouse
+  if (role) options['role'] = role
+  return {
+    driver: 'snowflake',
+    host: url.hostname,
+    database: decode(url.pathname.replace(/^\/+|\/+$/g, '')),
+    username: decode(url.username),
+    password: decode(url.password),
+    ssl: true,
+    options,
+  }
 }
 
 // ── Parse connection string ─────────────────────
 // Supports: postgresql://user:pass@host:port/db?sslmode=require
 //           mysql://user:pass@host:port/db
+//           sqlserver://user:pass@host:port/db (also mssql://)
 //           trino://user@host:port/catalog/schema?ssl=true  (password optional)
+//           snowflake://user:pass@account/db/schema?warehouse=WH&role=ROLE
+//           mongodb://user:pass@host:port/db, mongodb+srv://user:pass@cluster/db?opts
+//           redis://[user:]pass@host:port/0, rediss:// for TLS
 function parseConnectionString(raw: string): Partial<CreateConnectionInput> | null {
   const trimmed = raw.trim()
   if (!trimmed.includes('://')) return null
+  if (/^mongodb(\+srv)?:\/\//i.test(trimmed)) return parseMongoConnectionString(trimmed)
 
   try {
     // Handle postgres:// alias
     const normalized = trimmed.replace(/^postgres:\/\//, 'postgresql://')
     const url = new URL(normalized)
 
+    if (url.protocol === 'snowflake:') return parseSnowflakeConnectionString(url)
+    if (url.protocol === 'redis:' || url.protocol === 'rediss:') {
+      return {
+        driver: 'redis',
+        host: url.hostname,
+        port: url.port ? Number(url.port) : 6379,
+        database: url.pathname.replace(/^\//, '') || '0',
+        username: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+        ssl: url.protocol === 'rediss:',
+      }
+    }
+
     let driver: DbDriver = 'postgresql'
     if (url.protocol === 'mysql:') driver = 'mysql'
+    else if (url.protocol === 'sqlserver:' || url.protocol === 'mssql:') driver = 'mssql'
     else if (url.protocol === 'trino:' || url.protocol === 'trinos:') driver = 'trino'
     else if (url.protocol !== 'postgresql:') return null
 
@@ -104,12 +196,13 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
     name: editing?.name ?? '',
     driver: editing?.driver ?? 'postgresql',
     host: editing?.host ?? 'localhost',
-    port: editing?.port ?? 5432,
+    port: editing?.port ?? DEFAULT_PORTS[editing?.driver ?? 'postgresql'] ?? 5432,
     database: editing?.database ?? '',
     username: editing?.username ?? '',
     password: '',
     filePath: editing?.filePath ?? '',
     ssl: editing?.ssl ?? false,
+    options: editing?.options ?? {},
     color: editing?.color ?? COLORS[0] ?? '#41cd2a',
     environment: editing?.environment ?? '',
   })
@@ -155,8 +248,35 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
 
   const buildConnectionString = (): string => {
     if (form.driver === 'sqlite') return `sqlite://${form.filePath ?? ''}`
+    if (form.driver === 'mongodb') {
+      const user = encodeURIComponent(form.username ?? '')
+      const auth = user ? `${user}:${form.password ? encodeURIComponent(form.password) : '<password>'}@` : ''
+      const db = form.database ? `/${encodeURIComponent(form.database)}` : '/'
+      const host = form.host ?? ''
+      if (isMongoUri(host)) {
+        // Credentials go back between the scheme and the hosts; the path is the database.
+        const m = host.match(/^(mongodb(?:\+srv)?:\/\/)([^/?#]*)[^?#]*(\?.*)?$/i)
+        return m ? `${m[1]}${auth}${m[2]}${db}${m[3] ?? ''}` : host
+      }
+      return `mongodb://${auth}${host}:${form.port ?? 27017}${db}${form.ssl ? '?tls=true' : ''}`
+    }
+    if (form.driver === 'redis') {
+      if (isRedisUrl(form.host)) return form.host!.trim()
+      const user = encodeURIComponent(form.username ?? '')
+      const auth = form.password || user ? `${user}:${form.password ? encodeURIComponent(form.password) : '<password>'}@` : ''
+      return `${form.ssl ? 'rediss' : 'redis'}://${auth}${form.host ?? ''}:${form.port ?? 6379}/${form.database || '0'}`
+    }
+    if (form.driver === 'snowflake') {
+      const params = new URLSearchParams(Object.entries(form.options ?? {}).filter(([, v]) => v))
+      const qs = params.toString()
+      const pwd = form.password ? encodeURIComponent(form.password) : '<password>'
+      return `snowflake://${encodeURIComponent(form.username ?? '')}:${pwd}@${form.host ?? ''}/${form.database ?? ''}${qs ? `?${qs}` : ''}`
+    }
     const isTrinoDriver = form.driver === 'trino'
-    const scheme = form.driver === 'mysql' ? 'mysql' : form.driver === 'oracle' ? 'oracle' : isTrinoDriver ? 'trino' : 'postgresql'
+    const scheme = form.driver === 'mysql' ? 'mysql'
+      : form.driver === 'oracle' ? 'oracle'
+      : form.driver === 'mssql' ? 'sqlserver'
+      : isTrinoDriver ? 'trino' : 'postgresql'
     const user = encodeURIComponent(form.username ?? '')
     const pwd = form.password ? encodeURIComponent(form.password) : '<password>'
     // Trino authentication is optional: without a password the user is sent alone.
@@ -201,7 +321,8 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
       const merged = { ...f, ...parsed }
       return {
         ...merged,
-        name: f.name || `${parsed.host ?? 'localhost'}/${parsed.database ?? ''}`,
+        // A MongoDB URI host is named after its (first) cluster host, not the whole URI.
+        name: f.name || `${(parsed.host ?? 'localhost').replace(/^mongodb(\+srv)?:\/\//i, '').split(/[/?,]/)[0]}/${parsed.database ?? ''}`,
         color: f.color ?? '#41cd2a',
       }
     })
@@ -214,19 +335,25 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
         driver: form.driver,
         ssl: form.ssl,
         ...(form.host ? { host: form.host } : {}),
-        ...(form.port != null ? { port: form.port } : {}),
+        // Snowflake is reached by account: the port left by another driver is not sent.
+        ...(form.port != null && form.driver !== 'snowflake' ? { port: form.port } : {}),
         ...(form.database ? { database: form.database } : {}),
         ...(form.username ? { username: form.username } : {}),
         ...(form.password ? { password: form.password } : {}),
         ...(form.filePath ? { filePath: form.filePath } : {}),
+        // Snowflake warehouse/role; cleared (null) when an edited connection leaves Snowflake.
+        ...(form.driver === 'snowflake'
+          ? { options: filledOptions(form.options) }
+          : editing?.options ? { options: null } : {}),
         ...(form.color ? { color: form.color } : {}),
         ...(form.environment ? { environment: form.environment } : {}),
       }
       const result = editing
         ? await connectionsApi.update(editing.id, payload)
         : await connectionsApi.create(payload)
-      // Save share assignments if admin
-      if (isAdmin) {
+      // Save share assignments if admin — once the current ones are known: saving
+      // before they loaded used to send empty lists and remove every share.
+      if (isAdmin && (!editing || sharesSynced)) {
         const connId = editing?.id ?? result.connection.id
         await connectionsApi.setConnectionShares(connId, shareGroupIds, shareUserIds)
       }
@@ -250,10 +377,11 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
         : await connectionsApi.testRaw({
             driver: form.driver,
             ...(form.host ? { host: form.host } : {}),
-            ...(form.port != null ? { port: form.port } : {}),
+            ...(form.port != null && form.driver !== 'snowflake' ? { port: form.port } : {}),
             ...(form.database ? { database: form.database } : {}),
             ...(form.username ? { username: form.username } : {}),
             ...(form.password ? { password: form.password } : {}),
+            ...(form.driver === 'snowflake' ? { options: filledOptions(form.options) } : {}),
             ssl: form.ssl,
           })
       setTestResult({ ok: r.ok, msg: r.ok ? `OK — ${r.latencyMs}ms` : (r.error ?? t('conn.testFail')) })
@@ -311,7 +439,7 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
                   {connString && !parseError && form.host !== 'localhost' && (
                     <div className="rounded-md border border-primary/20 bg-dblumi-subtle p-2.5 text-xs text-muted-foreground grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
                       <span className="text-text-muted">{t('conn.parsedDriver')}</span><span>{form.driver}</span>
-                      <span className="text-text-muted">{t('conn.parsedHost')}</span><span>{form.host}:{form.port}</span>
+                      <span className="text-text-muted">{t('conn.parsedHost')}</span><span className="break-all">{isMongoUri(form.host) || form.driver === 'snowflake' || form.port == null ? form.host : `${form.host}:${form.port}`}</span>
                       <span className="text-text-muted">{t('conn.parsedDb')}</span><span>{form.database}</span>
                       <span className="text-text-muted">{t('conn.parsedUser')}</span><span>{form.username}</span>
                       <span className="text-text-muted">{t('conn.parsedSsl')}</span><span>{form.ssl ? t('conn.parsedSslYes') : t('conn.parsedSslNo')}</span>
@@ -496,36 +624,73 @@ function ManualFields({
 }) {
   const isSQLite = form.driver === 'sqlite'
   const isTrino = form.driver === 'trino'
+  const isMongo = form.driver === 'mongodb'
+  const isRedis = form.driver === 'redis'
+  const isSnowflake = form.driver === 'snowflake'
+  // A mongodb+srv:// or multi-host URI, or a redis:// URL, carries its own hosts and
+  // ports; Snowflake is reached by account identifier.
+  const hostIsUri = (isMongo && isMongoUri(form.host)) || (isRedis && isRedisUrl(form.host))
+  const portless = hostIsUri || isSnowflake
+  // Servers that may run without authentication.
+  const authOptional = isMongo || isRedis
+  const setOption = (key: string, value: string) => set('options', { ...(form.options ?? {}), [key]: value })
+
+  const hostPlaceholder = isMongo ? t('conn.hostOrUriPlaceholder')
+    : isRedis ? t('conn.redisHostPlaceholder')
+    : form.driver === 'mssql' ? t('conn.mssqlHostPlaceholder')
+    : isSnowflake ? t('conn.accountPlaceholder')
+    : undefined
+  const databaseLabel = isTrino ? t('conn.catalog') : isRedis ? t('conn.redisDb') : t('conn.database')
+  const databaseHint = isTrino ? t('conn.catalogHint')
+    : isMongo ? t('conn.mongoDatabaseHint')
+    : isRedis ? t('conn.redisDbHint')
+    : isSnowflake ? t('conn.snowflakeDatabaseHint')
+    : t('conn.databaseHint')
+  const databasePlaceholder = isTrino ? t('conn.catalogPlaceholder')
+    : isMongo ? t('conn.mongoDatabasePlaceholder')
+    : isRedis ? '0'
+    : isSnowflake ? t('conn.snowflakeDatabasePlaceholder')
+    : t('conn.databasePlaceholder')
 
   return (
     <>
-      {/* Driver toggle */}
+      {/* Driver picker — 9 drivers in a ~400px dialog: two rows, icon over label.
+          The 1px gaps over a border-coloured background draw the separators. */}
       <div className="space-y-1.5">
         <Label>{t('conn.parsedDriver')}</Label>
-        <div className="grid w-full grid-cols-5 rounded-md border border-border-strong overflow-hidden">
-          {(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'] as const).map((d, i, arr) => (
+        <div className="grid w-full grid-cols-5 gap-px rounded-md border border-border-strong overflow-hidden bg-border-strong">
+          {DRIVERS.map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => {
                 set('driver', d)
-                if (d !== 'sqlite') set('port', DEFAULT_PORTS[d] ?? 5432)
+                const port = DEFAULT_PORTS[d]
+                if (port !== undefined) set('port', port)
+                // Snowflake always uses TLS and is reached by account, never localhost:
+                // neither setting must stick when switching to or from it.
+                if (d === 'snowflake') {
+                  set('ssl', true)
+                  if (form.host === 'localhost') set('host', '')
+                } else if (form.driver === 'snowflake') {
+                  set('ssl', false)
+                  if (!form.host) set('host', 'localhost')
+                }
               }}
               className={cn(
-                // 5 drivers in a ~400px dialog: stack icon over label so nothing is clipped
                 'flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 min-w-0 text-[10px] font-medium leading-none transition-colors',
                 form.driver === d
                   ? 'bg-surface-overlay text-foreground'
-                  : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-raised',
-                i < arr.length - 1 && 'border-r border-border-strong',
+                  : 'bg-card text-muted-foreground hover:text-foreground hover:bg-surface-raised',
               )}
             >
               <DriverIcon driver={d} className="h-3.5 w-3.5" />
               <span className="w-full truncate text-center">
-                {d === 'postgresql' ? 'PostgreSQL' : d === 'mysql' ? 'MySQL' : d === 'oracle' ? 'Oracle' : d === 'sqlite' ? 'SQLite' : 'Trino'}
+                {DRIVER_LABELS[d]}
               </span>
             </button>
           ))}
+          {DRIVERS.length % 5 !== 0 && <div className="bg-card" style={{ gridColumn: `span ${5 - (DRIVERS.length % 5)}` }} />}
         </div>
       </div>
 
@@ -542,55 +707,87 @@ function ManualFields({
         </div>
       ) : (
         <>
-          {/* Host + Port */}
+          {/* Host + Port — MongoDB and Redis also take a URI here, which carries its port;
+              Snowflake takes an account identifier */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-1.5">
-              <Label>{t('conn.host')}</Label>
-              <Input value={form.host ?? ''} onChange={(e) => set('host', e.target.value)} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('conn.port')}</Label>
+            <div className={cn('space-y-1.5', portless ? 'col-span-3' : 'col-span-2')}>
+              <Label>{isSnowflake ? t('conn.account') : isMongo || isRedis ? t('conn.hostOrUri') : t('conn.host')}</Label>
               <Input
-                type="number"
-                value={form.port ?? ''}
-                onChange={(e) => set('port', Number(e.target.value))}
+                value={form.host ?? ''}
+                onChange={(e) => set('host', e.target.value)}
+                placeholder={hostPlaceholder}
+                className={cn(hostIsUri && 'font-mono text-xs')}
                 required
               />
             </div>
+            {!portless && (
+              <div className="space-y-1.5">
+                <Label>{t('conn.port')}</Label>
+                <Input
+                  type="number"
+                  value={form.port ?? ''}
+                  onChange={(e) => set('port', Number(e.target.value))}
+                  required
+                />
+              </div>
+            )}
           </div>
 
-          {/* Database — for Trino this field carries the target "catalog" or "catalog/schema" */}
+          {/* Database — "catalog[/schema]" for Trino, "database[/schema]" for Snowflake, an index for Redis */}
           <div className="space-y-1.5">
             <Label>
-              {isTrino ? t('conn.catalog') : t('conn.database')}{' '}
-              <span className="text-text-muted font-normal text-xs">
-                {isTrino ? t('conn.catalogHint') : t('conn.databaseHint')}
-              </span>
+              {databaseLabel}{' '}
+              <span className="text-text-muted font-normal text-xs">{databaseHint}</span>
             </Label>
             <Input
               value={form.database ?? ''}
               onChange={(e) => set('database', e.target.value)}
-              placeholder={isTrino ? t('conn.catalogPlaceholder') : t('conn.databasePlaceholder')}
+              placeholder={databasePlaceholder}
+              inputMode={isRedis ? 'numeric' : undefined}
             />
           </div>
+
+          {/* Snowflake warehouse + role (stored as non-secret options) */}
+          {isSnowflake && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>
+                  {t('conn.warehouse')}{' '}
+                  <span className="text-text-muted font-normal text-xs">{t('conn.environmentOptional')}</span>
+                </Label>
+                <Input value={form.options?.['warehouse'] ?? ''} onChange={(e) => setOption('warehouse', e.target.value)} placeholder="COMPUTE_WH" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  {t('conn.role')}{' '}
+                  <span className="text-text-muted font-normal text-xs">{t('conn.environmentOptional')}</span>
+                </Label>
+                <Input value={form.options?.['role'] ?? ''} onChange={(e) => setOption('role', e.target.value)} placeholder="ANALYST" />
+              </div>
+            </div>
+          )}
 
           {/* Username + Password */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>{t('conn.username')}</Label>
-              <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} required />
+              <Label>
+                {t('conn.username')}{' '}
+                {/* MongoDB and Redis servers may run without authentication */}
+                {authOptional && <span className="text-text-muted font-normal text-xs">{t('conn.environmentOptional')}</span>}
+              </Label>
+              <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} required={!authOptional} />
             </div>
             <div className="space-y-1.5">
               <Label>
-                {t('conn.password')}{' '}
-                {/* Trino clusters may run without an authenticator: an empty password is valid */}
-                {isTrino && <span className="text-text-muted font-normal text-xs">{t('conn.environmentOptional')}</span>}
+                {isSnowflake ? t('conn.passwordOrKey') : t('conn.password')}{' '}
+                {/* Trino, MongoDB and Redis may run without an authenticator: an empty password is valid */}
+                {(isTrino || authOptional) && <span className="text-text-muted font-normal text-xs">{t('conn.environmentOptional')}</span>}
               </Label>
               <Input
                 type="password"
                 value={form.password ?? ''}
                 onChange={(e) => set('password', e.target.value)}
-                placeholder={editing ? t('conn.passwordUnchanged') : ''}
+                placeholder={editing ? t('conn.passwordUnchanged') : isSnowflake ? t('conn.passwordOrKeyPlaceholder') : ''}
               />
             </div>
           </div>

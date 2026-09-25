@@ -31,12 +31,14 @@ import {
 } from '@codemirror/language'
 import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search'
 import { lintGutter, linter, type Diagnostic } from '@codemirror/lint'
-import { sql, PostgreSQL, MySQL, type SQLNamespace } from '@codemirror/lang-sql'
+import { sql, PostgreSQL, MySQL, MSSQL, type SQLNamespace } from '@codemirror/lang-sql'
+import { javascript } from '@codemirror/lang-javascript'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { format as formatSql } from 'sql-formatter'
 import { createCollabInstance, setActiveCollabInstance, type CollabInstance } from '@/collab/collab-provider'
 import { collabExtensions } from '@/collab/collab-extensions'
 import { CollabAvatars } from './CollabAvatars'
+import { buildRedisCompletions, redisLanguage } from './redis-language'
 import { useAuthStore } from '@/stores/auth.store'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
@@ -228,11 +230,67 @@ function buildFunctionCompletions(functions: SchemaFunction[]): (ctx: Completion
   }
 }
 
+// ── MongoDB (mongosh) completions ──
+const MONGO_DB_METHODS = [
+  'getCollection', 'getCollectionNames', 'getCollectionInfos', 'getSiblingDB', 'runCommand', 'adminCommand',
+  'createCollection', 'createView', 'dropDatabase', 'stats', 'version', 'getName', 'aggregate', 'getUsers',
+  'getRoles', 'currentOp', 'serverStatus',
+]
+const MONGO_COLLECTION_METHODS = [
+  'find', 'findOne', 'aggregate', 'countDocuments', 'estimatedDocumentCount', 'distinct', 'insertOne',
+  'insertMany', 'updateOne', 'updateMany', 'replaceOne', 'deleteOne', 'deleteMany', 'findOneAndUpdate',
+  'findOneAndReplace', 'findOneAndDelete', 'bulkWrite', 'createIndex', 'createIndexes', 'dropIndex',
+  'dropIndexes', 'getIndexes', 'drop', 'renameCollection', 'stats',
+]
+const MONGO_CURSOR_METHODS = ['sort', 'limit', 'skip', 'projection', 'hint', 'collation', 'maxTimeMS', 'explain', 'count', 'toArray']
+const MONGO_OPERATORS = [
+  '$eq', '$ne', '$gt', '$gte', '$lt', '$lte', '$in', '$nin', '$exists', '$type', '$regex', '$options', '$and',
+  '$or', '$nor', '$not', '$elemMatch', '$size', '$all', '$expr', '$text', '$search',
+  '$set', '$unset', '$inc', '$mul', '$rename', '$push', '$pull', '$addToSet', '$pop', '$currentDate',
+  '$match', '$group', '$project', '$sort', '$limit', '$skip', '$lookup', '$unwind', '$count', '$addFields',
+  '$replaceRoot', '$facet', '$bucket', '$sortByCount', '$sample', '$out', '$merge',
+  '$sum', '$avg', '$min', '$max', '$first', '$last', '$push', '$concat', '$toString', '$dateToString',
+]
+
+/** Collections after `db.`, methods after a collection or a call, operators after `$`, fields elsewhere. */
+function buildMongoCompletions(tables: SchemaTable[]): (ctx: CompletionContext) => { from: number; options: Completion[] } | null {
+  const plain = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+  const collections: Completion[] = tables.map((tbl) => ({
+    label: tbl.name,
+    type: 'class',
+    detail: tbl.type === 'view' ? 'view' : 'collection',
+    // Names mongosh cannot reach with a dot go through getCollection().
+    ...(plain.test(tbl.name) ? {} : { apply: `getCollection(${JSON.stringify(tbl.name)})` }),
+  }))
+  const fn = (type: string) => (name: string): Completion => ({ label: name, type, apply: `${name}()` })
+  const dbMethods = MONGO_DB_METHODS.map(fn('method'))
+  const collectionMethods = MONGO_COLLECTION_METHODS.map(fn('method'))
+  const cursorMethods = MONGO_CURSOR_METHODS.map(fn('method'))
+  const operators: Completion[] = [...new Set(MONGO_OPERATORS)].map((op) => ({ label: op, type: 'keyword' }))
+  const fields: Completion[] = [...new Set(tables.flatMap((tbl) => tbl.columns.map((c) => c.name)))]
+    .map((name) => ({ label: name, type: 'property', boost: -1 }))
+
+  return (ctx: CompletionContext) => {
+    let m = ctx.matchBefore(/\bdb\.[\w$]*$/)
+    if (m) return { from: m.from + 3, options: [...collections, ...dbMethods] }
+    m = ctx.matchBefore(/\bdb\.(?:[\w$]+|getCollection\([^)]*\))\.[\w$]*$/)
+    if (m) return { from: m.to - (/[\w$]*$/.exec(m.text)?.[0].length ?? 0), options: collectionMethods }
+    m = ctx.matchBefore(/\)\s*\.[\w$]*$/)
+    if (m) return { from: m.to - (/[\w$]*$/.exec(m.text)?.[0].length ?? 0), options: cursorMethods }
+    m = ctx.matchBefore(/\$[\w]*$/)
+    if (m) return { from: m.from, options: operators }
+    m = ctx.matchBefore(/[\w.]+$/)
+    if (m && (m.from < m.to || ctx.explicit)) return { from: m.from, options: fields }
+    return null
+  }
+}
+
 /** Pick the right CodeMirror dialect */
 function getDialect(driver: string | undefined) {
   if (driver === 'mysql') return MySQL
   if (driver === 'postgresql') return PostgreSQL
-  // @codemirror/lang-sql v6 ships no Trino (nor SQLite) dialect. PostgreSQL is the
+  if (driver === 'mssql') return MSSQL
+  // @codemirror/lang-sql v6 ships no Trino, SQLite nor Snowflake dialect. PostgreSQL is the
   // closest match — ANSI-ish grammar, double-quoted identifiers. Deliberate default,
   // not a fallthrough.
   return PostgreSQL
@@ -312,6 +370,7 @@ export function SqlEditor({ onSave }: Props) {
   const sqlCompartment = useRef(new Compartment())
   const fnCompartment = useRef(new Compartment())
   const phrasesCompartment = useRef(new Compartment())
+  const lintCompartment = useRef(new Compartment())
   const collabRef = useRef<CollabInstance | null>(null)
   const [collabReady, setCollabReady] = useState(false)
   const collabCompartment = useRef(new Compartment())
@@ -339,16 +398,29 @@ export function SqlEditor({ onSave }: Props) {
     staleTime: 5 * 60 * 1000,
   })
 
+  const isMongoConnection = activeConnection?.driver === 'mongodb'
+  const isRedisConnection = activeConnection?.driver === 'redis'
+  // Neither mongosh nor redis-cli is SQL: no SQL formatter, no SQL linter.
+  const notSql = isMongoConnection || isRedisConnection
+
+  // MongoDB commands are mongosh (JavaScript) expressions, Redis ones redis-cli lines.
   const sqlExtension = useMemo(() => {
+    if (isMongoConnection) return javascript()
+    if (isRedisConnection) return redisLanguage
     const dialect = getDialect(activeConnection?.driver)
     const schema = schemaData?.tables ? buildSqlSchema(schemaData.tables) : undefined
     return sql({ dialect, ...(schema ? { schema } : {}), upperCaseKeywords: true })
-  }, [activeConnection?.driver, schemaData?.tables])
+  }, [isMongoConnection, isRedisConnection, activeConnection?.driver, schemaData?.tables])
 
   const fnCompletionSource = useMemo(() => {
+    if (isMongoConnection) return buildMongoCompletions(schemaData?.tables ?? [])
+    if (isRedisConnection) return buildRedisCompletions(schemaData?.tables ?? [])
     if (!schemaData?.functions?.length) return null
     return buildFunctionCompletions(schemaData.functions)
-  }, [schemaData?.functions])
+  }, [isMongoConnection, isRedisConnection, schemaData?.tables, schemaData?.functions])
+
+  // The SQL linter flags quotes and parentheses: it would misreport JavaScript.
+  const lintExtension = useMemo(() => (notSql ? [] : linter(sqlLinter, { delay: 500 })), [notSql])
 
   // Create editor once
   useEffect(() => {
@@ -392,7 +464,7 @@ export function SqlEditor({ onSave }: Props) {
           search({ top: true }),
 
           // Linting
-          linter(sqlLinter, { delay: 500 }),
+          lintCompartment.current.of(lintExtension),
 
           // Theme
           oneDark,
@@ -458,7 +530,7 @@ export function SqlEditor({ onSave }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Reconfigure sql extension when schema or driver changes
+  // Reconfigure language, completions and linter when the schema or the driver changes
   useEffect(() => {
     const view = viewRef.current
     if (!view) return
@@ -466,9 +538,10 @@ export function SqlEditor({ onSave }: Props) {
       effects: [
         sqlCompartment.current.reconfigure(sqlExtension),
         fnCompartment.current.reconfigure(fnCompletionSource ? EditorState.languageData.of(() => [{ autocomplete: fnCompletionSource }]) : []),
+        lintCompartment.current.reconfigure(lintExtension),
       ],
     })
-  }, [sqlExtension, fnCompletionSource])
+  }, [sqlExtension, fnCompletionSource, lintExtension])
 
   // Reconfigure phrases when locale changes
   useEffect(() => {
@@ -611,10 +684,18 @@ export function SqlEditor({ onSave }: Props) {
     const targetFrom = hasSelection ? from : 0
     const targetTo = hasSelection ? to : view.state.doc.length
     const text = view.state.sliceDoc(targetFrom, targetTo)
+    // sql-formatter would mangle a mongosh or redis-cli command.
+    const d = activeConnection?.driver
+    if (d === 'mongodb' || d === 'redis') return
     try {
-      const d = activeConnection?.driver
-      // sql-formatter v15 ships a native Trino dialect
-      const language = d === 'mysql' ? 'mysql' : d === 'trino' ? 'trino' : 'postgresql'
+      // sql-formatter v15 ships a native dialect for each of these.
+      const language = d === 'mysql' ? 'mysql'
+        : d === 'trino' ? 'trino'
+        : d === 'mssql' ? 'transactsql'
+        : d === 'snowflake' ? 'snowflake'
+        : d === 'oracle' ? 'plsql'
+        : d === 'sqlite' ? 'sqlite'
+        : 'postgresql'
       const formatted = formatSql(text, { language, tabWidth: 2, keywordCase: 'upper' })
       view.dispatch({ changes: { from: targetFrom, to: targetTo, insert: formatted } })
     } catch {
@@ -669,7 +750,7 @@ export function SqlEditor({ onSave }: Props) {
             <ContextMenuShortcut>⌘A</ContextMenuShortcut>
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem onSelect={handleBeautify}>
+          <ContextMenuItem onSelect={handleBeautify} disabled={notSql}>
             {t('editor.beautify')}
             <ContextMenuShortcut>⇧⌘F</ContextMenuShortcut>
           </ContextMenuItem>

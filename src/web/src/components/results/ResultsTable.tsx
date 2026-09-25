@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useI18n } from '@/i18n'
 import {
   DndContext,
@@ -41,8 +42,27 @@ import { Calendar } from '@/components/ui/calendar'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { readSSE } from '@/api/client'
+import { connectionsApi, type DbDriver } from '@/api/connections'
 import { useEditorStore, type QueryColumn, type SortBy, type SortEntry, type FilterRow } from '@/stores/editor.store'
+import {
+  deleteRowsStatement,
+  editorDataType,
+  explainToggle,
+  exportAsStatements,
+  filteredTableQuery,
+  insertRowStatement,
+  isCellEditable,
+  isMongo,
+  isRedis,
+  keyColumns,
+  quoteIdent,
+  tableQuery,
+  tableRef,
+  updateCellStatement,
+  updateRowStatements,
+} from '@/lib/query-dialect'
+import { driverCaps } from '@/lib/drivers'
+import { runStatement } from '@/lib/run-statement'
 import { explainError } from '@/stores/copilot.store'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import { cn } from '@/lib/utils'
@@ -136,10 +156,10 @@ export function PaginationBar({
           <DropdownMenuContent align="start" className="min-w-[4rem]">
             {PAGE_SIZE_OPTIONS.map((s) => (
               <DropdownMenuItem key={s} className={cn('text-xs', s === pageSize && 'text-primary font-medium')}
-                onClick={() => { onPageSize(s); onPage(0) }}>{s}</DropdownMenuItem>
+                onClick={() => onPageSize(s)}>{s}</DropdownMenuItem>
             ))}
             <DropdownMenuItem className={cn('text-xs', pageSize === 10000 && 'text-primary font-medium')}
-              onClick={() => { onPageSize(10000); onPage(0) }}>{t('results.all')}</DropdownMenuItem>
+              onClick={() => onPageSize(10000)}>{t('results.all')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -284,6 +304,7 @@ function FilterPanel({ columns, filters, setFilters, onApply, onClear }: {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onApply() }
     }
     window.addEventListener('keydown', handler)
@@ -362,6 +383,7 @@ function SortPanel({ columns, sorts, setSorts, onApply, onClear }: {
   const { t } = useI18n()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onApply() }
     }
     window.addEventListener('keydown', handler)
@@ -466,12 +488,6 @@ function rowsToCsv(rows: Record<string, unknown>[], columns: QueryColumn[]): str
 function rowsToJson(rows: Record<string, unknown>[], columns: QueryColumn[]): string {
   return JSON.stringify(rows.map((r) => Object.fromEntries(columns.map((c) => [c.name, r[c.name] ?? null]))), null, 2)
 }
-function rowsToSql(rows: Record<string, unknown>[], columns: QueryColumn[], tableName: string): string {
-  return rows.map((r) => {
-    const vals = columns.map((c) => { const v = r[c.name]; if (v === null || v === undefined) return 'NULL'; if (typeof v === 'number') return String(v); return `'${String(v).replace(/'/g, "''")}'` })
-    return `INSERT INTO ${tableName} (${columns.map((c) => c.name).join(', ')}) VALUES (${vals.join(', ')});`
-  }).join('\n')
-}
 function downloadBlob(content: string, filename: string, mime: string) {
   const blob = new Blob([content], { type: mime }); const url = URL.createObjectURL(blob)
   const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url)
@@ -494,7 +510,7 @@ function isBoolType(dt: string) {
 }
 function isNumericType(dt: string) {
   const l = dt.toLowerCase()
-  return ['integer', 'int', 'int2', 'int4', 'int8', 'smallint', 'bigint', 'serial', 'float4', 'float8', 'numeric', 'decimal', 'real', 'double precision', 'double'].includes(l)
+  return ['integer', 'int', 'int2', 'int4', 'int8', 'smallint', 'bigint', 'serial', 'float4', 'float8', 'numeric', 'decimal', 'real', 'double precision', 'double', 'long'].includes(l)
 }
 function isTextType(dt: string) {
   const l = dt.toLowerCase()
@@ -597,17 +613,25 @@ function TypedField({ col, value, onChange }: { col: QueryColumn; value: string;
 }
 
 // ── Record Sheet (insert / edit) ─────────────────
-function RecordSheet({ open, mode, editRow, onClose, columns }: {
+/** Text shown in an editor for a cell: JSON for objects — String() gave "[object Object]". */
+function cellText(v: unknown): string {
+  if (v === null || v === undefined) return ''
+  return typeof v === 'object' ? JSON.stringify(v) : String(v)
+}
+
+function RecordSheet({ open, mode, editRow, onClose, columns, driver, keys }: {
   open: boolean
   mode: 'row' | 'column' | 'csv' | 'edit'
   editRow?: Record<string, unknown>
   onClose: () => void
   columns: QueryColumn[]
+  driver: DbDriver | undefined
+  keys: QueryColumn[] | null
 }) {
   const { t } = useI18n()
   const initialValues = useMemo(() => {
     if (mode === 'edit' && editRow) {
-      return Object.fromEntries(columns.map((c) => [c.name, editRow[c.name] === null || editRow[c.name] === undefined ? '' : String(editRow[c.name])]))
+      return Object.fromEntries(columns.map((c) => [c.name, cellText(editRow[c.name])]))
     }
     if (mode === 'row') {
       return Object.fromEntries(columns.filter((c) => isUuidType(c.dataType)).map((c) => [c.name, crypto.randomUUID()]))
@@ -619,50 +643,49 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
   const [colName, setColName] = useState('')
   const [colType, setColType] = useState('text')
   const [csvText, setCsvText] = useState('')
-  const { tabs, activeTabId, activeConnectionId, executeQuery } = useEditorStore()
+  const { tabs, activeTabId, activeConnectionId, reloadTab } = useEditorStore()
   const tab = tabs.find((t) => t.id === activeTabId)
   const tableName = tab?.kind === 'table' ? tab.name : ''
+  const columnOf = (name: string): QueryColumn => columns.find((c) => c.name === name) ?? { name, dataType: 'text' }
 
-  const reloadTable = async () => {
-    useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`)
-    await executeQuery(true)
-  }
-
+  // Statements run outside the tab: the tab keeps its query (and its filters),
+  // and is simply reloaded afterwards.
   const handleInsertRow = async () => {
     if (!activeConnectionId || !tableName) return
     const cols = Object.keys(rowValues).filter((k) => rowValues[k] !== '')
     if (cols.length === 0) return
-    const vals = cols.map((k) => { const v = rowValues[k]; return v === 'NULL' ? 'NULL' : `'${v!.replace(/'/g, "''")}'` })
-    useEditorStore.getState().setSql(`INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${vals.join(', ')})`)
-    await executeQuery(true)
-    await reloadTable()
+    const sql = insertRowStatement(driver, tableName, cols.map((k) => ({ column: columnOf(k), value: rowValues[k]! })))
+    if (await runStatement(activeConnectionId, sql)) return
+    await reloadTab()
     setRowValues({}); onClose()
   }
 
   const handleUpdateRow = async () => {
     if (!activeConnectionId || !tableName || !editRow) return
-    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
-    if (!pkCol) return
-    const pkVal = editRow[pkCol.name]
-    const pkLit = typeof pkVal === 'number' ? String(pkVal) : `'${String(pkVal).replace(/'/g, "''")}'`
-    const sets = columns
-      .filter((c) => c.name !== pkCol.name)
-      .map((c) => {
-        const v = rowValues[c.name]
-        if (v === undefined || v === '') return `${c.name} = NULL`
-        return `${c.name} = '${v.replace(/'/g, "''")}'`
-      })
-    useEditorStore.getState().setSql(`UPDATE ${tableName} SET ${sets.join(', ')} WHERE ${pkCol.name} = ${pkLit}`)
-    await executeQuery(true)
-    await reloadTable()
+    if (!keys) { toast.error(t('table.noPrimaryKey')); return }
+    // Only the fields the user changed: rewriting every column turned JSON into
+    // text and empty strings into NULL.
+    const keyNames = new Set(keys.map((k) => k.name))
+    const changes = columns
+      .filter((c) => !keyNames.has(c.name) && (rowValues[c.name] ?? '') !== (initialValues[c.name] ?? ''))
+      .map((c) => ({ column: c, value: rowValues[c.name] ? rowValues[c.name]! : null }))
+    if (changes.length > 0) {
+      // One UPDATE — or, on Redis, one command per changed field.
+      for (const statement of updateRowStatements(driver, tableName, keys, editRow, changes)) {
+        if (await runStatement(activeConnectionId, statement)) return
+      }
+      await reloadTab()
+    }
     onClose()
   }
 
   const handleAddColumn = async () => {
     if (!activeConnectionId || !tableName || !colName.trim()) return
-    useEditorStore.getState().setSql(`ALTER TABLE ${tableName} ADD COLUMN ${colName.trim()} ${colType}`)
-    await executeQuery(true)
-    await reloadTable()
+    // T-SQL writes `ADD name type`, without the COLUMN keyword.
+    const add = driver === 'mssql' ? 'ADD' : 'ADD COLUMN'
+    const sql = `ALTER TABLE ${tableRef(driver, tableName)} ${add} ${quoteIdent(driver, colName.trim())} ${colType}`
+    if (await runStatement(activeConnectionId, sql)) return
+    await reloadTab()
     setColName(''); onClose()
   }
 
@@ -671,11 +694,14 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
     const lines = csvText.trim().split('\n'); if (lines.length < 2) return
     const headers = lines[0]!.split(',').map((h) => h.trim())
     for (const line of lines.slice(1)) {
-      const vals = line.split(',').map((v) => { const t = v.trim(); return t === '' || t.toUpperCase() === 'NULL' ? 'NULL' : `'${t.replace(/'/g, "''")}'` })
-      useEditorStore.getState().setSql(`INSERT INTO ${tableName} (${headers.join(', ')}) VALUES (${vals.join(', ')})`)
-      await executeQuery(true)
+      const values = line.split(',').map((v, i) => {
+        const text = v.trim()
+        return { column: columnOf(headers[i] ?? ''), value: text === '' || text.toUpperCase() === 'NULL' ? 'NULL' : text }
+      }).filter((v) => v.column.name)
+      // Stop at the first failing line instead of hammering the database.
+      if (await runStatement(activeConnectionId, insertRowStatement(driver, tableName, values))) break
     }
-    await reloadTable()
+    await reloadTab()
     setCsvText(''); onClose()
   }
 
@@ -688,10 +714,11 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
         <div className="mt-4 flex-1 overflow-y-auto px-3 space-y-3">
           {(mode === 'row' || mode === 'edit') && (
             <div className="space-y-3">
-              {columns.map((col) => (
+              {/* Redis key rows: type and size are computed, never written. */}
+              {columns.filter((col) => !isRedis(driver) || ['key', 'ttl', 'value'].includes(col.name)).map((col) => (
                 <div key={col.name} className="space-y-1">
                   <Label className="text-xs">{col.name} <span className="text-text-muted/50 font-mono">{col.dataType}</span></Label>
-                  <TypedField col={col} value={rowValues[col.name] ?? ''} onChange={(v) => setRowValues((p) => ({ ...p, [col.name]: v }))} />
+                  <TypedField col={{ ...col, dataType: editorDataType(driver, col.dataType) }} value={rowValues[col.name] ?? ''} onChange={(v) => setRowValues((p) => ({ ...p, [col.name]: v }))} />
                 </div>
               ))}
             </div>
@@ -726,16 +753,31 @@ function RecordSheet({ open, mode, editRow, onClose, columns }: {
 // ── Main component ───────────────────────────────
 export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) {
   const { t } = useI18n()
-  const { tabs, activeTabId, activeConnectionId, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, executeSql, pendingCsvImport, setPendingCsvImport, setTabFilters } = useEditorStore()
+  const { tabs, activeTabId, activeConnectionId, connectionDrivers, goToPage, setResultPageSize, reloadTab, sortByColumn, sortByMulti, executeQuery, executeSql, pendingCsvImport, setPendingCsvImport, setTabFilters } = useEditorStore()
   const tab = tabs.find((t) => t.id === activeTabId)
   const result = tab?.result
   const isTableMode = tab?.kind === 'table'
   const tableName = isTableMode ? tab.name : ''
+  const driver = activeConnectionId ? connectionDrivers[activeConnectionId] : undefined
   const { status, columns, rows, rowCount, totalCount, page, pageSize, durationMs, error, sortBy } =
     result ?? { status: 'idle' as const, columns: [], rows: [], rowCount: 0, totalCount: null, page: 0, pageSize: 100, durationMs: 0, error: null, guardrail: null, sortBy: null, sortMulti: [] }
 
   const total = totalCount ?? rowCount
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  // Rows are identified by the primary key declared in the schema (same query
+  // as the schema browser, so usually already cached).
+  const { data: schemaData } = useQuery({
+    queryKey: ['schema', activeConnectionId],
+    queryFn: () => connectionsApi.schema(activeConnectionId!),
+    enabled: !!activeConnectionId && isTableMode,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  })
+  const keys = useMemo(
+    () => (isTableMode ? keyColumns(driver, tableName, columns, schemaData?.tables) : null),
+    [isTableMode, driver, tableName, columns, schemaData],
+  )
 
   // ── Per-tab persistent local state ──────
   const getTabState = (): TabLocalState => {
@@ -867,11 +909,10 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
 
   // ── Apply filter → build WHERE ──────────
   const startEditing = useCallback((rowIdx: number, colName: string) => {
-    if (!isTableMode) return
-    const val = rows[rowIdx]?.[colName]
+    if (!isTableMode || !isCellEditable(driver, rows[rowIdx] ?? {}, colName)) return
     setEditingCell({ rowIdx, colName })
-    setEditValue(val === null ? '' : val === undefined ? '' : String(val))
-  }, [isTableMode, rows])
+    setEditValue(cellText(rows[rowIdx]?.[colName]))
+  }, [isTableMode, rows, driver])
 
   const commitEdit = useCallback(async () => {
     if (!editingCell || !tableName || !activeConnectionId) return
@@ -880,16 +921,17 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
     if (!row) return
 
     // Check if value actually changed
-    const oldVal = row[colName]
-    const oldStr = oldVal === null ? '' : oldVal === undefined ? '' : String(oldVal)
-    if (editValue === oldStr) {
+    if (editValue === cellText(row[colName])) {
       setEditingCell(null)
       return
     }
 
-    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
-    if (!pkCol) return
-    const newVal = editValue === '' ? 'NULL' : `'${editValue.replace(/'/g, "''")}'`
+    if (!keys) {
+      toast.error(t('table.noPrimaryKey'))
+      setEditingCell(null)
+      return
+    }
+    const newVal = editValue === '' ? null : editValue
 
     // Collect all rows to update: the edited cell + all selected cells
     const rowIndicesToUpdate = new Set([rowIdx])
@@ -906,93 +948,41 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
         ? [colName]
         : Array.from(selectedCells).filter((k) => k.startsWith(`${ri}:`)).map((k) => k.split(':')[1]!)
       for (const cn of colsForRow) {
-        const pk = r[pkCol.name]
-        const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
-        const sql = `UPDATE ${tableName} SET ${cn} = ${newVal} WHERE ${pkCol.name} = ${pl}`
-        for await (const { event, data } of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) {
-          if (event === 'error') {
-            const d = data as { message: string; detail?: string }
-            const msg = d.message || 'Query execution failed'
-            const full = d.detail ? `${msg}\n${d.detail}` : msg
-            toast.error(msg, { description: d.detail, duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(full) } })
-          } else if (event === '__http') {
-            const resp = data as { status: number; body: Record<string, unknown> }
-            const msg = (resp.body['message'] ?? resp.body['title'] ?? 'Unknown error') as string
-            toast.error(msg, { duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(msg) } })
-          }
-        }
+        if (!isCellEditable(driver, r, cn)) continue
+        const column = columns.find((c) => c.name === cn) ?? { name: cn, dataType: 'text' }
+        await runStatement(activeConnectionId, updateCellStatement(driver, tableName, keys, r, column, newVal))
       }
     }
 
     setEditingCell(null)
     setSelectedCells(new Set())
     await reloadTab()
-  }, [editingCell, editValue, tableName, activeConnectionId, rows, columns, selectedCells, reloadTab])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingCell, editValue, tableName, activeConnectionId, rows, columns, selectedCells, reloadTab, keys, driver])
 
   const cancelEdit = useCallback(() => {
     setEditingCell(null)
   }, [])
 
-  const setNullSelectedCells = useCallback(async () => {
+  /** Writes one value (null = NULL) into every selected cell, row by row. */
+  const writeSelectedCells = useCallback(async (value: string | null) => {
     if (!isTableMode || !tableName || !activeConnectionId || selectedCells.size === 0 || editingCell) return
-    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
-    if (!pkCol) return
-
+    if (!keys) { toast.error(t('table.noPrimaryKey')); return }
     for (const key of selectedCells) {
-      const [riStr, colName] = key.split(':')
-      if (!riStr || !colName) continue
-      const row = rows[parseInt(riStr, 10)]
-      if (!row) continue
-      const pk = row[pkCol.name]
-      const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
-      const sql = `UPDATE ${tableName} SET ${colName} = NULL WHERE ${pkCol.name} = ${pl}`
-      for await (const { event, data } of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) {
-        if (event === 'error') {
-          const d = data as { message: string; detail?: string }
-          const msg = d.message || 'Query execution failed'
-          const full = d.detail ? `${msg}\n${d.detail}` : msg
-          toast.error(msg, { description: d.detail, duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(full) } })
-        } else if (event === '__http') {
-          const resp = data as { status: number; body: Record<string, unknown> }
-          const msg = (resp.body['message'] ?? resp.body['title'] ?? 'Unknown error') as string
-          toast.error(msg, { duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(msg) } })
-        }
-      }
-    }
-
-    setSelectedCells(new Set())
-    await reloadTab()
-  }, [isTableMode, tableName, activeConnectionId, selectedCells, editingCell, columns, rows, reloadTab])
-
-  const pasteToSelectedCells = useCallback(async (value: string) => {
-    if (!isTableMode || !tableName || !activeConnectionId || selectedCells.size === 0 || editingCell) return
-    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
-    if (!pkCol) return
-    const newVal = value === '' ? 'NULL' : `'${value.replace(/'/g, "''")}'`
-    for (const key of selectedCells) {
-      const [riStr, colName] = key.split(':')
-      if (!riStr || !colName) continue
-      const row = rows[parseInt(riStr, 10)]
-      if (!row) continue
-      const pk = row[pkCol.name]
-      const pl = typeof pk === 'number' ? String(pk) : `'${String(pk).replace(/'/g, "''")}'`
-      const sql = `UPDATE ${tableName} SET ${colName} = ${newVal} WHERE ${pkCol.name} = ${pl}`
-      for await (const { event, data } of readSSE('/query', { connectionId: activeConnectionId, sql, limit: 1, force: true })) {
-        if (event === 'error') {
-          const d = data as { message: string; detail?: string }
-          const msg = d.message || 'Query execution failed'
-          const full = d.detail ? `${msg}\n${d.detail}` : msg
-          toast.error(msg, { description: d.detail, duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(full) } })
-        } else if (event === '__http') {
-          const resp = data as { status: number; body: Record<string, unknown> }
-          const msg = (resp.body['message'] ?? resp.body['title'] ?? 'Unknown error') as string
-          toast.error(msg, { duration: Infinity, action: { label: 'Copy', onClick: () => navigator.clipboard.writeText(msg) } })
-        }
-      }
+      const sep = key.indexOf(':')
+      const row = rows[parseInt(key.slice(0, sep), 10)]
+      const colName = key.slice(sep + 1)
+      if (!row || !colName || !isCellEditable(driver, row, colName)) continue
+      const column = columns.find((c) => c.name === colName) ?? { name: colName, dataType: 'text' }
+      await runStatement(activeConnectionId, updateCellStatement(driver, tableName, keys, row, column, value))
     }
     setSelectedCells(new Set())
     await reloadTab()
-  }, [isTableMode, tableName, activeConnectionId, selectedCells, editingCell, columns, rows, reloadTab])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTableMode, tableName, activeConnectionId, selectedCells, editingCell, columns, rows, reloadTab, keys, driver])
+
+  const setNullSelectedCells = useCallback(() => writeSelectedCells(null), [writeSelectedCells])
+  const pasteToSelectedCells = useCallback((value: string) => writeSelectedCells(value === '' ? null : value), [writeSelectedCells])
 
   const anchorCellRef = useRef<CellRef | null>(null)
   const cursorCellRef = useRef<CellRef | null>(null)
@@ -1018,7 +1008,11 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
   useEffect(() => {
     const NAV_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown']
     const handler = (e: KeyboardEvent) => {
-      if (editingCell) return
+      if (editingCell || e.defaultPrevented) return
+      // Delete in a filter field or in the record sheet used to set the selected
+      // cells to NULL in the database, and Ctrl+V pasted into them.
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], .cm-editor')) return
 
       // Ctrl+A: select all cells
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
@@ -1148,22 +1142,13 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
 
   const handleApplyFilter = useCallback(() => {
     if (!tableName) return
-    const valid = filters.filter((f) => f.column && f.operator)
-    let sql = `SELECT * FROM ${tableName}`
-    if (valid.length > 0) {
-      const clauses = valid.map((f) => {
-        if (f.operator === 'IS NULL') return `${f.column} IS NULL`
-        if (f.operator === 'IS NOT NULL') return `${f.column} IS NOT NULL`
-        return `${f.column} ${f.operator} '${f.value.replace(/'/g, "''")}'`
-      })
-      sql += ` WHERE ${clauses.join(' AND ')}`
-    }
+    const sql = filteredTableQuery(driver, tableName, filters, columns)
     setTabFilters(filters)
     useEditorStore.getState().setSql(sql)
     void executeQuery(true)
     setTabState({ showFilter: false })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, tableName, executeQuery, activeTabId, setTabFilters])
+  }, [filters, tableName, executeQuery, activeTabId, setTabFilters, driver, columns])
 
   // ── Apply multi-sort ────────────────────
   const handleApplySort = useCallback(() => {
@@ -1176,28 +1161,28 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
   // ── Selection actions ───────────────────
   const selectedRows = useMemo(() => Array.from(selected).map((i) => rows[i]!), [selected, rows])
   const handleDeleteSelected = useCallback(async () => {
-    if (!tableName || selectedRows.length === 0) return
-    const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]; if (!pkCol) return
-    const ids = selectedRows.map((r) => { const v = r[pkCol.name]; return typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''")}'` })
-    useEditorStore.getState().setSql(`DELETE FROM ${tableName} WHERE ${pkCol.name} IN (${ids.join(', ')})`)
-    await executeQuery(true)
-    useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`); await executeQuery(true)
+    if (!tableName || !activeConnectionId || selectedRows.length === 0) return
+    if (!keys) { toast.error(t('table.noPrimaryKey')); return }
+    if (await runStatement(activeConnectionId, deleteRowsStatement(driver, tableName, keys, selectedRows))) return
+    await reloadTab()
     setTabState({ selected: new Set() })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableName, selectedRows, columns, executeQuery, activeTabId])
+  }, [tableName, selectedRows, keys, driver, activeConnectionId, reloadTab, activeTabId])
 
   const handleCopy = useCallback((fmt: 'csv' | 'json' | 'sql') => {
     const data = selectedRows.length > 0 ? selectedRows : rows
-    const text = fmt === 'csv' ? rowsToCsv(data, orderedColumns) : fmt === 'json' ? rowsToJson(data, orderedColumns) : rowsToSql(data, orderedColumns, tableName || 'table')
+    const text = fmt === 'csv' ? rowsToCsv(data, orderedColumns) : fmt === 'json' ? rowsToJson(data, orderedColumns) : exportAsStatements(driver, tableName || 'table', data, orderedColumns)
     navigator.clipboard.writeText(text)
-  }, [selectedRows, rows, orderedColumns, tableName])
+  }, [selectedRows, rows, orderedColumns, tableName, driver])
 
   const handleExport = useCallback((fmt: 'csv' | 'json' | 'sql') => {
     const data = selectedRows.length > 0 ? selectedRows : rows; const name = tableName || 'export'
     if (fmt === 'csv') downloadBlob(rowsToCsv(data, orderedColumns), `${name}.csv`, 'text/csv')
     else if (fmt === 'json') downloadBlob(rowsToJson(data, orderedColumns), `${name}.json`, 'application/json')
-    else downloadBlob(rowsToSql(data, orderedColumns, name), `${name}.sql`, 'text/sql')
-  }, [selectedRows, rows, orderedColumns, tableName])
+    else if (isMongo(driver)) downloadBlob(exportAsStatements(driver, name, data, orderedColumns), `${name}.js`, 'text/javascript')
+    else if (isRedis(driver)) downloadBlob(exportAsStatements(driver, name, data, orderedColumns), `${name.replace(/[:*?]/g, '_')}.redis`, 'text/plain')
+    else downloadBlob(exportAsStatements(driver, name, data, orderedColumns), `${name}.sql`, 'text/sql')
+  }, [selectedRows, rows, orderedColumns, tableName, driver])
 
   const checkboxColW = isTableMode ? 36 : 48
   const totalWidth = checkboxColW + orderedColumns.reduce((sum, col) => sum + getColWidth(col.name), 0)
@@ -1294,7 +1279,7 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
             <DropdownMenuContent>
               <DropdownMenuItem className="text-xs" onClick={() => handleCopy('csv')}>{t('sel.copyAsCsv')}</DropdownMenuItem>
               <DropdownMenuItem className="text-xs" onClick={() => handleCopy('json')}>{t('sel.copyAsJson')}</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('sql')}>{t('sel.copyAsSql')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleCopy('sql')}>{isMongo(driver) ? t('sel.copyAsMongo') : isRedis(driver) ? t('sel.copyAsRedis') : t('sel.copyAsSql')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
@@ -1302,7 +1287,7 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
             <DropdownMenuContent>
               <DropdownMenuItem className="text-xs" onClick={() => handleExport('csv')}>{t('sel.exportAsCsv')}</DropdownMenuItem>
               <DropdownMenuItem className="text-xs" onClick={() => handleExport('json')}>{t('sel.exportAsJson')}</DropdownMenuItem>
-              <DropdownMenuItem className="text-xs" onClick={() => handleExport('sql')}>{t('sel.exportAsSql')}</DropdownMenuItem>
+              <DropdownMenuItem className="text-xs" onClick={() => handleExport('sql')}>{isMongo(driver) ? t('sel.exportAsMongo') : isRedis(driver) ? t('sel.exportAsRedis') : t('sel.exportAsSql')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </>) : (<>
@@ -1350,22 +1335,17 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
                 <ArrowDownUp className="h-3 w-3" />{t('table.sort')}
                 {sorts.length > 0 && <span className="ml-0.5 bg-primary/20 text-primary rounded px-1 text-[10px]">{sorts.length}</span>}
               </Button>
-              {(() => {
-                const isExplaining = /^EXPLAIN\s/i.test(result?.executedSql?.trim() ?? '')
+              {driverCaps(driver).explain && (() => {
+                const current = (result?.executedSql ?? tab?.sql ?? '').trim()
+                const explain = explainToggle(driver, current)
                 return (
                   <Button
-                    variant={isExplaining ? 'default' : 'ghost'}
+                    variant={explain.explaining ? 'default' : 'ghost'}
                     size="sm"
                     className="h-6 text-xs gap-1"
                     onClick={() => {
-                      if (isExplaining) {
-                        const original = result!.executedSql!.trim().replace(/^EXPLAIN\s+/i, '')
-                        if (original) void executeSql(original)
-                      } else {
-                        const raw = result?.executedSql ?? tab?.sql
-                        const sql = raw?.trim()
-                        if (sql) void executeSql(`EXPLAIN ${sql}`)
-                      }
+                      // Not forced: EXPLAIN ANALYZE of a write still asks for confirmation.
+                      if (current && explain.next) void executeSql(explain.next, { force: false })
                     }}
                   >
                     <ScanSearch className="h-3 w-3" />{t('results.explain')}
@@ -1380,7 +1360,9 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'row' })}><ListPlus className="h-3.5 w-3.5" />{t('table.insertRow')}</DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'csv' })}><Upload className="h-3.5 w-3.5" />{t('table.importCsv')}</DropdownMenuItem>
+                    {driverCaps(driver).csvImport && (
+                      <DropdownMenuItem className="text-xs gap-2" onClick={() => setSheetState({ mode: 'csv' })}><Upload className="h-3.5 w-3.5" />{t('table.importCsv')}</DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>)}
@@ -1397,7 +1379,7 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
             setTabState({ filters: [], showFilter: false })
             setTabFilters([])
             if (!tableName) return
-            useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`)
+            useEditorStore.getState().setSql(tableQuery(driver, tableName))
             void executeQuery(true)
           }} />
       )}
@@ -1610,11 +1592,10 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
                         setDeleteMultiConfirm({
                           count: cellSelRows.length,
                           action: async () => {
-                            const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]; if (!pkCol) return
-                            const ids = cellSelRows.map((r) => { const v = r[pkCol.name]; return typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''")}'` })
-                            useEditorStore.getState().setSql(`DELETE FROM ${tableName} WHERE ${pkCol.name} IN (${ids.join(', ')})`)
-                            await executeQuery(true)
-                            useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`); await executeQuery(true)
+                            if (!activeConnectionId) return
+                            if (!keys) { toast.error(t('table.noPrimaryKey')); return }
+                            if (await runStatement(activeConnectionId, deleteRowsStatement(driver, tableName, keys, cellSelRows))) return
+                            await reloadTab()
                             setTabState({ selected: new Set() })
                           },
                         })
@@ -1681,7 +1662,7 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
       {/* Record sheet (insert / edit) */}
       {isTableMode && sheetState && (
         <RecordSheet open mode={sheetState.mode} {...(sheetState.editRow ? { editRow: sheetState.editRow } : {})}
-          onClose={() => setSheetState(null)} columns={columns} />
+          onClose={() => setSheetState(null)} columns={columns} driver={driver} keys={keys} />
       )}
 
       {/* Delete confirmation dialog */}
@@ -1694,15 +1675,10 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
           <SlideToConfirm
             label={t('admin.slideToDelete')}
             onConfirm={async () => {
-              if (!deleteConfirmRow || !tableName) return
-              const pkCol = columns.find((c) => c.name.toLowerCase() === 'id') ?? columns[0]
-              if (!pkCol) return
-              const v = deleteConfirmRow[pkCol.name]
-              const pkLit = typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''")}'`
-              useEditorStore.getState().setSql(`DELETE FROM ${tableName} WHERE ${pkCol.name} = ${pkLit}`)
-              await executeQuery(true)
-              useEditorStore.getState().setSql(`SELECT * FROM ${tableName}`)
-              await executeQuery(true)
+              if (!deleteConfirmRow || !tableName || !activeConnectionId) return
+              if (!keys) { toast.error(t('table.noPrimaryKey')); return }
+              if (await runStatement(activeConnectionId, deleteRowsStatement(driver, tableName, keys, [deleteConfirmRow]))) return
+              await reloadTab()
               setDeleteConfirmRow(null)
             }}
           />

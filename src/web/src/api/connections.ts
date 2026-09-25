@@ -1,6 +1,6 @@
 import { api } from './client'
 
-export type DbDriver = 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'trino'
+export type DbDriver = 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'trino' | 'mongodb' | 'mssql' | 'snowflake' | 'redis'
 
 export type Connection = {
   id: string
@@ -12,6 +12,8 @@ export type Connection = {
   username: string | null
   filePath: string | null
   ssl: boolean
+  /** Driver-specific, non-secret settings (Snowflake warehouse and role). */
+  options: Record<string, string> | null
   color: string | null
   environment: string | null
   createdBy: string
@@ -29,6 +31,7 @@ export type CreateConnectionInput = {
   password?: string
   filePath?: string
   ssl: boolean
+  options?: Record<string, string> | null
   color?: string
   environment?: string
 }
@@ -73,7 +76,7 @@ export const connectionsApi = {
   delete: (id: string) => api.del<void>(`/connections/${id}`),
   test: (id: string) =>
     api.post<{ ok: boolean; latencyMs?: number; error?: string }>(`/connections/${id}/test`),
-  testRaw: (data: { driver: DbDriver; host?: string; port?: number; database?: string; username?: string; password?: string; filePath?: string; ssl: boolean }) =>
+  testRaw: (data: { driver: DbDriver; host?: string; port?: number; database?: string; username?: string; password?: string; filePath?: string; ssl: boolean; options?: Record<string, string> | null }) =>
     api.post<{ ok: boolean; latencyMs?: number; error?: string }>('/connections/test-raw', data),
   schema: (id: string) =>
     api.get<{ tables: SchemaTable[]; functions?: SchemaFunction[] }>(`/connections/${id}/schema`),

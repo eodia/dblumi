@@ -1,0 +1,9 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Snowflake: six solid arms around a centre, in the product's blue. -->
+  <g fill="#29b5e8">
+    <rect x="14.25" y="2.5" width="3.5" height="27" rx="1.75"/>
+    <rect x="14.25" y="2.5" width="3.5" height="27" rx="1.75" transform="rotate(60 16 16)"/>
+    <rect x="14.25" y="2.5" width="3.5" height="27" rx="1.75" transform="rotate(120 16 16)"/>
+  </g>
+  <rect x="12.5" y="12.5" width="7" height="7" rx="1" transform="rotate(45 16 16)" fill="#1a8fc0"/>
+</svg>

@@ -1,7 +1,7 @@
 // src/web/src/components/overview/OverviewPage.tsx
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { connectionsApi } from '@/api/connections'
+import { connectionsApi, type DbDriver } from '@/api/connections'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
 import { StatsCards } from './StatsCards'
@@ -10,6 +10,7 @@ import { QuickAccessCard } from './QuickAccessCard'
 import { ErdDiagram } from './ErdDiagram'
 import { Server, RefreshCw, Users, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { driverCaps } from '@/lib/drivers'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { DriverIcon, envBadgeClass } from '@/components/ui/driver-icon'
 import { dbUsersApi } from '@/api/db-users'
@@ -19,8 +20,9 @@ type Props = { onNavigate: (page: 'sql-editor' | 'tables') => void }
 
 function ConnectionStatusBar({ connectionId, driver }: { connectionId: string; driver?: string | undefined }) {
   const { t } = useI18n()
-  // Trino delegates authentication to the coordinator: it exposes no database user catalog.
-  const supportsDbUsers = driver !== 'trino'
+  // No database user catalog served by the API (501): Trino delegates authentication
+  // to its coordinator, SQLite has no users, the others manage theirs in the editor.
+  const supportsDbUsers = driverCaps(driver as DbDriver | undefined).dbUsers
   const [checking, setChecking] = useState(false)
   const [latency, setLatency] = useState<number | null>(null)
   const [usersOpen, setUsersOpen] = useState(false)

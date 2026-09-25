@@ -1,0 +1,7 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- SQL Server: a database cylinder in the product's red. Bands are 2px wide:
+       the icon also renders at 14px in the driver picker. -->
+  <path d="M5 8v16c0 2.5 4.9 4.5 11 4.5s11-2 11-4.5V8z" fill="#cc2927"/>
+  <ellipse cx="16" cy="8" rx="11" ry="4.5" fill="#e8605a"/>
+  <path d="M5 14.5c0 2.5 4.9 4.5 11 4.5s11-2 11-4.5v2.2c0 2.5-4.9 4.5-11 4.5S5 19.2 5 16.7z" fill="#8f1c18"/>
+</svg>

@@ -29,7 +29,9 @@ dblumi is a **self-hosted database client** that gives your team a fast, secure,
 ## Features
 
 **SQL Editor**
-- Syntax highlighting & auto-complete for PostgreSQL, MySQL, Oracle, SQLite, Trino (the PostgreSQL grammar is used for SQLite and Trino)
+- Syntax highlighting & auto-complete for PostgreSQL, MySQL, Oracle, SQL Server, SQLite, Trino, Snowflake (the PostgreSQL grammar is used for SQLite, Trino and Snowflake)
+- MongoDB with mongosh syntax (`db.orders.find({ total: { $gt: 100 } }).sort({ at: -1 })`, `aggregate`, writes, indexes) — parsed, never evaluated
+- Redis with redis-cli syntax (`HGETALL user:42`, `SCAN 0 MATCH user:*`), key prefixes browsed as tables, keys edited in the grid
 - 4 levels of safety guardrails (destructive query detection + confirmation)
 - EXPLAIN plan analysis, streaming results, multi-tab
 - Export to CSV, JSON, SQL
@@ -102,11 +104,21 @@ Requirements: Node.js 22+, pnpm 9+
 ```bash
 git clone https://github.com/eodia/dblumi.git
 cd dblumi
-pnpm install
-pnpm dev
+node scripts/launch.mjs
 ```
 
-The app starts on `http://localhost:5173` (frontend) and `http://localhost:3000` (API).
+The launcher checks your toolchain, creates a `.env` with freshly generated secrets,
+installs dependencies, builds the shared package, and starts both servers.
+The app runs on `http://localhost:5173` (frontend) and `http://localhost:3000` (API).
+
+| Command | What it does |
+|---------|--------------|
+| `pnpm launch` | Prepare the workspace, then start API + web in dev mode |
+| `pnpm launch:prod` | Build everything, then serve the app from the API on port 3000 |
+| `pnpm launch:check` | Run every check without starting anything |
+
+`--skip-install` bypasses the dependency step. `pnpm dev` still works if you prefer to
+handle setup yourself.
 
 ## Architecture
 
@@ -123,7 +135,7 @@ dblumi/
 |----------|-------|
 | Frontend | React, TypeScript, CodeMirror, TanStack Query, Tailwind CSS, shadcn/ui |
 | Backend  | Hono.js, Drizzle ORM, SQLite (app data) |
-| DB Drivers | pg, mysql2, oracledb, @libsql/client, trino-client |
+| DB Drivers | pg, mysql2, oracledb, mssql, @libsql/client, trino-client, snowflake-sdk, mongodb, @redis/client |
 | Infra    | Docker, Node.js 22 |
 
 ## Environment Variables
@@ -133,6 +145,7 @@ dblumi/
 | `JWT_SECRET` | Yes | Secret for signing JWT tokens |
 | `DBLUMI_ENCRYPTION_KEY` | Yes | Key for encrypting database credentials |
 | `DATABASE_PATH` | No | SQLite database path (default: `./data/dblumi.db`) |
+| `SQLITE_ALLOWED_DIR` | No | When set, SQLite connections may only open files inside this directory (dblumi's own database is always refused) |
 | `BASE_URL` | No | Public URL (default: `http://localhost:3000`) |
 | `GITHUB_CLIENT_ID` | No | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | No | GitHub OAuth client secret |
@@ -158,6 +171,10 @@ See the full reference in the [docs](https://eodia.github.io/dblumi/self-hosting
 | Oracle     | `oracledb` | Stable |
 | SQLite     | `@libsql/client` | Stable |
 | Trino      | `trino-client` | Stable |
+| MongoDB    | `mongodb` | Beta — host, or `mongodb://` / `mongodb+srv://` URI (Atlas, replica sets) |
+| SQL Server | `mssql` | Beta — SQL Server 2016+ and Azure SQL; `server\instance` for named instances |
+| Snowflake  | `snowflake-sdk` | Beta — password or key-pair authentication, warehouse and role per connection |
+| Redis      | `@redis/client` | Beta — Redis 5+, `redis://` / `rediss://` URLs; key prefixes shown as tables |
 
 ## Development
 

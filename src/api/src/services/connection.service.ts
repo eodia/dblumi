@@ -2,9 +2,10 @@ import { eq, and, or, inArray } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { connections, userGroups, connectionGroups, connectionUsers } from '../db/schema.js'
 import { encrypt, decrypt } from '../lib/crypto.js'
-import { connectionManager } from '../lib/connection-manager.js'
+import { connectionManager, type DbPool, type PoolOptions } from '../lib/connection-manager.js'
+import { assertSqlitePathAllowed, SqlitePathError } from '../lib/sqlite-path.js'
+import { isMongoUri, splitMongoHostCredentials } from '../lib/mongo.js'
 import type { DbDriver } from '@dblumi/shared'
-import type { PoolOptions } from '../lib/connection-manager.js'
 
 // ──────────────────────────────────────────────
 // Types
@@ -20,6 +21,7 @@ export type ConnectionView = {
   username: string | null
   filePath: string | null
   ssl: boolean
+  options: Record<string, string> | null
   color: string | null
   environment: string | null
   createdBy: string
@@ -37,6 +39,8 @@ export type CreateConnectionInput = {
   username?: string
   password?: string
   ssl?: boolean
+  /** Driver-specific, non-secret settings (Snowflake warehouse and role). */
+  options?: Record<string, string> | null
   // SQLite
   filePath?: string
   color?: string | null
@@ -60,12 +64,76 @@ function toView(row: typeof connections.$inferSelect): ConnectionView {
     username: row.username,
     filePath: row.filePath,
     ssl: row.ssl,
+    options: row.options ?? null,
     color: row.color,
     environment: row.environment,
     createdBy: row.createdBy,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
+}
+
+/**
+ * Driver-specific checks and clean-ups before a connection is stored:
+ *  - SQLite: the file must be allowed (never dblumi's own database);
+ *  - MongoDB: credentials pasted inside a URI host are moved to the dedicated
+ *    fields, so the password ends up encrypted instead of in clear in `host`.
+ */
+export function normalizeConnectionInput<
+  T extends {
+    host?: string | undefined
+    port?: number | undefined
+    database?: string | undefined
+    username?: string | undefined
+    password?: string | undefined
+    filePath?: string | undefined
+    ssl?: boolean | undefined
+  },
+>(input: T, driver: DbDriver): T {
+  // Redis: a pasted redis:// / rediss:// URL is split into the dedicated fields
+  // (the password then ends up encrypted, never in clear in `host`).
+  if (driver === 'redis' && input.host && /^rediss?:\/\//i.test(input.host.trim())) {
+    try {
+      const url = new URL(input.host.trim())
+      const db = url.pathname.replace(/^\//, '')
+      return {
+        ...input,
+        host: url.hostname.replace(/^\[|\]$/g, ''),
+        ...(url.port ? { port: Number(url.port) } : {}),
+        ...(db && !input.database ? { database: db } : {}),
+        ...(url.username && !input.username ? { username: decodeURIComponent(url.username) } : {}),
+        ...(url.password && !input.password ? { password: decodeURIComponent(url.password) } : {}),
+        ...(url.protocol === 'rediss:' ? { ssl: true } : {}),
+      }
+    } catch {
+      throw new ConnectionError('INVALID_HOST', 'URL Redis invalide.')
+    }
+  }
+  if (driver === 'sqlite' && input.filePath !== undefined) {
+    try {
+      assertSqlitePathAllowed(input.filePath)
+    } catch (err) {
+      if (err instanceof SqlitePathError) throw new ConnectionError('FORBIDDEN_PATH', err.message)
+      throw err
+    }
+  }
+  if (driver === 'mongodb' && input.host && isMongoUri(input.host)) {
+    const { host, username, password } = splitMongoHostCredentials(input.host)
+    return {
+      ...input,
+      host,
+      ...(username && !input.username ? { username } : {}),
+      ...(password !== undefined && !input.password ? { password } : {}),
+    }
+  }
+  return input
+}
+
+/** Keeps only non-empty string settings; null when nothing is left. */
+function cleanOptions(options: Record<string, string> | null | undefined): Record<string, string> | null {
+  if (!options) return null
+  const entries = Object.entries(options).filter(([, v]) => typeof v === 'string' && v.trim() !== '')
+  return entries.length ? Object.fromEntries(entries.map(([k, v]) => [k, v.trim()])) : null
 }
 
 // ──────────────────────────────────────────────
@@ -157,14 +225,29 @@ export async function getConnection(
   return toView(row)
 }
 
+/**
+ * Who may read or change a connection's sharing: its owner, or an admin.
+ * Having the connection shared with you is not enough — a user it was shared
+ * with could otherwise add anyone (or remove everyone else).
+ */
+export async function canManageConnection(id: string, userId: string, role: string): Promise<boolean> {
+  const row = await db
+    .select({ createdBy: connections.createdBy })
+    .from(connections)
+    .where(eq(connections.id, id))
+    .get()
+  return !!row && (row.createdBy === userId || role === 'admin')
+}
+
 // ──────────────────────────────────────────────
 // Create
 // ──────────────────────────────────────────────
 
 export async function createConnection(
-  input: CreateConnectionInput,
+  rawInput: CreateConnectionInput,
   userId: string
 ): Promise<ConnectionView> {
+  const input = normalizeConnectionInput(rawInput, rawInput.driver)
   const id = crypto.randomUUID()
   const now = new Date().toISOString()
 
@@ -182,6 +265,7 @@ export async function createConnection(
     passwordEncrypted,
     filePath: input.filePath ?? null,
     ssl: input.ssl ?? false,
+    options: cleanOptions(input.options),
     color: input.color ?? null,
     environment: input.environment ?? null,
     createdBy: userId,
@@ -198,7 +282,7 @@ export async function createConnection(
 
 export async function updateConnection(
   id: string,
-  input: UpdateConnectionInput,
+  rawInput: UpdateConnectionInput,
   userId: string
 ): Promise<ConnectionView> {
   const existing = await db
@@ -208,6 +292,8 @@ export async function updateConnection(
     .get()
 
   if (!existing) throw new ConnectionError('NOT_FOUND', 'Connexion introuvable.')
+  const driver = rawInput.driver ?? (existing.driver as DbDriver)
+  const input = normalizeConnectionInput(rawInput, driver)
 
   const now = new Date().toISOString()
   const updates: Partial<typeof connections.$inferInsert> = { updatedAt: now }
@@ -220,12 +306,13 @@ export async function updateConnection(
   if (input.username !== undefined) updates.username = input.username
   if (input.filePath !== undefined) updates.filePath = input.filePath
   if (input.ssl !== undefined) updates.ssl = input.ssl
+  if (input.options !== undefined) updates.options = cleanOptions(input.options)
   if (input.color !== undefined) updates.color = input.color
   if (input.environment !== undefined) updates.environment = input.environment
   // Known limitation: an empty string means "unchanged", never "clear it". A Trino
   // connection created with a password therefore cannot be switched back to
   // anonymous from the UI — it has to be deleted and recreated.
-  if (input.password !== undefined && input.password !== '' && input.driver !== 'sqlite') {
+  if (input.password !== undefined && input.password !== '' && driver !== 'sqlite') {
     updates.passwordEncrypted = encrypt(input.password)
   }
 
@@ -234,8 +321,14 @@ export async function updateConnection(
     .set(updates)
     .where(eq(connections.id, id))
 
-  // Release stale pool so next query gets fresh credentials
-  await connectionManager.release(id)
+  // Release the stale pool so the next query gets fresh settings — but not for a
+  // rename or a colour change, which used to cut every running query.
+  const poolFields = ['driver', 'host', 'port', 'database', 'username', 'filePath', 'ssl'] as const
+  const affectsPool =
+    updates.passwordEncrypted !== undefined ||
+    poolFields.some((k) => updates[k] !== undefined && updates[k] !== existing[k]) ||
+    (updates.options !== undefined && JSON.stringify(updates.options) !== JSON.stringify(existing.options ?? null))
+  if (affectsPool) await connectionManager.release(id)
 
   return getConnection(id, userId)
 }
@@ -282,42 +375,80 @@ export async function testConnection(
   try {
     const opts = buildPoolOptions(row, password)
     const pool = await connectionManager.getPool(id, opts)
-
-    if (row.driver === 'postgresql') {
-      const pgPool = pool as import('pg').Pool
-      const client = await pgPool.connect()
-      await client.query('SELECT 1')
-      client.release()
-    } else if (row.driver === 'mysql') {
-      const mysqlPool = pool as import('mysql2/promise').Pool
-      const conn = await mysqlPool.getConnection()
-      await conn.query('SELECT 1')
-      conn.release()
-    } else if (row.driver === 'oracle') {
-      const oraclePool = pool as import('oracledb').Pool
-      const conn = await oraclePool.getConnection()
-      await conn.execute('SELECT 1 FROM dual')
-      await conn.close()
-    } else if (row.driver === 'trino') {
-      // `pingTrino` runs SELECT 1 then resolves the catalog AND the schema, so a
-      // typo in either half fails here rather than later as an empty schema browser.
-      // `runTrino` already converts transport failures into French messages.
-      const { pingTrino, parseTrinoTarget, TRINO_PING_TIMEOUT_MS } = await import('../lib/trino.js')
-      await pingTrino(
-        pool as import('trino-client').Trino,
-        parseTrinoTarget(row.database),
-        TRINO_PING_TIMEOUT_MS,
-      )
-    } else {
-      // SQLite
-      const client = pool as import('@libsql/client').Client
-      await client.execute('SELECT 1')
-    }
+    await pingPool(opts.driver, pool, connectionManager.liveDatabase(id) ?? opts.database, opts.options)
 
     return { ok: true, latencyMs: Date.now() - start }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { ok: false, latencyMs: Date.now() - start, error: message }
+  }
+}
+
+/**
+ * Round-trip on a pool. Every borrowed connection is given back in a `finally`:
+ * a ping failing after connect() used to leak it — and made test-raw hang, since
+ * pg's `end()` waits for borrowed clients.
+ */
+export async function pingPool(
+  driver: DbDriver,
+  pool: DbPool,
+  database?: string | null,
+  options?: Record<string, string> | null,
+): Promise<void> {
+  switch (driver) {
+    case 'postgresql': {
+      const client = await (pool as import('pg').Pool).connect()
+      try {
+        await client.query('SELECT 1')
+      } finally {
+        client.release()
+      }
+      return
+    }
+    case 'mysql': {
+      const conn = await (pool as import('mysql2/promise').Pool).getConnection()
+      try {
+        await conn.query('SELECT 1')
+      } finally {
+        conn.release()
+      }
+      return
+    }
+    case 'oracle': {
+      const conn = await (pool as import('oracledb').Pool).getConnection()
+      try {
+        await conn.execute('SELECT 1 FROM dual')
+      } finally {
+        await conn.close()
+      }
+      return
+    }
+    case 'trino': {
+      // `pingTrino` runs SELECT 1 then resolves the catalog AND the schema, so a
+      // typo in either half fails here rather than later as an empty schema browser.
+      const { pingTrino, parseTrinoTarget, TRINO_PING_TIMEOUT_MS } = await import('../lib/trino.js')
+      await pingTrino(pool as import('trino-client').Trino, parseTrinoTarget(database), TRINO_PING_TIMEOUT_MS)
+      return
+    }
+    case 'mongodb': {
+      const { pingMongo, mongoDatabaseName } = await import('../lib/mongo.js')
+      await pingMongo(pool as import('mongodb').MongoClient, mongoDatabaseName(database))
+      return
+    }
+    case 'sqlite':
+      await (pool as import('@libsql/client').Client).execute('SELECT 1')
+      return
+    case 'mssql':
+      await (pool as import('mssql').ConnectionPool).request().query('SELECT 1')
+      return
+    case 'snowflake': {
+      const { pingSnowflake } = await import('../lib/snowflake.js')
+      await pingSnowflake(pool as import('../lib/snowflake.js').SnowflakeClient, database, options?.['warehouse'])
+      return
+    }
+    case 'redis':
+      await (pool as import('../lib/redis.js').RedisConn).sendCommand(['PING'])
+      return
   }
 }
 
@@ -350,6 +481,7 @@ function buildPoolOptions(
   if (row.database !== null) opts.database = row.database
   if (row.username !== null) opts.username = row.username
   if (row.filePath !== null) opts.filePath = row.filePath
+  if (row.options) opts.options = row.options
   if (row.driver !== 'sqlite') opts.password = password
   return opts
 }

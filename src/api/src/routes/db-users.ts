@@ -5,6 +5,8 @@ import { authMiddleware } from '../middleware/auth.js'
 import { getPoolOptions } from '../services/connection.service.js'
 import { connectionManager } from '../lib/connection-manager.js'
 import { logger } from '../logger.js'
+import { DRIVER_LABELS, DRIVER_SUPPORT } from '../lib/drivers.js'
+import type { DbDriver } from '@dblumi/shared'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
@@ -83,6 +85,24 @@ const MYSQL_PRIV_COLS: Record<string, string> = {
   Create_user_priv: 'CREATE USER', Event_priv: 'EVENT', Trigger_priv: 'TRIGGER',
 }
 
+// ── Identifier & privilege safety ────────────────
+/**
+ * Double-quoted identifier (PostgreSQL, Oracle). Schema and table names are read
+ * back from the database itself: a table named `x" FROM PUBLIC; ALTER ROLE …`
+ * must stay a name, never become SQL.
+ */
+function qi(name: string): string {
+  return `"${name.replace(/"/g, '""')}"`
+}
+
+/** Privilege keywords are interpolated, not bound: letters, spaces and underscores only. */
+function assertPrivileges(privileges: string[]): string[] {
+  for (const p of privileges) {
+    if (!/^[A-Za-z][A-Za-z _]*$/.test(p)) throw new Error(`Invalid privilege: ${p}`)
+  }
+  return privileges
+}
+
 // ── MySQL helpers ────────────────────────────────
 function escapeMysqlId(name: string): string {
   if (/`/.test(name)) throw new Error(`Invalid identifier: ${name}`)
@@ -134,7 +154,7 @@ async function applyMysqlServerPrivs(
   pool: MySQLPool, username: string, host: string, privs: Record<string, boolean>
 ): Promise<void> {
   await pool.execute('REVOKE ALL PRIVILEGES, GRANT OPTION FROM ?@?', [username, host])
-  const granted = Object.entries(privs).filter(([, v]) => v).map(([p]) => p).filter((p) => p !== 'GRANT OPTION')
+  const granted = assertPrivileges(Object.entries(privs).filter(([, v]) => v).map(([p]) => p).filter((p) => p !== 'GRANT OPTION'))
   const withGrant = privs['GRANT OPTION'] ?? false
   if (granted.length > 0) {
     await pool.execute(
@@ -161,7 +181,7 @@ async function applyMysqlTablePrivs(
   }
   for (const tp of tablePrivs) {
     if (!tp.privileges.length) continue
-    const privNames = tp.privileges.filter((p) => p !== 'GRANT').join(', ')
+    const privNames = assertPrivileges(tp.privileges.filter((p) => p !== 'GRANT')).join(', ')
     const withGrant = tp.privileges.includes('GRANT')
     if (privNames) {
       await pool.execute(
@@ -271,10 +291,10 @@ async function createUserPg(pool: PgPool, input: CreateUserInput): Promise<void>
   try {
     await client.query('BEGIN')
     const opts = pgRoleOpts(input.serverPrivileges, input.advanced.connectionLimit ?? -1)
-    await client.query(`CREATE ROLE "${input.username}" WITH ${opts} PASSWORD ${client.escapeLiteral(input.password)}`)
+    await client.query(`CREATE ROLE ${qi(input.username)} WITH ${opts} PASSWORD ${client.escapeLiteral(input.password)}`)
     for (const tp of input.tablePrivileges) {
       if (!tp.privileges.length) continue
-      await client.query(`GRANT ${tp.privileges.join(', ')} ON "${tp.database}"."${tp.table}" TO "${input.username}"`)
+      await client.query(`GRANT ${assertPrivileges(tp.privileges).join(', ')} ON ${qi(tp.database)}.${qi(tp.table)} TO ${qi(input.username)}`)
     }
     await client.query('COMMIT')
   } catch (e) {
@@ -290,27 +310,27 @@ async function updateUserPg(pool: PgPool, username: string, input: UpdateUserInp
   try {
     await client.query('BEGIN')
     const opts = pgRoleOpts(input.serverPrivileges, input.advanced.connectionLimit ?? -1)
-    await client.query(`ALTER ROLE "${username}" WITH ${opts}`)
+    await client.query(`ALTER ROLE ${qi(username)} WITH ${opts}`)
     if (input.password) {
-      await client.query(`ALTER ROLE "${username}" WITH PASSWORD ${client.escapeLiteral(input.password)}`)
+      await client.query(`ALTER ROLE ${qi(username)} WITH PASSWORD ${client.escapeLiteral(input.password)}`)
     }
     const existing = await client.query(
       'SELECT table_schema AS "schema", table_name AS "table", privilege_type AS privilege FROM information_schema.role_table_grants WHERE grantee = $1',
       [username]
     )
-    const existingMap = new Map<string, string[]>()
+    // Keyed by a JSON tuple: splitting "schema.table" on '.' broke dotted names.
+    const existingMap = new Map<string, { schema: string; table: string; privileges: string[] }>()
     for (const r of existing.rows) {
-      const key = `${r.schema}.${r.table}`
-      if (!existingMap.has(key)) existingMap.set(key, [])
-      existingMap.get(key)!.push(r.privilege)
+      const key = JSON.stringify([r.schema, r.table])
+      if (!existingMap.has(key)) existingMap.set(key, { schema: r.schema, table: r.table, privileges: [] })
+      existingMap.get(key)!.privileges.push(r.privilege)
     }
-    for (const [key, privs] of existingMap.entries()) {
-      const [schema, table] = key.split('.')
-      await client.query(`REVOKE ${privs.join(', ')} ON "${schema}"."${table}" FROM "${username}"`)
+    for (const { schema, table, privileges } of existingMap.values()) {
+      await client.query(`REVOKE ${assertPrivileges(privileges).join(', ')} ON ${qi(schema)}.${qi(table)} FROM ${qi(username)}`)
     }
     for (const tp of input.tablePrivileges) {
       if (!tp.privileges.length) continue
-      await client.query(`GRANT ${tp.privileges.join(', ')} ON "${tp.database}"."${tp.table}" TO "${username}"`)
+      await client.query(`GRANT ${assertPrivileges(tp.privileges).join(', ')} ON ${qi(tp.database)}.${qi(tp.table)} TO ${qi(username)}`)
     }
     await client.query('COMMIT')
   } catch (e) {
@@ -324,7 +344,7 @@ async function updateUserPg(pool: PgPool, username: string, input: UpdateUserInp
 async function dropUserPg(pool: PgPool, username: string): Promise<void> {
   const client = await pool.connect()
   try {
-    await client.query(`DROP ROLE "${username}"`)
+    await client.query(`DROP ROLE ${qi(username)}`)
   } finally {
     client.release()
   }
@@ -381,13 +401,13 @@ async function createUserOracle(pool: OraclePool, input: CreateUserInput): Promi
   if (input.password.includes('"')) throw new Error('Password must not contain double-quote characters')
   const conn = await pool.getConnection()
   try {
-    await conn.execute(`CREATE USER "${input.username}" IDENTIFIED BY "${input.password}"`)
+    await conn.execute(`CREATE USER ${qi(input.username)} IDENTIFIED BY "${input.password}"`)
     for (const [priv, granted] of Object.entries(input.serverPrivileges)) {
-      if (granted) await conn.execute(`GRANT ${priv} TO "${input.username}"`)
+      if (granted) await conn.execute(`GRANT ${assertPrivileges([priv])[0]} TO ${qi(input.username)}`)
     }
     for (const tp of input.tablePrivileges) {
       for (const priv of tp.privileges) {
-        await conn.execute(`GRANT ${priv} ON "${tp.database}"."${tp.table}" TO "${input.username}"`)
+        await conn.execute(`GRANT ${assertPrivileges([priv])[0]} ON ${qi(tp.database)}.${qi(tp.table)} TO ${qi(input.username)}`)
       }
     }
   } finally {
@@ -400,23 +420,23 @@ async function updateUserOracle(pool: OraclePool, username: string, input: Updat
   const conn = await pool.getConnection()
   try {
     if (input.password) {
-      await conn.execute(`ALTER USER "${username}" IDENTIFIED BY "${input.password}"`)
+      await conn.execute(`ALTER USER ${qi(username)} IDENTIFIED BY "${input.password}"`)
     }
     const u = username.toUpperCase()
     const sysResult = await conn.execute('SELECT privilege FROM dba_sys_privs WHERE grantee = :1', [u])
     for (const r of (sysResult.rows ?? []) as unknown[][]) {
-      await conn.execute(`REVOKE ${r[0]} FROM "${username}"`)
+      await conn.execute(`REVOKE ${assertPrivileges([String(r[0])])[0]} FROM ${qi(username)}`)
     }
     for (const [priv, granted] of Object.entries(input.serverPrivileges)) {
-      if (granted) await conn.execute(`GRANT ${priv} TO "${username}"`)
+      if (granted) await conn.execute(`GRANT ${assertPrivileges([priv])[0]} TO ${qi(username)}`)
     }
     const tabResult = await conn.execute('SELECT owner, table_name, privilege FROM dba_tab_privs WHERE grantee = :1', [u])
     for (const r of (tabResult.rows ?? []) as unknown[][]) {
-      await conn.execute(`REVOKE ${r[2]} ON "${r[0]}"."${r[1]}" FROM "${username}"`)
+      await conn.execute(`REVOKE ${assertPrivileges([String(r[2])])[0]} ON ${qi(String(r[0]))}.${qi(String(r[1]))} FROM ${qi(username)}`)
     }
     for (const tp of input.tablePrivileges) {
       for (const priv of tp.privileges) {
-        await conn.execute(`GRANT ${priv} ON "${tp.database}"."${tp.table}" TO "${username}"`)
+        await conn.execute(`GRANT ${assertPrivileges([priv])[0]} ON ${qi(tp.database)}.${qi(tp.table)} TO ${qi(username)}`)
       }
     }
   } finally {
@@ -427,7 +447,7 @@ async function updateUserOracle(pool: OraclePool, username: string, input: Updat
 async function dropUserOracle(pool: OraclePool, username: string): Promise<void> {
   const conn = await pool.getConnection()
   try {
-    await conn.execute(`DROP USER "${username}" CASCADE`)
+    await conn.execute(`DROP USER ${qi(username)} CASCADE`)
   } finally {
     await conn.close()
   }
@@ -439,17 +459,27 @@ function sqlError(err: unknown): string {
 }
 
 /**
- * Problem Details (RFC 9457) body for drivers that have no notion of database
- * users. Trino delegates authentication and authorization to the coordinator,
- * so none of the five routes below can be served for it.
+ * Drivers without a database-user model served here. Trino delegates
+ * authentication to its coordinator, SQLite has no users at all, and MongoDB
+ * users are managed with its own commands (db.createUser…), not SQL GRANTs.
+ * Refused before any pool is opened — they used to fall through to Oracle.
  */
-function unsupportedDriver(driver: string) {
+const UNSUPPORTED_DETAILS: Partial<Record<DbDriver, string>> = {
+  trino: "Trino délègue l'authentification et les droits au coordinateur (file-based access control, LDAP/OAuth2) : il n'expose ni CREATE USER ni catalogue de comptes.",
+  sqlite: "SQLite n'a pas de notion d'utilisateur : l'accès est celui du fichier.",
+  mongodb: 'Les utilisateurs MongoDB se gèrent avec db.createUser() / db.updateUser() dans l’éditeur.',
+  mssql: "Les logins et utilisateurs SQL Server se gèrent en T-SQL dans l'éditeur (CREATE LOGIN, CREATE USER, ALTER ROLE … ADD MEMBER).",
+  snowflake: "Les utilisateurs et rôles Snowflake se gèrent en SQL dans l'éditeur (CREATE USER, GRANT ROLE).",
+  redis: "Les utilisateurs Redis (ACL) se gèrent avec ACL SETUSER / ACL LIST dans l'éditeur.",
+}
+
+/** Problem Details (RFC 9457) body for drivers that have no notion of database users. */
+function unsupportedDriver(driver: DbDriver) {
   return {
     type: 'https://dblumi.dev/errors/501',
-    title: `Gestion des utilisateurs non supportée pour le driver ${driver}.`,
+    title: `Gestion des utilisateurs non supportée pour ${DRIVER_LABELS[driver]}.`,
     status: 501,
-    detail:
-      "Trino délègue l'authentification et les droits au coordinateur (file-based access control, LDAP/OAuth2) : il n'expose ni CREATE USER ni catalogue de comptes.",
+    detail: UNSUPPORTED_DETAILS[driver],
   }
 }
 
@@ -463,8 +493,7 @@ dbUsersRouter.get('/', async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
-  // Refuse before opening any pool: Trino has no user catalog at all.
-  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
+  if (!DRIVER_SUPPORT[poolOpts.driver].dbUsers) return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     const result =
@@ -490,8 +519,7 @@ dbUsersRouter.get('/:username/privileges', async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
-  // Refuse before opening any pool: Trino has no user catalog at all.
-  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
+  if (!DRIVER_SUPPORT[poolOpts.driver].dbUsers) return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     const result =
@@ -516,8 +544,7 @@ dbUsersRouter.post('/', zValidator('json', CreateSchema), async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
-  // Refuse before opening any pool: Trino has no user catalog at all.
-  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
+  if (!DRIVER_SUPPORT[poolOpts.driver].dbUsers) return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     if (poolOpts.driver === 'postgresql') await createUserPg(pool as PgPool, input)
@@ -542,8 +569,7 @@ dbUsersRouter.put('/:username', zValidator('json', UpdateSchema), async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
-  // Refuse before opening any pool: Trino has no user catalog at all.
-  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
+  if (!DRIVER_SUPPORT[poolOpts.driver].dbUsers) return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     if (poolOpts.driver === 'postgresql') await updateUserPg(pool as PgPool, username, input)
@@ -568,8 +594,7 @@ dbUsersRouter.delete('/:username', async (c) => {
   } catch {
     return c.json({ message: 'Connection not found or unauthorized' }, 404)
   }
-  // Refuse before opening any pool: Trino has no user catalog at all.
-  if (poolOpts.driver === 'trino') return c.json(unsupportedDriver(poolOpts.driver), 501)
+  if (!DRIVER_SUPPORT[poolOpts.driver].dbUsers) return c.json(unsupportedDriver(poolOpts.driver), 501)
   try {
     const pool = await connectionManager.getPool(connectionId, poolOpts)
     if (poolOpts.driver === 'postgresql') await dropUserPg(pool as PgPool, username)

@@ -14,24 +14,40 @@ import {
   deleteConnection,
   testConnection,
   getPoolOptions,
+  pingPool,
+  normalizeConnectionInput,
+  canManageConnection,
   ConnectionError,
 } from '../services/connection.service.js'
-import { connectionManager } from '../lib/connection-manager.js'
+import { fetchSchema, liveDatabaseOf } from '../services/schema.service.js'
+import { connectionManager, type DbPool, type PoolOptions } from '../lib/connection-manager.js'
+import { DB_DRIVERS, DRIVER_LABELS, DRIVER_SUPPORT, isSqlDriver, quoteIdent, quoteTable, type SqlDriver } from '../lib/drivers.js'
+import { formatBytes } from '../lib/format.js'
+import { runStatement } from '../lib/query-executor.js'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { Pool as PgPool } from 'pg'
 import type { Pool as MySQLPool } from 'mysql2/promise'
 import type { Pool as OraclePool } from 'oracledb'
 import type { Client as LibSQLClient } from '@libsql/client'
 import type { Trino } from 'trino-client'
+import type { MongoClient } from 'mongodb'
+import type { ConnectionPool as MssqlPool } from 'mssql'
+import type { SnowflakeClient } from '../lib/snowflake.js'
+import type { RedisConn } from '../lib/redis.js'
 import {
   runTrino,
-  pingTrino,
   parseTrinoTarget,
   quoteTrinoIdent,
-  quoteTrinoString,
   quoteTrinoTable,
-  TRINO_PING_TIMEOUT_MS,
 } from '../lib/trino.js'
+import {
+  countMongoCollection,
+  dumpMongoCollection,
+  getMongoStats,
+  isMongoUri,
+  listMongoDatabases,
+  mongoDatabaseName,
+} from '../lib/mongo.js'
 
 const connectionsRouter = new Hono<AuthVariables>()
 
@@ -42,9 +58,33 @@ connectionsRouter.use('*', authMiddleware)
 // Schemas
 // ──────────────────────────────────────────────
 
+/** Fields required per driver. */
+function refineConnectionFields(
+  val: { driver: (typeof DB_DRIVERS)[number]; host?: string | undefined; port?: number | undefined; username?: string | undefined; filePath?: string | undefined },
+  ctx: z.RefinementCtx,
+) {
+  if (val.driver === 'sqlite') {
+    if (!val.filePath) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'filePath requis pour SQLite', path: ['filePath'] })
+    return
+  }
+  if (!val.host) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'host requis', path: ['host'] })
+  // Snowflake is reached by account identifier; a MongoDB or Redis URI carries its own port.
+  const portless = val.driver === 'snowflake'
+    || (val.driver === 'mongodb' && isMongoUri(val.host))
+    || (val.driver === 'redis' && /^rediss?:\/\//i.test(val.host?.trim() ?? ''))
+  if (!val.port && !portless) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'port requis', path: ['port'] })
+  // MongoDB and Redis servers may run without authentication.
+  if (!val.username && val.driver !== 'mongodb' && val.driver !== 'redis') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'username requis', path: ['username'] })
+  }
+}
+
+/** Driver-specific, non-secret settings (Snowflake warehouse and role). */
+const ConnectionOptionsInput = z.record(z.string().max(64), z.string().max(256))
+
 const CreateSchema = z.object({
   name: z.string().min(1).max(100),
-  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino']),
+  driver: z.enum(DB_DRIVERS),
   host: z.string().min(1).optional(),
   port: z.number().int().min(1).max(65535).optional(),
   database: z.string().optional(),
@@ -52,21 +92,14 @@ const CreateSchema = z.object({
   password: z.string().optional(),
   filePath: z.string().min(1).optional(),
   ssl: z.boolean().default(false),
+  options: ConnectionOptionsInput.optional(),
   color: z.string().optional(),
   environment: z.string().max(50).optional(),
-}).superRefine((val, ctx) => {
-  if (val.driver === 'sqlite') {
-    if (!val.filePath) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'filePath requis pour SQLite', path: ['filePath'] })
-  } else {
-    if (!val.host) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'host requis', path: ['host'] })
-    if (!val.port) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'port requis', path: ['port'] })
-    if (!val.username) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'username requis', path: ['username'] })
-  }
-})
+}).superRefine(refineConnectionFields)
 
 const UpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino']).optional(),
+  driver: z.enum(DB_DRIVERS).optional(),
   host: z.string().min(1).optional(),
   port: z.number().int().min(1).max(65535).optional(),
   database: z.string().optional(),
@@ -74,6 +107,7 @@ const UpdateSchema = z.object({
   password: z.string().optional(),
   filePath: z.string().min(1).optional(),
   ssl: z.boolean().optional(),
+  options: ConnectionOptionsInput.nullable().optional(),
   color: z.string().optional(),
   environment: z.string().max(50).optional(),
 })
@@ -86,6 +120,22 @@ function problem(status: number, title: string, detail?: string) {
   return { type: `https://dblumi.dev/errors/${status}`, title, status, detail }
 }
 
+function errorMessage(err: unknown, fallback: string): string {
+  const raw = err instanceof Error ? err.message : String(err)
+  const code = err instanceof Error && 'code' in err ? (err as Record<string, unknown>).code : undefined
+  return raw || (code ? `Database error (${String(code)})` : fallback)
+}
+
+/** Maps service errors: unknown connection → 404, refused SQLite path → 400. */
+function connectionErrorResponse(e: ConnectionError) {
+  return e.code === 'FORBIDDEN_PATH' || e.code === 'INVALID_HOST'
+    ? { body: problem(400, e.message), status: 400 as const }
+    : { body: problem(404, e.message), status: 404 as const }
+}
+
+function mongoDatabaseOf(connectionId: string, poolOpts: PoolOptions): string {
+  return mongoDatabaseName(liveDatabaseOf(connectionId, poolOpts.database))
+}
 
 // ──────────────────────────────────────────────
 // GET /connections
@@ -123,8 +173,16 @@ connectionsRouter.post(
   async (c) => {
     const userId = c.get('userId')
     const body = c.req.valid('json')
-    const conn = await createConnection({ ...body, color: body.color ?? null, environment: body.environment ?? null } as Parameters<typeof createConnection>[0], userId)
-    return c.json({ connection: conn }, 201)
+    try {
+      const conn = await createConnection({ ...body, color: body.color ?? null, environment: body.environment ?? null } as Parameters<typeof createConnection>[0], userId)
+      return c.json({ connection: conn }, 201)
+    } catch (e) {
+      if (e instanceof ConnectionError) {
+        const { body: err, status } = connectionErrorResponse(e)
+        return c.json(err, status)
+      }
+      throw e
+    }
   }
 )
 
@@ -145,8 +203,10 @@ connectionsRouter.put(
       const conn = await updateConnection(c.req.param('id'), body, userId)
       return c.json({ connection: conn })
     } catch (e) {
-      if (e instanceof ConnectionError)
-        return c.json(problem(404, e.message), 404)
+      if (e instanceof ConnectionError) {
+        const { body: err, status } = connectionErrorResponse(e)
+        return c.json(err, status)
+      }
       throw e
     }
   }
@@ -189,7 +249,7 @@ connectionsRouter.post('/:id/test', async (c) => {
 // ──────────────────────────────────────────────
 
 const TestRawSchema = z.object({
-  driver: z.enum(['postgresql', 'mysql', 'oracle', 'sqlite', 'trino']),
+  driver: z.enum(DB_DRIVERS),
   host: z.string().min(1).optional(),
   port: z.number().int().optional(),
   database: z.string().optional(),
@@ -197,50 +257,24 @@ const TestRawSchema = z.object({
   password: z.string().optional(),
   filePath: z.string().min(1).optional(),
   ssl: z.boolean().default(false),
+  options: ConnectionOptionsInput.optional(),
 })
 
 connectionsRouter.post(
   '/test-raw',
   zValidator('json', TestRawSchema),
   async (c) => {
-    const opts = c.req.valid('json')
     const tempId = `_test_${crypto.randomUUID()}`
     const start = Date.now()
 
     try {
-      const pool = await connectionManager.getPool(tempId, opts as Parameters<typeof connectionManager.getPool>[1])
-
-      if (opts.driver === 'postgresql') {
-        const pgPool = pool as import('pg').Pool
-        const client = await pgPool.connect()
-        await client.query('SELECT 1')
-        client.release()
-      } else if (opts.driver === 'mysql') {
-        const mysqlPool = pool as import('mysql2/promise').Pool
-        const conn = await mysqlPool.getConnection()
-        await conn.query('SELECT 1')
-        conn.release()
-      } else if (opts.driver === 'sqlite') {
-        const client = pool as import('@libsql/client').Client
-        await client.execute('SELECT 1')
-      } else if (opts.driver === 'trino') {
-        // `pingTrino` also resolves the catalog AND the schema, so a typo in
-        // either half of the Catalog field fails here instead of surfacing
-        // later as a silently empty schema browser.
-        await pingTrino(pool as Trino, parseTrinoTarget(opts.database), TRINO_PING_TIMEOUT_MS)
-      } else {
-        const oraclePool = pool as OraclePool
-        const conn = await oraclePool.getConnection()
-        await conn.execute('SELECT 1 FROM dual')
-        await conn.close()
-      }
-
+      // Same clean-up as on save: credentials inside a MongoDB URI, SQLite path check.
+      const opts = normalizeConnectionInput(c.req.valid('json'), c.req.valid('json').driver) as PoolOptions
+      const pool = await connectionManager.getPool(tempId, opts)
+      await pingPool(opts.driver, pool, opts.database, opts.options)
       return c.json({ ok: true, latencyMs: Date.now() - start })
     } catch (err) {
-      const raw = err instanceof Error ? err.message : String(err)
-      const code = err instanceof Error && 'code' in err ? (err as Record<string, unknown>).code : undefined
-      const message = raw || (code ? `Database error (${code})` : 'Connection failed')
-      return c.json({ ok: false, latencyMs: Date.now() - start, error: message })
+      return c.json({ ok: false, latencyMs: Date.now() - start, error: errorMessage(err, 'Connection failed') })
     } finally {
       await connectionManager.release(tempId)
     }
@@ -250,458 +284,6 @@ connectionsRouter.post(
 // ──────────────────────────────────────────────
 // GET /connections/:id/schema
 // ──────────────────────────────────────────────
-
-type SchemaRow = {
-  table_name: string
-  column_name: string
-  data_type: string
-  is_nullable: string
-  is_primary_key: boolean
-  table_type: string
-  table_comment: string | null
-}
-
-type SchemaIndex = { name: string; columns: string[]; unique: boolean }
-type SchemaFK = { name: string; fields: string[]; referencedDatabase: string; referencedTable: string; referencedFields: string[]; onDelete: string; onUpdate: string }
-
-type SchemaItem = {
-  name: string
-  type: 'table' | 'view'
-  comment: string
-  columns: Array<{ name: string; dataType: string; nullable: boolean; primaryKey: boolean }>
-  indexes: SchemaIndex[]
-  foreignKeys: SchemaFK[]
-}
-
-type IndexRow = { table_name: string; index_name: string; is_unique: boolean; column_name: string }
-type FKRow = { table_name: string; constraint_name: string; column_name: string; referenced_schema: string; referenced_table: string; referenced_column: string; on_delete: string; on_update: string }
-
-function groupByTable(rows: SchemaRow[]) {
-  const map = new Map<string, SchemaItem>()
-  for (const row of rows) {
-    if (!map.has(row.table_name)) {
-      const isView = row.table_type === 'VIEW'
-      map.set(row.table_name, { name: row.table_name, type: isView ? 'view' : 'table', comment: row.table_comment ?? '', columns: [], indexes: [], foreignKeys: [] })
-    }
-    map.get(row.table_name)!.columns.push({
-      name: row.column_name,
-      dataType: row.data_type,
-      nullable: row.is_nullable === 'YES',
-      primaryKey:
-        row.is_primary_key === true || (row.is_primary_key as unknown) === 1,
-    })
-  }
-  return map
-}
-
-function mergeIndexes(map: Map<string, SchemaItem>, indexRows: IndexRow[]) {
-  for (const row of indexRows) {
-    const table = map.get(row.table_name)
-    if (!table) continue
-    let idx = table.indexes.find((i) => i.name === row.index_name)
-    if (!idx) {
-      idx = { name: row.index_name, columns: [], unique: row.is_unique }
-      table.indexes.push(idx)
-    }
-    idx.columns.push(row.column_name)
-  }
-}
-
-function mergeForeignKeys(map: Map<string, SchemaItem>, fkRows: FKRow[]) {
-  for (const row of fkRows) {
-    const table = map.get(row.table_name)
-    if (!table) continue
-    let fk = table.foreignKeys.find((f) => f.name === row.constraint_name)
-    if (!fk) {
-      fk = { name: row.constraint_name, fields: [], referencedDatabase: row.referenced_schema, referencedTable: row.referenced_table, referencedFields: [], onDelete: row.on_delete, onUpdate: row.on_update }
-      table.foreignKeys.push(fk)
-    }
-    fk.fields.push(row.column_name)
-    fk.referencedFields.push(row.referenced_column)
-  }
-  return { tables: Array.from(map.values()) }
-}
-
-type FunctionRow = {
-  name: string
-  kind: string       // 'function' or 'procedure'
-  return_type: string
-  arguments: string
-  language: string
-}
-
-async function getPgSchema(pool: PgPool) {
-  const client = await pool.connect()
-  try {
-    const { rows } = await client.query<SchemaRow>(`
-      SELECT
-        c.table_name,
-        c.column_name,
-        c.data_type,
-        c.is_nullable,
-        t.table_type,
-        CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_primary_key,
-        obj_description(('public.' || c.table_name)::regclass, 'pg_class') AS table_comment
-      FROM information_schema.columns c
-      JOIN information_schema.tables t
-        ON t.table_name = c.table_name AND t.table_schema = c.table_schema
-      LEFT JOIN (
-        SELECT ku.table_name, ku.column_name
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage ku
-          ON tc.constraint_name = ku.constraint_name AND tc.table_schema = ku.table_schema
-        WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_schema = 'public'
-      ) pk ON pk.table_name = c.table_name AND pk.column_name = c.column_name
-      WHERE c.table_schema = 'public' AND t.table_type IN ('BASE TABLE', 'VIEW')
-      ORDER BY t.table_type, c.table_name, c.ordinal_position
-    `)
-
-    const { rows: funcRows } = await client.query<FunctionRow>(`
-      SELECT
-        p.proname AS name,
-        CASE WHEN p.prokind = 'p' THEN 'procedure' ELSE 'function' END AS kind,
-        pg_get_function_result(p.oid) AS return_type,
-        pg_get_function_identity_arguments(p.oid) AS arguments,
-        l.lanname AS language
-      FROM pg_proc p
-      JOIN pg_namespace n ON n.oid = p.pronamespace
-      JOIN pg_language l ON l.oid = p.prolang
-      WHERE n.nspname = 'public'
-        AND p.prokind IN ('f', 'p')
-      ORDER BY p.prokind, p.proname
-    `)
-
-    const { rows: idxRows } = await client.query<IndexRow>(`
-      SELECT
-        t.relname AS table_name,
-        i.relname AS index_name,
-        ix.indisunique AS is_unique,
-        a.attname AS column_name
-      FROM pg_class t
-      JOIN pg_index ix ON ix.indrelid = t.oid
-      JOIN pg_class i ON i.oid = ix.indexrelid
-      JOIN pg_namespace n ON n.oid = t.relnamespace
-      JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-      WHERE n.nspname = 'public' AND t.relkind = 'r' AND NOT ix.indisprimary
-      ORDER BY t.relname, i.relname, array_position(ix.indkey, a.attnum)
-    `)
-
-    const { rows: fkRows } = await client.query<FKRow>(`
-      SELECT
-        tc.table_name,
-        tc.constraint_name,
-        kcu.column_name,
-        ccu.table_schema  AS referenced_schema,
-        ccu.table_name    AS referenced_table,
-        ccu.column_name   AS referenced_column,
-        rc.delete_rule    AS on_delete,
-        rc.update_rule    AS on_update
-      FROM information_schema.table_constraints tc
-      JOIN information_schema.key_column_usage kcu
-        ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-      JOIN information_schema.referential_constraints rc
-        ON tc.constraint_name = rc.constraint_name AND tc.table_schema = rc.constraint_schema
-      JOIN information_schema.constraint_column_usage ccu
-        ON rc.unique_constraint_name = ccu.constraint_name AND rc.unique_constraint_schema = ccu.table_schema
-      WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'
-      ORDER BY tc.table_name, tc.constraint_name, kcu.ordinal_position
-    `)
-
-    const tableMap = groupByTable(rows)
-    mergeIndexes(tableMap, idxRows)
-    const result = mergeForeignKeys(tableMap, fkRows)
-    return { ...result, functions: funcRows }
-  } finally {
-    client.release()
-  }
-}
-
-async function getMySQLSchema(pool: MySQLPool) {
-  const conn = await pool.getConnection()
-  try {
-    const [rows] = await conn.query(`
-      SELECT
-        c.TABLE_NAME    AS table_name,
-        c.COLUMN_NAME   AS column_name,
-        c.DATA_TYPE     AS data_type,
-        c.IS_NULLABLE   AS is_nullable,
-        t.TABLE_TYPE    AS table_type,
-        CASE WHEN c.COLUMN_KEY = 'PRI' THEN true ELSE false END AS is_primary_key,
-        t.TABLE_COMMENT AS table_comment
-      FROM information_schema.COLUMNS c
-      JOIN information_schema.TABLES t
-        ON t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_SCHEMA = c.TABLE_SCHEMA
-      WHERE c.TABLE_SCHEMA = DATABASE() AND t.TABLE_TYPE IN ('BASE TABLE', 'VIEW')
-      ORDER BY t.TABLE_TYPE, c.TABLE_NAME, c.ORDINAL_POSITION
-    `)
-
-    const [funcRows] = await conn.query(`
-      SELECT
-        ROUTINE_NAME AS name,
-        LOWER(ROUTINE_TYPE) AS kind,
-        DTD_IDENTIFIER AS return_type,
-        ROUTINE_COMMENT AS arguments,
-        EXTERNAL_LANGUAGE AS language
-      FROM information_schema.ROUTINES
-      WHERE ROUTINE_SCHEMA = DATABASE()
-      ORDER BY ROUTINE_TYPE, ROUTINE_NAME
-    `)
-
-    const [idxRows] = await conn.query(`
-      SELECT
-        TABLE_NAME  AS table_name,
-        INDEX_NAME  AS index_name,
-        NOT NON_UNIQUE AS is_unique,
-        COLUMN_NAME AS column_name
-      FROM information_schema.STATISTICS
-      WHERE TABLE_SCHEMA = DATABASE() AND INDEX_NAME != 'PRIMARY'
-      ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX
-    `)
-
-    const [fkRows] = await conn.query(`
-      SELECT
-        kcu.TABLE_NAME        AS table_name,
-        kcu.CONSTRAINT_NAME   AS constraint_name,
-        kcu.COLUMN_NAME       AS column_name,
-        kcu.REFERENCED_TABLE_SCHEMA  AS referenced_schema,
-        kcu.REFERENCED_TABLE_NAME    AS referenced_table,
-        kcu.REFERENCED_COLUMN_NAME   AS referenced_column,
-        rc.DELETE_RULE        AS on_delete,
-        rc.UPDATE_RULE        AS on_update
-      FROM information_schema.KEY_COLUMN_USAGE kcu
-      JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
-        ON rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME AND rc.CONSTRAINT_SCHEMA = kcu.TABLE_SCHEMA
-      WHERE kcu.TABLE_SCHEMA = DATABASE() AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
-      ORDER BY kcu.TABLE_NAME, kcu.CONSTRAINT_NAME, kcu.ORDINAL_POSITION
-    `)
-
-    const tableMap = groupByTable(rows as SchemaRow[])
-    mergeIndexes(tableMap, idxRows as IndexRow[])
-    const result = mergeForeignKeys(tableMap, fkRows as FKRow[])
-    return { ...result, functions: funcRows as FunctionRow[] }
-  } finally {
-    conn.release()
-  }
-}
-
-async function getSQLiteSchema(client: LibSQLClient) {
-  const tablesResult = await client.execute(
-    `SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name`
-  )
-
-  const tables: SchemaItem[] = []
-
-  for (const tableRow of tablesResult.rows) {
-    const tableName = String(tableRow[0])
-    const tableType = tableRow[1] === 'view' ? 'view' : ('table' as const)
-
-    // PRAGMA table_info: cid, name, type, notnull, dflt_value, pk
-    const colsResult = await client.execute(`PRAGMA table_info(${JSON.stringify(tableName)})`)
-    const columns = colsResult.rows.map((r) => ({
-      name: String(r[1]),
-      dataType: String(r[2] || 'text').toLowerCase(),
-      nullable: r[3] === 0,
-      primaryKey: Number(r[5]) > 0,
-    }))
-
-    // PRAGMA index_list: seq, name, unique, origin, partial
-    const idxListResult = await client.execute(`PRAGMA index_list(${JSON.stringify(tableName)})`)
-    const indexes: SchemaIndex[] = []
-    for (const idxRow of idxListResult.rows) {
-      const idxName = String(idxRow[1])
-      const isUnique = Number(idxRow[2]) === 1
-      const idxInfoResult = await client.execute(`PRAGMA index_info(${JSON.stringify(idxName)})`)
-      const idxColumns = idxInfoResult.rows.map((r) => String(r[2]))
-      indexes.push({ name: idxName, columns: idxColumns, unique: isUnique })
-    }
-
-    // PRAGMA foreign_key_list: id, seq, table, from, to, on_delete, on_update, match
-    const fkResult = await client.execute(`PRAGMA foreign_key_list(${JSON.stringify(tableName)})`)
-    const fkMap = new Map<number, { referencedTable: string; fields: string[]; referencedFields: string[]; onDelete: string; onUpdate: string }>()
-    for (const fkRow of fkResult.rows) {
-      const fkId = Number(fkRow[0])
-      if (!fkMap.has(fkId)) {
-        fkMap.set(fkId, { referencedTable: String(fkRow[2]), fields: [], referencedFields: [], onDelete: String(fkRow[5]), onUpdate: String(fkRow[6]) })
-      }
-      const entry = fkMap.get(fkId)!
-      entry.fields.push(String(fkRow[3]))
-      entry.referencedFields.push(String(fkRow[4]))
-    }
-    const foreignKeys: SchemaFK[] = Array.from(fkMap.entries()).map(([fkId, fk]) => ({
-      name: `fk_${tableName}_${fkId}`,
-      fields: fk.fields,
-      referencedDatabase: '',
-      referencedTable: fk.referencedTable,
-      referencedFields: fk.referencedFields,
-      onDelete: fk.onDelete,
-      onUpdate: fk.onUpdate,
-    }))
-
-    tables.push({ name: tableName, type: tableType, comment: '', columns, indexes, foreignKeys })
-  }
-
-  return { tables, functions: [] as FunctionRow[] }
-}
-
-async function getOracleSchema(pool: OraclePool) {
-  const conn = await pool.getConnection()
-  try {
-    const { rows: colRows } = await conn.execute<[string, string, string, string, number]>(`
-      SELECT
-        c.TABLE_NAME,
-        c.COLUMN_NAME,
-        c.DATA_TYPE,
-        c.NULLABLE,
-        CASE WHEN p.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PK
-      FROM USER_TAB_COLUMNS c
-      LEFT JOIN (
-        SELECT cc.TABLE_NAME, cc.COLUMN_NAME
-        FROM USER_CONSTRAINTS uc
-        JOIN USER_CONS_COLUMNS cc ON cc.CONSTRAINT_NAME = uc.CONSTRAINT_NAME
-        WHERE uc.CONSTRAINT_TYPE = 'P'
-      ) p ON p.TABLE_NAME = c.TABLE_NAME AND p.COLUMN_NAME = c.COLUMN_NAME
-      ORDER BY c.TABLE_NAME, c.COLUMN_ID
-    `, [], { outFormat: 4001 /* ARRAY */ })
-
-    const map = new Map<string, SchemaItem>()
-    for (const row of (colRows ?? []) as [string, string, string, string, number][]) {
-      const [tableName, columnName, dataType, nullable, isPk] = row
-      if (!tableName) continue
-      if (!map.has(tableName)) {
-        map.set(tableName, { name: tableName, type: 'table', comment: '', columns: [], indexes: [], foreignKeys: [] })
-      }
-      map.get(tableName)!.columns.push({
-        name: columnName ?? '',
-        dataType: dataType ?? 'unknown',
-        nullable: nullable === 'Y',
-        primaryKey: isPk === 1,
-      })
-    }
-
-    const { rows: fkRows } = await conn.execute<[string, string, string, string, string, string]>(`
-      SELECT
-        uc.TABLE_NAME,
-        uc.CONSTRAINT_NAME,
-        cc.COLUMN_NAME,
-        rc.TABLE_NAME AS REF_TABLE,
-        rcc.COLUMN_NAME AS REF_COLUMN,
-        uc.DELETE_RULE
-      FROM USER_CONSTRAINTS uc
-      JOIN USER_CONS_COLUMNS cc ON cc.CONSTRAINT_NAME = uc.CONSTRAINT_NAME
-      JOIN USER_CONSTRAINTS rc ON rc.CONSTRAINT_NAME = uc.R_CONSTRAINT_NAME
-      JOIN USER_CONS_COLUMNS rcc ON rcc.CONSTRAINT_NAME = uc.R_CONSTRAINT_NAME AND rcc.POSITION = cc.POSITION
-      WHERE uc.CONSTRAINT_TYPE = 'R'
-      ORDER BY uc.TABLE_NAME, uc.CONSTRAINT_NAME, cc.POSITION
-    `, [], { outFormat: 4001 })
-
-    for (const row of (fkRows ?? []) as [string, string, string, string, string, string][]) {
-      const [tableName, constraintName, columnName, refTable, refColumn, deleteRule] = row
-      if (!tableName) continue
-      const table = map.get(tableName)
-      if (!table) continue
-      let fk = table.foreignKeys.find((f) => f.name === constraintName)
-      if (!fk) {
-        fk = { name: constraintName ?? '', fields: [], referencedDatabase: '', referencedTable: refTable ?? '', referencedFields: [], onDelete: deleteRule ?? 'NO ACTION', onUpdate: 'NO ACTION' }
-        table.foreignKeys.push(fk)
-      }
-      fk.fields.push(columnName ?? '')
-      fk.referencedFields.push(refColumn ?? '')
-    }
-
-    return { tables: Array.from(map.values()), functions: [] }
-  } finally {
-    await conn.close()
-  }
-}
-
-/**
- * Effective Trino target of a connection.
- *
- * `POST /:id/switch-database` re-creates the client with a new catalog WITHOUT
- * persisting it on the row, so the stored `database` alone would keep every
- * Trino metadata route pinned to the original (often empty) catalog and turn the
- * database switcher into a no-op.
- */
-/** Schemas introspected in one pass when no schema is pinned on the connection. */
-const TRINO_MAX_SCHEMAS = 50
-
-function trinoTargetOf(connectionId: string, stored?: string | null): string | null {
-  return connectionManager.trinoTarget(connectionId) ?? stored ?? null
-}
-
-/**
- * Trino introspection through the catalog's `information_schema`.
- *
- * Two modes, driven by the connection target ("catalog" or "catalog/schema"):
- *  - pinned schema  -> bare table names (`orders`)
- *  - catalog only   -> qualified names (`default.orders`), because the front-end
- *                      builds `SELECT * FROM ${tableName}` without qualification.
- *
- * Trino exposes no primary keys, no indexes, no foreign keys and no user routines:
- * those collections are always returned empty.
- */
-async function getTrinoSchema(client: Trino, target?: string | null) {
-  const { catalog, schema } = parseTrinoTarget(target)
-  if (!catalog) {
-    throw new Error(
-      'Aucun catalogue Trino défini : renseignez le champ Catalogue (ex. hive ou hive/default).',
-    )
-  }
-  const cat = quoteTrinoIdent(catalog)
-  const SYSTEM_SCHEMAS = new Set(['information_schema', 'pg_catalog', 'sys'])
-
-  let where: string
-  let nameExpr: string
-  if (schema) {
-    where = `c.table_schema = ${quoteTrinoString(schema)}`
-    nameExpr = 'c.table_name'
-  } else {
-    // `SHOW SCHEMAS` + `IN (...)` is pushed down to the connector, while a
-    // `NOT IN (...)` filter makes Trino enumerate metadata for the whole catalog.
-    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`)
-    const all = shown.data
-      .map((r) => String(r[0] ?? ''))
-      .filter((s) => s && !SYSTEM_SCHEMAS.has(s.toLowerCase()))
-    const schemas = all.slice(0, TRINO_MAX_SCHEMAS) // guardrail against over-scanning
-    if (all.length > schemas.length) {
-      logger.warn(
-        { catalog, total: all.length, kept: schemas.length },
-        'Trino schema list truncated — pin a schema on the connection to browse the rest',
-      )
-    }
-    if (schemas.length === 0) return { tables: [] as SchemaItem[], functions: [] as FunctionRow[] }
-    where = `c.table_schema IN (${schemas.map(quoteTrinoString).join(', ')})`
-    nameExpr = `c.table_schema || '.' || c.table_name`
-  }
-
-  // A single columns query: every Trino statement costs several HTTP round-trips.
-  const sql = `
-    SELECT ${nameExpr} AS table_name, c.column_name, c.data_type, c.is_nullable,
-           t.table_type, false AS is_primary_key, CAST(NULL AS varchar) AS table_comment
-    FROM ${cat}.information_schema.columns c
-    JOIN ${cat}.information_schema.tables t
-      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
-    WHERE ${where}
-    ORDER BY 1, c.ordinal_position`
-  const result = await runTrino(client, sql)
-
-  // An empty result is ambiguous: an empty schema, or a schema that does not
-  // exist at all (`information_schema.columns` simply matches nothing). Resolve
-  // it here — only on that path, so the normal case keeps its single query.
-  if (result.rows.length === 0 && schema) {
-    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`)
-    const wanted = schema.toLowerCase()
-    const known = shown.data.some((r) => String(r[0] ?? '').toLowerCase() === wanted)
-    if (!known) {
-      throw new Error(
-        `Schéma '${schema}' introuvable dans le catalogue '${catalog}' : corrigez le champ Catalogue de la connexion.`,
-      )
-    }
-  }
-
-  const map = groupByTable(result.rows as unknown as SchemaRow[])
-  return { ...mergeForeignKeys(map, []), functions: [] as FunctionRow[] }
-}
 
 connectionsRouter.get('/:id/schema', async (c) => {
   const userId = c.get('userId')
@@ -717,25 +299,12 @@ connectionsRouter.get('/:id/schema', async (c) => {
     )
   }
 
-  const pool = await connectionManager.getPool(connectionId, poolOpts)
-
   try {
-    const schema =
-      poolOpts.driver === 'postgresql'
-        ? await getPgSchema(pool as PgPool)
-        : poolOpts.driver === 'mysql'
-        ? await getMySQLSchema(pool as MySQLPool)
-        : poolOpts.driver === 'sqlite'
-        ? await getSQLiteSchema(pool as LibSQLClient)
-        : poolOpts.driver === 'trino'
-        ? await getTrinoSchema(pool as Trino, trinoTargetOf(connectionId, poolOpts.database))
-        : await getOracleSchema(pool as OraclePool)
-    return c.json(schema)
+    const pool = await connectionManager.getPool(connectionId, poolOpts)
+    return c.json(await fetchSchema(connectionId, poolOpts.driver, pool, poolOpts.database))
   } catch (err) {
-    const raw = err instanceof Error ? err.message : String(err)
-    const code = err instanceof Error && 'code' in err ? (err as Record<string, unknown>).code : undefined
-    const message = raw || (code ? `Database error (${code})` : 'Connection failed')
-    logger.warn({ connectionId, err: raw, code }, 'Schema fetch failed')
+    const message = errorMessage(err, 'Connection failed')
+    logger.warn({ connectionId, err: message }, 'Schema fetch failed')
     return c.json({ type: 'error', message }, 502)
   }
 })
@@ -759,50 +328,37 @@ connectionsRouter.post(
       return c.json(problem(404, 'Connexion introuvable.'), 404)
     }
 
-    const pool = await connectionManager.getPool(connectionId, poolOpts)
-
     try {
+      const pool = await connectionManager.getPool(connectionId, poolOpts)
       let count: number
-      if (poolOpts.driver === 'postgresql') {
-        const client = await (pool as PgPool).connect()
-        try {
-          const result = await client.query(`SELECT COUNT(*) AS count FROM ${table}`)
-          count = parseInt(result.rows[0].count, 10)
-        } finally {
-          client.release()
-        }
-      } else if (poolOpts.driver === 'mysql') {
-        const conn = await (pool as MySQLPool).getConnection()
-        try {
-          const [rows] = await conn.query(`SELECT COUNT(*) AS count FROM ${table}`)
-          count = Number((rows as Array<Record<string, unknown>>)[0]!['count'])
-        } finally {
-          conn.release()
-        }
-      } else if (poolOpts.driver === 'sqlite') {
-        const result = await (pool as import('@libsql/client').Client).execute(`SELECT COUNT(*) AS count FROM ${JSON.stringify(table)}`)
-        count = Number(result.rows[0]?.[0] ?? 0)
+      if (poolOpts.driver === 'mongodb') {
+        count = await countMongoCollection(pool as MongoClient, mongoDatabaseOf(connectionId, poolOpts), table)
+      } else if (poolOpts.driver === 'redis') {
+        const { countRedisPattern } = await import('../lib/redis.js')
+        count = await countRedisPattern(pool as RedisConn, table)
+      } else if (poolOpts.driver === 'snowflake') {
+        const { countSnowflakeTable } = await import('../lib/snowflake.js')
+        count = await countSnowflakeTable(pool as SnowflakeClient, table, liveDatabaseOf(connectionId, poolOpts.database))
       } else if (poolOpts.driver === 'trino') {
         // `table` may be `schema.table` (see getTrinoSchema): quote each segment.
         const r = await runTrino(
           pool as Trino,
           `SELECT COUNT(*) AS c FROM ${quoteTrinoTable(table)}`,
-          parseTrinoTarget(trinoTargetOf(connectionId, poolOpts.database)),
+          parseTrinoTarget(liveDatabaseOf(connectionId, poolOpts.database)),
         )
         count = Number(r.data[0]?.[0] ?? 0)
       } else {
-        const conn = await (pool as OraclePool).getConnection()
-        try {
-          const result = await conn.execute(`SELECT COUNT(*) AS "count" FROM ${table}`, [], { outFormat: 4002 })
-          count = Number((result.rows as Record<string, unknown>[])[0]!['count'])
-        } finally {
-          await conn.close()
-        }
+        // The table name is quoted: it used to be interpolated raw, which both
+        // broke mixed-case names and let a crafted name bypass the guardrail.
+        const alias = poolOpts.driver === 'oracle' ? '"total"' : 'total'
+        const countFn = poolOpts.driver === 'mssql' ? 'COUNT_BIG(*)' : 'COUNT(*)'
+        const sql = `SELECT ${countFn} AS ${alias} FROM ${quoteTable(poolOpts.driver, table)}`
+        const result = await runStatement(poolOpts.driver, pool, sql, { limit: 1, offset: 0 })
+        count = Number(result.rows[0]?.['total'] ?? 0)
       }
       return c.json({ count })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Query failed'
-      return c.json(problem(502, message), 502)
+      return c.json(problem(502, errorMessage(err, 'Query failed')), 502)
     }
   }
 )
@@ -823,14 +379,18 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
     return c.json(problem(404, 'Connexion introuvable.'), 404)
   }
 
-  // Trino exposes no user-defined functions or procedures: never fall through to Oracle.
-  if (poolOpts.driver === 'trino') {
-    return c.json(problem(501, 'Introspection de fonctions non supportée par Trino.'), 501)
+  // No user-defined routines to introspect: never fall through to the Oracle branch.
+  if (!DRIVER_SUPPORT[poolOpts.driver].functions) {
+    return c.json(problem(501, `Introspection de fonctions non supportée par ${DRIVER_LABELS[poolOpts.driver]}.`), 501)
   }
 
-  const pool = await connectionManager.getPool(connectionId, poolOpts)
-
   try {
+    const pool = await connectionManager.getPool(connectionId, poolOpts)
+    if (poolOpts.driver === 'mssql') {
+      const { getMssqlRoutine } = await import('../lib/mssql.js')
+      const routine = await getMssqlRoutine(pool as MssqlPool, funcName)
+      return routine ? c.json({ function: routine }) : c.json(problem(404, 'Fonction introuvable.'), 404)
+    }
     if (poolOpts.driver === 'postgresql') {
       const pgPool = pool as PgPool
       const client = await pgPool.connect()
@@ -922,8 +482,7 @@ connectionsRouter.get('/:id/function/:name', async (c) => {
       }
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to get function'
-    return c.json(problem(502, message), 502)
+    return c.json(problem(502, errorMessage(err, 'Failed to get function')), 502)
   }
 })
 
@@ -942,9 +501,11 @@ connectionsRouter.get('/:id/databases', async (c) => {
     return c.json(problem(404, 'Connexion introuvable.'), 404)
   }
 
-  const pool = await connectionManager.getPool(connectionId, poolOpts)
+  // A SQLite file is a single database (it used to fall through to the Oracle branch).
+  if (poolOpts.driver === 'sqlite') return c.json({ databases: [] })
 
   try {
+    const pool = await connectionManager.getPool(connectionId, poolOpts)
     if (poolOpts.driver === 'postgresql') {
       const pgPool = pool as PgPool
       const client = await pgPool.connect()
@@ -968,10 +529,21 @@ connectionsRouter.get('/:id/databases', async (c) => {
       } finally {
         conn.release()
       }
+    } else if (poolOpts.driver === 'mongodb') {
+      return c.json({ databases: await listMongoDatabases(pool as MongoClient) })
+    } else if (poolOpts.driver === 'mssql') {
+      const { listMssqlDatabases } = await import('../lib/mssql.js')
+      return c.json({ databases: await listMssqlDatabases(pool as MssqlPool) })
+    } else if (poolOpts.driver === 'snowflake') {
+      const { listSnowflakeDatabases } = await import('../lib/snowflake.js')
+      return c.json({ databases: await listSnowflakeDatabases(pool as SnowflakeClient, liveDatabaseOf(connectionId, poolOpts.database)) })
+    } else if (poolOpts.driver === 'redis') {
+      const { listRedisDatabases, redisDatabaseIndex } = await import('../lib/redis.js')
+      return c.json({ databases: await listRedisDatabases(pool as RedisConn, redisDatabaseIndex(poolOpts.database)) })
     } else if (poolOpts.driver === 'trino') {
       // Returned values must be re-injectable into POST /:id/switch-database,
       // hence the `catalog/schema` shape once a catalog is known.
-      const { catalog } = parseTrinoTarget(trinoTargetOf(connectionId, poolOpts.database))
+      const { catalog } = parseTrinoTarget(liveDatabaseOf(connectionId, poolOpts.database))
       if (!catalog) {
         const r = await runTrino(pool as Trino, 'SHOW CATALOGS')
         return c.json({ databases: r.data.map((row) => String(row[0] ?? '')) })
@@ -1001,8 +573,7 @@ connectionsRouter.get('/:id/databases', async (c) => {
       }
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to list databases'
-    return c.json(problem(502, message), 502)
+    return c.json(problem(502, errorMessage(err, 'Failed to list databases')), 502)
   }
 })
 
@@ -1018,11 +589,17 @@ connectionsRouter.post(
     const connectionId = c.req.param('id')
     const { database } = c.req.valid('json')
 
-    // Release existing pool so it reconnects with the new DB
-    await connectionManager.release(connectionId)
+    // Access is checked BEFORE the pool is touched: releasing first let any
+    // authenticated user recycle the pool of a connection they cannot see.
+    let poolOpts
+    try {
+      poolOpts = await getPoolOptions(connectionId, userId)
+    } catch {
+      return c.json(problem(404, 'Connexion introuvable.'), 404)
+    }
 
-    // Re-create pool with the new database (runtime only, not persisted to connection config)
-    const poolOpts = await getPoolOptions(connectionId, userId)
+    // Re-create the pool with the new database (runtime only, not persisted to connection config)
+    await connectionManager.release(connectionId)
     await connectionManager.getPool(connectionId, { ...poolOpts, database })
 
     return c.json({ database })
@@ -1048,41 +625,37 @@ connectionsRouter.post(
       return c.json(problem(404, 'Connexion introuvable.'), 404)
     }
 
-    const pool = await connectionManager.getPool(connectionId, poolOpts)
+    if (!DRIVER_SUPPORT[poolOpts.driver].createDatabase) {
+      return c.json(problem(400, `Création de base non supportée par ${DRIVER_LABELS[poolOpts.driver]}.`), 400)
+    }
+    // Sanitize: only allow alphanumeric, underscore and hyphen
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+      return c.json(problem(400, 'Nom invalide. Utilisez uniquement des lettres, chiffres, _ ou -.'), 400)
+    }
 
     try {
+      const pool = await connectionManager.getPool(connectionId, poolOpts)
       if (poolOpts.driver === 'postgresql') {
         // CREATE DATABASE cannot run inside a transaction — use a direct client
-        const pgPool = pool as PgPool
-        const client = await pgPool.connect()
+        const client = await (pool as PgPool).connect()
         try {
-          // Sanitize: only allow alphanumeric, underscore and hyphen
-          if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-            return c.json(problem(400, 'Nom invalide. Utilisez uniquement des lettres, chiffres, _ ou -.'), 400)
-          }
-          await client.query(`CREATE DATABASE "${name}"`)
+          await client.query(`CREATE DATABASE ${quoteIdent('postgresql', name)}`)
         } finally {
           client.release()
         }
-      } else if (poolOpts.driver === 'mysql') {
-        if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-          return c.json(problem(400, 'Nom invalide. Utilisez uniquement des lettres, chiffres, _ ou -.'), 400)
-        }
-        const mysqlPool = pool as MySQLPool
-        const conn = await mysqlPool.getConnection()
+      } else if (poolOpts.driver === 'mssql') {
+        await (pool as MssqlPool).request().query(`CREATE DATABASE ${quoteIdent('mssql', name)}`)
+      } else {
+        const conn = await (pool as MySQLPool).getConnection()
         try {
-          await conn.query(`CREATE DATABASE \`${name}\``)
+          await conn.query(`CREATE DATABASE ${quoteIdent('mysql', name)}`)
         } finally {
           conn.release()
         }
-      } else {
-        return c.json(problem(400, 'Création de base non supportée pour ce driver.'), 400)
       }
-
       return c.json({ name }, 201)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create database'
-      return c.json(problem(502, message), 502)
+      return c.json(problem(502, errorMessage(err, 'Failed to create database')), 502)
     }
   }
 )
@@ -1093,6 +666,9 @@ connectionsRouter.post(
 
 connectionsRouter.get('/:id/shares', async (c) => {
   const connectionId = c.req.param('id')
+  if (!(await canManageConnection(connectionId, c.get('userId'), c.get('userRole')))) {
+    return c.json(problem(404, 'Connexion introuvable.'), 404)
+  }
 
   const groupRows = await db
     .select({ id: groups.id, name: groups.name, color: groups.color })
@@ -1119,24 +695,31 @@ connectionsRouter.put(
   async (c) => {
     const connectionId = c.req.param('id')
     const { groupIds, userIds } = c.req.valid('json')
-
-    // Replace all groups
-    await db.delete(connectionGroups).where(eq(connectionGroups.connectionId, connectionId))
-    for (const groupId of groupIds) {
-      await db.insert(connectionGroups).values({ connectionId, groupId }).onConflictDoNothing()
+    // Only the owner (or an admin) may change who can use the stored credentials.
+    if (!(await canManageConnection(connectionId, c.get('userId'), c.get('userRole')))) {
+      return c.json(problem(404, 'Connexion introuvable.'), 404)
     }
 
-    // Replace all shared users
-    await db.delete(connectionUsers).where(eq(connectionUsers.connectionId, connectionId))
-    for (const userId of userIds) {
-      await db.insert(connectionUsers).values({ connectionId, userId }).onConflictDoNothing()
-    }
+    await db.transaction(async (tx) => {
+      // Replace all groups
+      await tx.delete(connectionGroups).where(eq(connectionGroups.connectionId, connectionId))
+      for (const groupId of groupIds) {
+        await tx.insert(connectionGroups).values({ connectionId, groupId }).onConflictDoNothing()
+      }
+
+      // Replace all shared users
+      await tx.delete(connectionUsers).where(eq(connectionUsers.connectionId, connectionId))
+      for (const userId of userIds) {
+        await tx.insert(connectionUsers).values({ connectionId, userId }).onConflictDoNothing()
+      }
+    })
 
     return c.json({ groupIds, userIds })
   },
 )
 
-async function getDbStats(pool: PgPool | MySQLPool | OraclePool | LibSQLClient | Trino, driver: string) {
+async function getDbStats(connectionId: string, poolOpts: PoolOptions, pool: DbPool) {
+  const driver = poolOpts.driver
   if (driver === 'sqlite') {
     const client = pool as LibSQLClient
     const r = await client.execute('SELECT sqlite_version() AS v')
@@ -1146,6 +729,21 @@ async function getDbStats(pool: PgPool | MySQLPool | OraclePool | LibSQLClient |
     // Trino has no catalog-level size metric.
     const r = await runTrino(pool as Trino, 'SELECT version()')
     return { version: `Trino ${String(r.data[0]?.[0] ?? '')}`, encoding: 'UTF-8', timezone: null, sizePretty: null, sizeBytes: null }
+  }
+  if (driver === 'mongodb') {
+    return getMongoStats(pool as MongoClient, mongoDatabaseOf(connectionId, poolOpts))
+  }
+  if (driver === 'mssql') {
+    const { getMssqlStats } = await import('../lib/mssql.js')
+    return getMssqlStats(pool as MssqlPool)
+  }
+  if (driver === 'snowflake') {
+    const { getSnowflakeStats } = await import('../lib/snowflake.js')
+    return getSnowflakeStats(pool as SnowflakeClient)
+  }
+  if (driver === 'redis') {
+    const { getRedisStats } = await import('../lib/redis.js')
+    return getRedisStats(pool as RedisConn)
   }
   let version: string | null = null
   let encoding: string | null = null
@@ -1187,11 +785,7 @@ async function getDbStats(pool: PgPool | MySQLPool | OraclePool | LibSQLClient |
         WHERE table_schema = DATABASE()
       `) as [Record<string,unknown>[], unknown]
       sizeBytes = Number((srow as Record<string,unknown>)?.sb) || null
-      if (sizeBytes) sizePretty = sizeBytes > 1_073_741_824
-        ? `${(sizeBytes / 1_073_741_824).toFixed(1)} GB`
-        : sizeBytes > 1_048_576
-        ? `${(sizeBytes / 1_048_576).toFixed(1)} MB`
-        : `${Math.round(sizeBytes / 1024)} KB`
+      if (sizeBytes) sizePretty = formatBytes(sizeBytes)
     } finally { conn.release() }
   } else {
     // Oracle: best-effort, many views need DBA grants
@@ -1203,16 +797,9 @@ async function getDbStats(pool: PgPool | MySQLPool | OraclePool | LibSQLClient |
         version = (r1.rows?.[0] as [string])?.[0] ?? null
       } catch { /* v$version may need DBA */ }
       try {
-        const conn2 = await oracle.getConnection()
-        try {
-          const r2 = await conn2.execute<[number]>('SELECT SUM(bytes) FROM user_segments', [], { outFormat: 4001 })
-          sizeBytes = Number((r2.rows?.[0] as [number])?.[0]) || null
-          if (sizeBytes) sizePretty = sizeBytes > 1_073_741_824
-            ? `${(sizeBytes / 1_073_741_824).toFixed(1)} GB`
-            : sizeBytes > 1_048_576
-            ? `${(sizeBytes / 1_048_576).toFixed(1)} MB`
-            : `${Math.round(sizeBytes / 1024)} KB`
-        } finally { await conn2.close() }
+        const r2 = await conn.execute<[number]>('SELECT SUM(bytes) FROM user_segments', [], { outFormat: 4001 })
+        sizeBytes = Number((r2.rows?.[0] as [number])?.[0]) || null
+        if (sizeBytes) sizePretty = formatBytes(sizeBytes)
       } catch { /* segments may not be accessible */ }
     } finally { try { await conn.close() } catch { /* ignore */ } }
   }
@@ -1231,14 +818,11 @@ connectionsRouter.get('/:id/stats', async (c) => {
     return c.json(problem(404, 'Connexion introuvable.'), 404)
   }
 
-  const pool = await connectionManager.getPool(connectionId, poolOpts)
-
   try {
-    const stats = await getDbStats(pool, poolOpts.driver)
-    return c.json(stats)
+    const pool = await connectionManager.getPool(connectionId, poolOpts)
+    return c.json(await getDbStats(connectionId, poolOpts, pool))
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Stats unavailable'
-    return c.json(problem(502, message), 502)
+    return c.json(problem(502, errorMessage(err, 'Stats unavailable')), 502)
   }
 })
 
@@ -1266,31 +850,52 @@ connectionsRouter.post(
       return c.json(problem(404, 'Connection not found.'), 404)
     }
 
-    const pool = await connectionManager.getPool(connectionId, poolOpts)
-
     try {
+      const pool = await connectionManager.getPool(connectionId, poolOpts)
       const parts: string[] = []
+      const driver = poolOpts.driver
       for (const table of tables) {
-        parts.push(await dumpTable(pool, poolOpts.driver, table, includeData))
+        if (driver === 'mongodb') {
+          parts.push(await dumpMongoCollection(pool as MongoClient, mongoDatabaseOf(connectionId, poolOpts), table, includeData))
+        } else if (driver === 'redis') {
+          const { dumpRedisPattern } = await import('../lib/redis.js')
+          parts.push(await dumpRedisPattern(pool as RedisConn, table, includeData))
+        } else {
+          parts.push(await dumpTable(pool, driver, table, includeData, liveDatabaseOf(connectionId, poolOpts.database)))
+        }
       }
-      const sql = parts.join('\n\n')
-      c.header('Content-Type', 'text/sql; charset=utf-8')
-      c.header('Content-Disposition', `attachment; filename="dump.sql"`)
-      return c.text(sql)
+      // mongosh script, redis-cli commands, or SQL.
+      const [type, file] = driver === 'mongodb'
+        ? ['text/javascript', 'dump.js']
+        : driver === 'redis' ? ['text/plain', 'dump.redis'] : ['text/sql', 'dump.sql']
+      c.header('Content-Type', `${type}; charset=utf-8`)
+      c.header('Content-Disposition', `attachment; filename="${file}"`)
+      return c.text(parts.join('\n\n'))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Dump failed'
-      return c.json(problem(502, message), 502)
+      return c.json(problem(502, errorMessage(err, 'Dump failed')), 502)
     }
   },
 )
 
+/** A table name inside a `--` comment: a newline would let it escape the comment. */
+function commentSafe(name: string): string {
+  return name.replace(/[\r\n]+/g, ' ')
+}
+
 async function dumpTable(
-  pool: PgPool | MySQLPool | OraclePool | LibSQLClient | Trino,
-  driver: string,
+  pool: DbPool,
+  driver: SqlDriver,
   table: string,
   includeData: boolean,
+  target: string | null,
 ): Promise<string> {
-  if (driver === 'sqlite') {
+  if (driver === 'mssql') {
+    const { dumpMssqlTable } = await import('../lib/mssql.js')
+    return dumpMssqlTable(pool as MssqlPool, table, includeData)
+  } else if (driver === 'snowflake') {
+    const { dumpSnowflakeTable } = await import('../lib/snowflake.js')
+    return dumpSnowflakeTable(pool as SnowflakeClient, table, includeData, target)
+  } else if (driver === 'sqlite') {
     return dumpSQLite(pool as LibSQLClient, table, includeData)
   } else if (driver === 'mysql') {
     return dumpMySQL(pool as MySQLPool, table, includeData)
@@ -1305,24 +910,21 @@ async function dumpTable(
 
 async function dumpSQLite(client: LibSQLClient, table: string, includeData: boolean): Promise<string> {
   const parts: string[] = []
+  const q = (name: string) => quoteIdent('sqlite', name)
   // Get CREATE TABLE statement from sqlite_master
-  const ddlResult = await client.execute(
-    `SELECT sql FROM sqlite_master WHERE type='table' AND name=${JSON.stringify(table)}`
-  )
+  const ddlResult = await client.execute({
+    sql: `SELECT sql FROM sqlite_master WHERE type='table' AND name = ?`,
+    args: [table],
+  })
   const ddl = String(ddlResult.rows[0]?.[0] ?? '')
   if (ddl) parts.push(`${ddl};`)
   if (includeData) {
-    const rows = await client.execute(`SELECT * FROM ${JSON.stringify(table)}`)
+    const rows = await client.execute(`SELECT * FROM ${q(table)}`)
     if (rows.rows.length > 0) {
-      const colNames = rows.columns.map((name) => `"${name}"`).join(', ')
+      const colNames = rows.columns.map(q).join(', ')
       const inserts = rows.rows.map((row) => {
-        const vals = rows.columns.map((_name, i) => {
-          const v = row[i]
-          if (v === null) return 'NULL'
-          if (typeof v === 'number' || typeof v === 'bigint') return String(v)
-          return `'${String(v).replace(/'/g, "''")}'`
-        }).join(', ')
-        return `INSERT INTO "${table}" (${colNames}) VALUES (${vals});`
+        const vals = rows.columns.map((_name, i) => escapeValue(row[i], 'sqlite')).join(', ')
+        return `INSERT INTO ${q(table)} (${colNames}) VALUES (${vals});`
       })
       parts.push(inserts.join('\n'))
     }
@@ -1331,21 +933,22 @@ async function dumpSQLite(client: LibSQLClient, table: string, includeData: bool
 }
 
 async function dumpMySQL(pool: MySQLPool, table: string, includeData: boolean): Promise<string> {
+  const q = (name: string) => quoteIdent('mysql', name)
   const conn = await pool.getConnection()
   try {
-    const [ddlRows] = await conn.query(`SHOW CREATE TABLE \`${table}\``)
+    const [ddlRows] = await conn.query(`SHOW CREATE TABLE ${q(table)}`)
     const ddl = (ddlRows as Record<string, string>[])[0]?.['Create Table'] ?? ''
-    let result = `-- Table: ${table}\n${ddl};\n`
+    let result = `-- Table: ${commentSafe(table)}\n${ddl};\n`
 
     if (includeData) {
-      const [rows] = await conn.query(`SELECT * FROM \`${table}\``)
+      const [rows] = await conn.query(`SELECT * FROM ${q(table)}`)
       const data = rows as Record<string, unknown>[]
       if (data.length > 0) {
         const cols = Object.keys(data[0]!)
-        const colList = cols.map((c) => `\`${c}\``).join(', ')
+        const colList = cols.map(q).join(', ')
         for (const row of data) {
-          const vals = cols.map((c) => escapeValue(row[c])).join(', ')
-          result += `INSERT INTO \`${table}\` (${colList}) VALUES (${vals});\n`
+          const vals = cols.map((c) => escapeValue(row[c], 'mysql')).join(', ')
+          result += `INSERT INTO ${q(table)} (${colList}) VALUES (${vals});\n`
         }
       }
     }
@@ -1356,44 +959,50 @@ async function dumpMySQL(pool: MySQLPool, table: string, includeData: boolean): 
 }
 
 async function dumpPg(pool: PgPool, table: string, includeData: boolean): Promise<string> {
+  const q = (name: string) => quoteIdent('postgresql', name)
   const client = await pool.connect()
   try {
-    // Build CREATE TABLE from information_schema
+    // Build CREATE TABLE from information_schema — `public` only, like the schema
+    // browser: a same-named table in another schema must not add its columns.
     const colRes = await client.query(
       `SELECT column_name, data_type, is_nullable, column_default, character_maximum_length
-       FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
+       FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = $1
+       ORDER BY ordinal_position`,
       [table],
     )
     const pkRes = await client.query(
       `SELECT kcu.column_name
        FROM information_schema.table_constraints tc
-       JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-       WHERE tc.table_name = $1 AND tc.constraint_type = 'PRIMARY KEY'`,
+       JOIN information_schema.key_column_usage kcu
+         ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+       WHERE tc.table_schema = 'public' AND tc.table_name = $1 AND tc.constraint_type = 'PRIMARY KEY'
+       ORDER BY kcu.ordinal_position`,
       [table],
     )
-    const pkCols = new Set(pkRes.rows.map((r: Record<string, string>) => r.column_name))
+    const pkCols = new Set(pkRes.rows.map((r: Record<string, unknown>) => String(r.column_name)))
 
     const colDefs = colRes.rows.map((r: Record<string, unknown>) => {
-      let def = `  "${r.column_name}" ${r.data_type}`
+      let def = `  ${q(String(r.column_name))} ${r.data_type}`
       if (r.character_maximum_length) def += `(${r.character_maximum_length})`
       if (r.column_default) def += ` DEFAULT ${r.column_default}`
       if (r.is_nullable === 'NO') def += ' NOT NULL'
       return def
     })
     if (pkCols.size > 0) {
-      colDefs.push(`  PRIMARY KEY (${[...pkCols].map((c) => `"${c}"`).join(', ')})`)
+      colDefs.push(`  PRIMARY KEY (${[...pkCols].map(q).join(', ')})`)
     }
 
-    let result = `-- Table: ${table}\nCREATE TABLE "${table}" (\n${colDefs.join(',\n')}\n);\n`
+    let result = `-- Table: ${commentSafe(table)}\nCREATE TABLE ${q(table)} (\n${colDefs.join(',\n')}\n);\n`
 
     if (includeData) {
-      const dataRes = await client.query(`SELECT * FROM "${table}"`)
+      const dataRes = await client.query(`SELECT * FROM ${q(table)}`)
       if (dataRes.rows.length > 0) {
         const cols = dataRes.fields.map((f) => f.name)
-        const colList = cols.map((c) => `"${c}"`).join(', ')
+        const colList = cols.map(q).join(', ')
         for (const row of dataRes.rows as Record<string, unknown>[]) {
-          const vals = cols.map((c) => escapeValue(row[c])).join(', ')
-          result += `INSERT INTO "${table}" (${colList}) VALUES (${vals});\n`
+          const vals = cols.map((c) => escapeValue(row[c], 'postgresql')).join(', ')
+          result += `INSERT INTO ${q(table)} (${colList}) VALUES (${vals});\n`
         }
       }
     }
@@ -1404,6 +1013,7 @@ async function dumpPg(pool: PgPool, table: string, includeData: boolean): Promis
 }
 
 async function dumpOracle(pool: OraclePool, table: string, includeData: boolean): Promise<string> {
+  const q = (name: string) => quoteIdent('oracle', name)
   const conn = await pool.getConnection()
   try {
     const ddlRes = await conn.execute<[string]>(
@@ -1411,17 +1021,17 @@ async function dumpOracle(pool: OraclePool, table: string, includeData: boolean)
       [table],
     )
     const ddl = ddlRes.rows?.[0]?.[0] ?? ''
-    let result = `-- Table: ${table}\n${ddl};\n`
+    let result = `-- Table: ${commentSafe(table)}\n${ddl};\n`
 
     if (includeData) {
-      const dataRes = await conn.execute(`SELECT * FROM "${table}"`, [], { outFormat: 4002 })
+      const dataRes = await conn.execute(`SELECT * FROM ${q(table)}`, [], { outFormat: 4002 })
       const rows = (dataRes.rows ?? []) as Record<string, unknown>[]
       if (rows.length > 0) {
         const cols = (dataRes.metaData ?? []).map((m) => m.name)
-        const colList = cols.map((c) => `"${c}"`).join(', ')
+        const colList = cols.map(q).join(', ')
         for (const row of rows) {
-          const vals = cols.map((c) => escapeValue(row[c])).join(', ')
-          result += `INSERT INTO "${table}" (${colList}) VALUES (${vals});\n`
+          const vals = cols.map((c) => escapeValue(row[c], 'oracle')).join(', ')
+          result += `INSERT INTO ${q(table)} (${colList}) VALUES (${vals});\n`
         }
       }
     }
@@ -1442,7 +1052,7 @@ const TRINO_DUMP_MAX_ROWS = 100_000
 
 async function dumpTrino(client: Trino, table: string, includeData: boolean): Promise<string> {
   const ident = quoteTrinoTable(table)
-  const parts: string[] = [`-- Table: ${table}`]
+  const parts: string[] = [`-- Table: ${commentSafe(table)}`]
   const ddl = await runTrino(client, `SHOW CREATE TABLE ${ident}`)
   parts.push(`${String(ddl.data[0]?.[0] ?? '')};`)
   if (includeData) {
@@ -1453,7 +1063,7 @@ async function dumpTrino(client: Trino, table: string, includeData: boolean): Pr
     })
     const cols = rows.columns.map((col) => quoteTrinoIdent(col.name)).join(', ')
     for (const row of rows.data) {
-      parts.push(`INSERT INTO ${ident} (${cols}) VALUES (${row.map(escapeValue).join(', ')});`)
+      parts.push(`INSERT INTO ${ident} (${cols}) VALUES (${row.map((v) => escapeValue(v, 'trino')).join(', ')});`)
     }
     if (rows.truncated) {
       parts.push(`-- data truncated at ${TRINO_DUMP_MAX_ROWS} rows`)
@@ -1462,18 +1072,22 @@ async function dumpTrino(client: Trino, table: string, includeData: boolean): Pr
   return parts.join('\n')
 }
 
-function escapeValue(v: unknown): string {
+function escapeValue(v: unknown, driver: SqlDriver): string {
   if (v === null || v === undefined) return 'NULL'
   if (typeof v === 'number' || typeof v === 'bigint') return String(v)
   if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'
-  if (v instanceof Date) return `'${v.toISOString()}'`
+  // MySQL treats a backslash inside a literal as an escape character: a value
+  // ending in `\` would otherwise swallow the closing quote on restore.
+  const literal = (s: string) =>
+    `'${(driver === 'mysql' ? s.replace(/\\/g, '\\\\') : s).replace(/'/g, "''")}'`
+  if (v instanceof Date) return literal(v.toISOString())
   // Binary columns (pg `bytea`, mysql BLOB/BINARY, oracle RAW, sqlite BLOB) reach
   // this function as Buffers. They must keep their historical text rendering —
   // the object branch below would emit `{"type":"Buffer","data":[...]}`.
-  if (v instanceof Uint8Array) return `'${Buffer.from(v).toString().replace(/'/g, "''")}'`
+  if (v instanceof Uint8Array) return literal(Buffer.from(v).toString())
   // Trino ARRAY/MAP/ROW/JSON values arrive as objects — String(v) would yield "[object Object]".
-  if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'`
-  return `'${String(v).replace(/'/g, "''")}'`
+  if (typeof v === 'object') return literal(JSON.stringify(v))
+  return literal(String(v))
 }
 
 export { connectionsRouter }

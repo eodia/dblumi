@@ -3,6 +3,8 @@ import { useThemeStore } from '@/stores/theme.store'
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
 import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { dropStatement } from '@/lib/query-dialect'
+import { runStatement } from '@/lib/run-statement'
 import {
   DndContext,
   PointerSensor,
@@ -116,7 +118,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable'
-import { connectionsApi, type Connection, type SchemaTable, type SchemaFunction } from '@/api/connections'
+import { connectionsApi, type Connection, type DbDriver, type SchemaTable, type SchemaFunction } from '@/api/connections'
 import { savedQueriesApi } from '@/api/saved-queries'
 import { useAuthStore } from '@/stores/auth.store'
 import { useEditorStore } from '@/stores/editor.store'
@@ -143,6 +145,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { driverCaps } from '@/lib/drivers'
 import { useI18n } from '@/i18n'
 import { useDynamicHead } from '@/hooks/use-dynamic-head'
 
@@ -174,18 +177,22 @@ function EnvBadge({ env }: { env: string }) {
 
 // ── Schema tree (shown inline in sidebar when Tables is selected) ───────
 function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; onImport: () => void; onSync: () => void }) {
-  const { openTable, openFunction, activeConnectionId, executeQuery, setSql, setPendingCsvImport } = useEditorStore()
+  const { openTable, openFunction, activeConnectionId, setPendingCsvImport } = useEditorStore()
   const { isMobile, setOpenMobile } = useSidebar()
   const { t } = useI18n()
   const { data: connListData } = useQuery({ queryKey: ['connections'], queryFn: connectionsApi.list, staleTime: 5 * 60 * 1000 })
   const isProd = connListData?.connections.find((c) => c.id === connectionId)?.environment?.toLowerCase() === 'prod'
   const activeDriver = connListData?.connections.find((c) => c.id === connectionId)?.driver
-  // TableStructureEditor only emits PostgreSQL/MySQL DDL (see the cast on the Sheet below).
-  // Hide every structure-editing entry point for Trino rather than generating wrong DDL.
-  const supportsStructureEditor = activeDriver !== 'trino'
-  // The API refuses data import and sync for Trino (400): don't offer a wizard
-  // that can only fail on its last step.
-  const supportsDataTransfer = activeDriver !== 'trino'
+  // Entry points the driver cannot honour are hidden (see DRIVER_CAPS): the
+  // structure editor only emits PostgreSQL/MySQL/Oracle/SQLite DDL, and the API
+  // refuses the import wizard or sync for some drivers (400) — don't offer a
+  // wizard that can only fail on its last step.
+  const caps = driverCaps(activeDriver)
+  const supportsStructureEditor = caps.structureEditor
+  const supportsCsvImport = caps.csvImport
+  const supportsImport = caps.importWizard
+  const supportsSync = caps.sync
+  const supportsDrop = caps.drop
   const qcSchema = useQueryClient()
   const [tableSearch, setTableSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -203,15 +210,18 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
   const handleDump = useCallback(async (tables: string[], includeData: boolean) => {
     try {
       const sql = await connectionsApi.dump(connectionId, tables, includeData)
-      const blob = new Blob([sql], { type: 'text/sql' })
+      // mongosh script, redis-cli commands, or SQL.
+      const ext = activeDriver === 'mongodb' ? 'js' : activeDriver === 'redis' ? 'redis' : 'sql'
+      const blob = new Blob([sql], { type: ext === 'js' ? 'text/javascript' : ext === 'redis' ? 'text/plain' : 'text/sql' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = tables.length === 1 ? `${tables[0]}.sql` : 'dump.sql'
+      // A Redis pattern (user:*) is not a valid file name.
+      a.download = tables.length === 1 ? `${tables[0]!.replace(/[:*?]/g, '_')}.${ext}` : `dump.${ext}`
       a.click()
       URL.revokeObjectURL(url)
     } catch { /* toast could go here */ }
-  }, [connectionId])
+  }, [connectionId, activeDriver])
 
   const lc = tableSearch.toLowerCase()
   const tables: SchemaTable[] | undefined = data?.tables.filter(
@@ -293,12 +303,10 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
 
           const handleDrop = async () => {
             if (!dropTarget) return
-            const typeMap: Record<string, string> = { table: 'TABLE', view: 'VIEW', function: 'FUNCTION', procedure: 'PROCEDURE' }
-            const keyword = typeMap[dropTarget.type] ?? 'TABLE'
-            setSql(`DROP ${keyword} ${dropTarget.name}`)
-            await executeQuery(true)
-            setSql('')
-            qcSchema.invalidateQueries({ queryKey: ['schema', connectionId] })
+            // Run aside: going through the active tab overwrote (and, on a
+            // collaborative tab, broadcast) the user's unsaved query.
+            const failed = await runStatement(connectionId, dropStatement(activeDriver, dropTarget.type, dropTarget.name))
+            if (!failed) qcSchema.invalidateQueries({ queryKey: ['schema', connectionId] })
             setDropTarget(null)
           }
 
@@ -353,16 +361,18 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                         {t('table.modifyStructure')}
                       </ContextMenuItem>
                     </>)}
-                    {supportsDataTransfer && (<>
+                    {supportsCsvImport && (<>
                       <ContextMenuSeparator />
                       <ContextMenuItem className="gap-2 text-xs" onClick={() => { void openTable(item.name); setPendingCsvImport(item.name) }}>
                         <Upload className="h-3.5 w-3.5" />
                         {t('table.importCsv')}
                       </ContextMenuItem>
-                      <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
-                        <FileUp className="h-3.5 w-3.5" />
-                        {t('import.title')}
-                      </ContextMenuItem>
+                      {supportsImport && (
+                        <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
+                          <FileUp className="h-3.5 w-3.5" />
+                          {t('import.title')}
+                        </ContextMenuItem>
+                      )}
                     </>)}
                   </>)}
                   <ContextMenuSeparator />
@@ -380,12 +390,14 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                       </ContextMenuItem>
                     </ContextMenuSubContent>
                   </ContextMenuSub>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive"
-                    onClick={() => setDropTarget({ name: item.name, type: isView ? 'view' : 'table' })}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {t('common.delete')}
-                  </ContextMenuItem>
+                  {supportsDrop && (<>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem className="gap-2 text-xs text-destructive focus:text-destructive"
+                      onClick={() => setDropTarget({ name: item.name, type: isView ? 'view' : 'table' })}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {t('common.delete')}
+                    </ContextMenuItem>
+                  </>)}
                 </ContextMenuContent>
               </ContextMenu>
             )
@@ -430,11 +442,13 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                       {t('table.newTable')}
                     </ContextMenuItem>
                   )}
-                  {supportsDataTransfer && (<>
+                  {supportsImport && (
                     <ContextMenuItem className="gap-2 text-xs" onClick={onImport}>
                       <FileUp className="h-3.5 w-3.5" />
                       {t('import.title')}
                     </ContextMenuItem>
+                  )}
+                  {supportsSync && (<>
                     <ContextMenuSeparator />
                     <ContextMenuItem className="gap-2 text-xs" onClick={onSync}>
                       <ArrowLeftRight className="h-3.5 w-3.5" />
@@ -442,8 +456,8 @@ function SchemaNav({ connectionId, onImport, onSync }: { connectionId: string; o
                     </ContextMenuItem>
                   </>)}
                   {onlyTables.length > 0 && (<>
-                    {/* Both blocks above are hidden on Trino: no leading separator. */}
-                    {(supportsStructureEditor || supportsDataTransfer) && <ContextMenuSeparator />}
+                    {/* Every block above is hidden on Trino: no leading separator. */}
+                    {(supportsStructureEditor || supportsImport) && <ContextMenuSeparator />}
                     <ContextMenuSub>
                       <ContextMenuSubTrigger className="gap-2 text-xs">
                         <Download className="h-3.5 w-3.5" />
@@ -988,9 +1002,9 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
     if (activeTab?.kind === 'function') {
       // Function → execute CREATE OR REPLACE to update in DB
       if (!activeConnectionId || !activeTab.sql.trim()) return
-      useEditorStore.getState().executeSql(activeTab.sql).then(() => {
+      useEditorStore.getState().executeSql(activeTab.sql, { split: false }).then((ok) => {
         qcRef.current.invalidateQueries({ queryKey: ['schema', activeConnectionId] })
-        toast.success(t('sq.saved'))
+        if (ok) toast.success(t('sq.saved'))
       })
       return
     }
@@ -1013,9 +1027,9 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
     if (tab.kind === 'function') {
       const connId = tab.connectionId ?? activeConnectionId
       if (!connId || !tab.sql.trim()) return
-      await useEditorStore.getState().executeSql(tab.sql)
+      const ok = await useEditorStore.getState().executeSql(tab.sql, { split: false })
       qcRef.current.invalidateQueries({ queryKey: ['schema', connId] })
-      toast.success(t('sq.saved'))
+      if (ok) toast.success(t('sq.saved'))
       return
     }
 
@@ -1139,8 +1153,9 @@ function UnifiedEditorArea({ onSaveNew, onSaveAs }: { onSaveNew: () => void; onS
 // ── Database switcher (shown below connection selector) ──────────────────
 function DatabaseSwitcher({ connectionId, driver }: { connectionId: string; driver?: string | undefined }) {
   const { t } = useI18n()
-  // Trino exposes catalogs, not databases: there is no CREATE DATABASE at catalog level.
-  const supportsCreateDatabase = driver !== 'trino'
+  // The API creates databases on PostgreSQL, MySQL and SQL Server only (Trino exposes
+  // catalogs, MongoDB creates a database on first write, Oracle/SQLite have no such notion).
+  const supportsCreateDatabase = driverCaps(driver as DbDriver | undefined).createDatabase
   const qc = useQueryClient()
   const [selectedDb, setSelectedDb] = useState<string>('')
   const [dbSearch, setDbSearch] = useState('')
@@ -1292,7 +1307,12 @@ function AppShellInner({
   setConnModalOpen: (v: boolean) => void
 }) {
   const { user, logout: rawLogout } = useAuthStore()
-  const { activeConnectionId, setActiveConnection } = useEditorStore()
+  const { activeConnectionId, setActiveConnection, setConnectionDrivers } = useEditorStore()
+  // The editor store builds table queries, splits statements and writes grid
+  // edits in the connection's own language: it needs every connection's driver.
+  useEffect(() => {
+    setConnectionDrivers(Object.fromEntries(connections.map((c) => [c.id, c.driver])))
+  }, [connections, setConnectionDrivers])
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
   const { t, locale, setLocale } = useI18n()

@@ -50,6 +50,7 @@ import { useEditorStore } from '@/stores/editor.store'
 import { ConnectionModal } from '@/components/connections/ConnectionModal'
 import { ImportDialog } from '@/components/import/ImportDialog'
 import { cn } from '@/lib/utils'
+import { listTablesQuery, previewQuery } from '@/lib/query-dialect'
 
 type Props = { connections: Connection[] }
 
@@ -101,7 +102,7 @@ export function SchemaSidebar({ connections }: Props) {
   )
 
   const handleSelectAll = (tableName: string) => {
-    setSql(`SELECT * FROM ${tableName} LIMIT 100;`)
+    setSql(previewQuery(connections.find((c) => c.id === activeConnectionId)?.driver, tableName))
   }
 
   return (
@@ -186,7 +187,7 @@ export function SchemaSidebar({ connections }: Props) {
                   <ContextMenuItem
                     className="gap-2 text-xs"
                     onClick={() => {
-                      setSql(`SELECT * FROM information_schema.tables WHERE table_schema = 'public' LIMIT 50;`)
+                      setSql(listTablesQuery(conn.driver))
                       setActiveConnection(conn.id)
                     }}
                   >

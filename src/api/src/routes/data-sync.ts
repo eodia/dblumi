@@ -6,6 +6,7 @@ import { authMiddleware } from '../middleware/auth.js'
 import { getPoolOptions } from '../services/connection.service.js'
 import { connectionManager } from '../lib/connection-manager.js'
 import { executeSync } from '../services/data-sync.service.js'
+import { DRIVER_LABELS, DRIVER_SUPPORT } from '../lib/drivers.js'
 import { logger } from '../logger.js'
 import type { AuthVariables } from '../middleware/auth.js'
 
@@ -45,28 +46,23 @@ dataSyncRouter.post(
 
     // Refuse before opening any pool: executeSync() silently falls back to its
     // Oracle branches for unknown drivers, on both the source and target sides.
-    const hasTrino = sourceOpts.driver === 'trino' || targetOpts.driver === 'trino'
-    const hasSqlite = sourceOpts.driver === 'sqlite' || targetOpts.driver === 'sqlite'
-    if (hasTrino || hasSqlite) {
-      return c.json(
-        {
-          type: 'error',
-          message: hasTrino
-            ? 'Synchronisation non supportée pour Trino.'
-            : 'Sync non supporté pour SQLite.',
-        },
-        400,
-      )
+    const refused = [sourceOpts.driver, targetOpts.driver].find((d) => !DRIVER_SUPPORT[d].sync)
+    if (refused) {
+      return c.json({ type: 'error', message: `Synchronisation non supportée pour ${DRIVER_LABELS[refused]}.` }, 400)
     }
-
-    const sourcePool = await connectionManager.getPool(sourceConnectionId, sourceOpts)
-    const targetPool = await connectionManager.getPool(targetConnectionId, targetOpts)
+    // Same connection on both sides: the target table is dropped before the
+    // source is read, so the data would simply be lost.
+    if (sourceConnectionId === targetConnectionId && tables.some((t) => t.source === t.target)) {
+      return c.json({ type: 'error', message: 'La source et la cible désignent la même table.' }, 400)
+    }
 
     return streamSSE(c, async (stream) => {
       const send = (event: string, data: unknown) =>
         stream.writeSSE({ event, data: JSON.stringify(data) })
 
       try {
+        const sourcePool = await connectionManager.getPool(sourceConnectionId, sourceOpts)
+        const targetPool = await connectionManager.getPool(targetConnectionId, targetOpts)
         await executeSync(
           sourcePool as Parameters<typeof executeSync>[0], sourceOpts.driver as Parameters<typeof executeSync>[1],
           targetPool as Parameters<typeof executeSync>[2], targetOpts.driver as Parameters<typeof executeSync>[3],

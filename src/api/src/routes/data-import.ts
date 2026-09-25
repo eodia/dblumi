@@ -5,7 +5,11 @@ import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth.js'
 import { getPoolOptions } from '../services/connection.service.js'
 import { connectionManager } from '../lib/connection-manager.js'
-import { executeImport } from '../services/data-import.service.js'
+import { executeImport, executeImportMongo } from '../services/data-import.service.js'
+import { liveDatabaseOf } from '../services/schema.service.js'
+import { mongoDatabaseName } from '../lib/mongo.js'
+import { DRIVER_LABELS, DRIVER_SUPPORT } from '../lib/drivers.js'
+import type { MongoClient } from 'mongodb'
 import { mapColumnsWithAI } from '../services/copilot.service.js'
 import { logger } from '../logger.js'
 import type { AuthVariables } from '../middleware/auth.js'
@@ -45,35 +49,35 @@ dataImportRouter.post(
     }
 
     // Refuse before opening any pool: executeImport() falls back to its Oracle
-    // branch for unknown drivers and TYPE_MAP has no entry for Trino.
-    if (poolOpts.driver === 'sqlite' || poolOpts.driver === 'trino') {
+    // branch for unknown drivers, and TYPE_MAP only covers the supported ones.
+    if (!DRIVER_SUPPORT[poolOpts.driver].importWizard) {
       return c.json(
-        {
-          type: 'error',
-          message:
-            poolOpts.driver === 'trino'
-              ? 'Import non supporté pour Trino.'
-              : 'Import non supporté pour SQLite.',
-        },
+        { type: 'error', message: `Import non supporté pour ${DRIVER_LABELS[poolOpts.driver]}.` },
         400,
       )
     }
-
-    const pool = await connectionManager.getPool(connectionId, poolOpts)
 
     return streamSSE(c, async (stream) => {
       const send = (event: string, data: unknown) =>
         stream.writeSSE({ event, data: JSON.stringify(data) })
 
       try {
-        await executeImport(
-          pool as Parameters<typeof executeImport>[0],
-          poolOpts.driver as Parameters<typeof executeImport>[1],
-          { tableName, createTable, ifExists, columns, rows },
-          async (progress) => {
-            await send('progress', progress)
-          },
-        )
+        const pool = await connectionManager.getPool(connectionId, poolOpts)
+        const request = { tableName, createTable, ifExists, columns, rows }
+        const onProgress = async (progress: Parameters<Parameters<typeof executeImport>[3]>[0]) => {
+          await send('progress', progress)
+        }
+        if (poolOpts.driver === 'mongodb') {
+          const database = mongoDatabaseName(liveDatabaseOf(connectionId, poolOpts.database))
+          await executeImportMongo(pool as MongoClient, database, request, onProgress)
+        } else {
+          await executeImport(
+            pool as Parameters<typeof executeImport>[0],
+            poolOpts.driver as Parameters<typeof executeImport>[1],
+            request,
+            onProgress,
+          )
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         logger.warn({ connectionId, tableName, err }, 'Data import error')

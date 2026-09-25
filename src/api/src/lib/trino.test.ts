@@ -144,10 +144,15 @@ describe('injectTrinoLimit', () => {
     expect(injectTrinoLimit('SELECT * FROM t LIMIT 500', 100)).toBe('SELECT * FROM t\nLIMIT 100')
   })
 
-  it('replaces an existing OFFSET clause instead of duplicating it', () => {
+  it('pages inside the user OFFSET instead of discarding it', () => {
+    // The user's result set starts at row 10: grid page 3 (offset 40) is row 50.
     const out = injectTrinoLimit('SELECT * FROM t OFFSET 10', 20, 40)
-    expect(out).toBe('SELECT * FROM t\nOFFSET 40\nLIMIT 20')
+    expect(out).toBe('SELECT * FROM t\nOFFSET 50\nLIMIT 20')
     expect(out).not.toContain('OFFSET 10')
+  })
+
+  it('never pages past the user LIMIT', () => {
+    expect(injectTrinoLimit('SELECT * FROM t LIMIT 150', 100, 100)).toBe('SELECT * FROM t\nOFFSET 100\nLIMIT 50')
   })
 
   it('keeps the user OFFSET when the grid asks for page 1', () => {

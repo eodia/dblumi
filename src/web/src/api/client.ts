@@ -43,17 +43,20 @@ export const api = {
 export async function* readSSE(
   path: string,
   body: unknown,
+  signal?: AbortSignal,
 ): AsyncGenerator<{ event: string; data: unknown }> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
     body: JSON.stringify(body),
     credentials: 'include',
+    ...(signal ? { signal } : {}),
   })
 
   // Non-2xx → yield a special __http event so caller can handle
   if (!res.ok) {
-    const data = await res.json()
+    // A proxy in front of the API may answer with an HTML error page.
+    const data = await res.json().catch(() => ({ message: `${res.status} ${res.statusText}` }))
     yield { event: '__http', data: { status: res.status, body: data } }
     return
   }

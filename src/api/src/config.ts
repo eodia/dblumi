@@ -3,8 +3,10 @@ import { z } from 'zod'
 const ConfigSchema = z.object({
   DBLUMI_ENCRYPTION_KEY: z
     .string()
-    .length(64, 'DBLUMI_ENCRYPTION_KEY must be 32 bytes (64 hex chars)'),
+    .regex(/^[0-9a-fA-F]{64}$/, 'DBLUMI_ENCRYPTION_KEY must be 32 bytes (64 hex chars)'),
   DATABASE_PATH: z.string().default('./data/dblumi.db'),
+  // When set, SQLite connections may only open files inside this directory.
+  SQLITE_ALLOWED_DIR: z.string().optional(),
   JWT_SECRET: z
     .string()
     .min(32, 'JWT_SECRET must be at least 32 characters'),

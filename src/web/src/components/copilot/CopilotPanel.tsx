@@ -73,18 +73,20 @@ function renderMarkdown(text: string): React.ReactNode {
 
 // ── Full message renderer with SQL syntax highlighting ──
 function MessageContent({ content, onInsertSql, t }: { content: string; onInsertSql: (sql: string) => void; t: (key: TranslationKey, replacements?: Record<string, string | number>) => string }) {
-  const parts = content.split(/(```sql[\s\S]*?```|```[\s\S]*?```)/g)
+  const parts = content.split(/(```[\s\S]*?```)/g)
 
   return (
     <div className="text-[13px] leading-relaxed space-y-2">
       {parts.map((part, i) => {
-        const sqlMatch = part.match(/^```sql\n?([\s\S]*?)```$/)
+        // SQL, a mongosh command (the MongoDB copilot answers in javascript blocks) or redis-cli commands.
+        const sqlMatch = part.match(/^```(sql|javascript|js|mongodb|mongo|redis)\n?([\s\S]*?)```$/)
         if (sqlMatch) {
-          const sql = sqlMatch[1]?.trim() ?? ''
+          const lang = sqlMatch[1] === 'sql' ? 'sql' : sqlMatch[1] === 'redis' ? 'redis-cli' : 'mongosh'
+          const sql = sqlMatch[2]?.trim() ?? ''
           return (
             <div key={i} className="relative group/sql rounded-md border border-border-subtle bg-background overflow-hidden">
               <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-subtle bg-surface">
-                <span className="text-[10px] font-mono text-text-muted uppercase tracking-wide">sql</span>
+                <span className="text-[10px] font-mono text-text-muted uppercase tracking-wide">{lang}</span>
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1" title={t('copilot.copySql')}
                     onClick={() => navigator.clipboard.writeText(sql)}>

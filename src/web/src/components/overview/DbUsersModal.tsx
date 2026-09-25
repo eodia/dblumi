@@ -10,6 +10,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import { dbUsersApi } from '@/api/db-users'
 import { connectionsApi } from '@/api/connections'
+import { driverCaps } from '@/lib/drivers'
 import type { DbUser } from '@/api/db-users'
 import { DbUserList } from './DbUserList'
 import { DbUserForm } from './DbUserForm'
@@ -33,8 +34,8 @@ export function DbUsersModal({ connectionId, open, onOpenChange }: Props) {
     staleTime: 5 * 60_000,
   })
   const driver = connList?.connections.find((c) => c.id === connectionId)?.driver ?? 'mysql'
-  // Trino has no database user catalog: the API answers 501 and the list/form would render empty.
-  const unsupported = driver === 'trino'
+  // No database user catalog for these drivers: the API answers 501 and the list/form would render empty.
+  const unsupported = !driverCaps(driver).dbUsers
 
   const { data, isLoading } = useQuery({
     queryKey: ['db-users', connectionId],

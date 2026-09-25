@@ -1,0 +1,6 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Redis: three stacked slabs (an in-memory key/value store), in the product's red. -->
+  <path d="M16 3.5 29 9 16 14.5 3 9z" fill="#ff4438"/>
+  <path d="M3 13 16 18.5 29 13v3.2L16 21.7 3 16.2z" fill="#dc382d"/>
+  <path d="M3 19.8 16 25.3 29 19.8V23L16 28.5 3 23z" fill="#a41e11"/>
+</svg>

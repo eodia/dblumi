@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { swaggerUI } from '@hono/swagger-ui'
+import { DB_DRIVERS } from '../lib/drivers.js'
 
 // ─── OpenAPI 3.0 spec ────────────────────────────────────────────────────────
 
@@ -64,41 +65,58 @@ const spec = {
         properties: {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
-          driver: { type: 'string', enum: ['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'] },
+          driver: { type: 'string', enum: [...DB_DRIVERS] },
           host: { type: 'string' },
           port: { type: 'integer' },
           database: { type: 'string' },
           username: { type: 'string' },
           ssl: { type: 'boolean' },
+          options: { type: 'object', additionalProperties: { type: 'string' }, nullable: true },
           color: { type: 'string', nullable: true },
           environment: { type: 'string', nullable: true },
         },
       },
       ConnectionInput: {
         type: 'object',
-        // host/port/username are required for server drivers only (not SQLite); password is optional for Trino.
+        // host/port/username are required for server drivers only (not SQLite); password is optional for Trino,
+        // MongoDB and Redis, username too for MongoDB and Redis; a MongoDB or Redis URI host and a Snowflake
+        // account carry no port.
         required: ['name', 'driver'],
         properties: {
           name: { type: 'string', minLength: 1, maxLength: 100 },
-          driver: { type: 'string', enum: ['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'] },
-          host: { type: 'string' },
+          driver: { type: 'string', enum: [...DB_DRIVERS] },
+          host: {
+            type: 'string',
+            description:
+              'Hostname. For MongoDB, also accepts a mongodb:// or mongodb+srv:// URI (Atlas, replica sets); for Redis, a redis:// or rediss:// URL; '
+              + 'credentials found in them are moved to username/password. For SQL Server, "server\\instance" targets a named instance. '
+              + 'For Snowflake: the account identifier ("myorg-myaccount") or its URL.',
+          },
           port: { type: 'integer', minimum: 1, maximum: 65535 },
           database: {
             type: 'string',
             default: '',
-            description: 'Database name. For Trino: target catalog ("hive") or catalog/schema ("hive/default").',
+            description:
+              'Database name. For Trino: target catalog ("hive") or catalog/schema ("hive/default"). For Snowflake: database or database/schema ("SALES/PUBLIC"). '
+              + 'For MongoDB: defaults to "test". For Redis: the database index ("0").',
           },
           username: {
             type: 'string',
             description:
-              'Required for every server driver (PostgreSQL, MySQL, Oracle, Trino). Unused for SQLite.',
+              'Required for PostgreSQL, MySQL, Oracle, SQL Server, Trino and Snowflake. Optional for MongoDB and Redis (server without authentication, or Redis "default" user). Unused for SQLite.',
           },
           password: {
             type: 'string',
             description:
-              'Required for PostgreSQL/MySQL/Oracle. Optional for Trino (omit or leave empty for a cluster without authentication). Unused for SQLite.',
+              'Required for PostgreSQL/MySQL/Oracle/SQL Server. Optional for Trino, MongoDB and Redis (omit or leave empty for a server without authentication). '
+              + 'For Snowflake: the password, or a PEM private key (key-pair authentication). Unused for SQLite.',
           },
           ssl: { type: 'boolean', default: false },
+          options: {
+            type: 'object',
+            additionalProperties: { type: 'string', maxLength: 256 },
+            description: 'Driver-specific, non-secret settings. Snowflake: "warehouse" and "role".',
+          },
           color: { type: 'string' },
           environment: { type: 'string', maxLength: 50 },
         },
@@ -366,8 +384,9 @@ const spec = {
     '/api/v1/query': {
       post: {
         tags: ['Query'],
-        summary: 'Execute a SQL query',
+        summary: 'Execute a SQL query (or a mongosh command on MongoDB)',
         description:
+          'On MongoDB connections, `sql` holds one mongosh command, e.g. `db.users.find({ age: { $gt: 30 } }).sort({ name: 1 })`.\n\n' +
           'Returns a **Server-Sent Events** stream. Events:\n' +
           '- `columns` — column list\n' +
           '- `rows` — batch of rows\n' +
@@ -387,6 +406,19 @@ const spec = {
                   limit: { type: 'integer', minimum: 1, maximum: 10000, default: 1000 },
                   offset: { type: 'integer', minimum: 0, default: 0 },
                   force: { type: 'boolean', default: false, description: 'Bypass guardrail after user confirmation' },
+                  sort: {
+                    type: 'array',
+                    maxItems: 16,
+                    description: 'Grid sort, applied server-side on top of the statement.',
+                    items: {
+                      type: 'object',
+                      required: ['column', 'direction'],
+                      properties: {
+                        column: { type: 'string' },
+                        direction: { type: 'string', enum: ['asc', 'desc'] },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -397,6 +429,34 @@ const spec = {
           '401': { description: 'Unauthenticated', content: { 'application/json': { schema: { $ref: '#/components/schemas/Problem' } } } },
           '404': { description: 'Connection not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Problem' } } } },
           '422': { description: 'Guardrail triggered', content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string' }, level: { type: 'integer' }, message: { type: 'string' } } } } } },
+        },
+      },
+    },
+
+    '/api/v1/query/count': {
+      post: {
+        tags: ['Query'],
+        summary: 'Count the rows of a query',
+        description: 'Total row count of a read statement, for pagination. `total` is null when the statement cannot be counted (write, DDL, unsupported form).',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['connectionId', 'sql'],
+                properties: {
+                  connectionId: { type: 'string', format: 'uuid' },
+                  sql: { type: 'string', minLength: 1, maxLength: 100000 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Count', content: { 'application/json': { schema: { type: 'object', properties: { total: { type: 'integer', nullable: true } } } } } },
+          '401': { description: 'Unauthenticated', content: { 'application/json': { schema: { $ref: '#/components/schemas/Problem' } } } },
+          '404': { description: 'Connection not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Problem' } } } },
         },
       },
     },

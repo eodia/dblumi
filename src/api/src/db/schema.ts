@@ -31,14 +31,17 @@ export const users = sqliteTable('users', {
 export const connections = sqliteTable('connections', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  driver: text('driver', { enum: ['postgresql', 'mysql', 'oracle', 'sqlite', 'trino'] }).notNull(),
+  driver: text('driver', { enum: ['postgresql', 'mysql', 'oracle', 'sqlite', 'trino', 'mongodb', 'mssql', 'snowflake', 'redis'] }).notNull(),
   host: text('host'),
   port: integer('port'),
   database: text('database'),                                // Trino: "catalog" or "catalog/schema"
+                                                             // MongoDB: host may be a credential-free mongodb[+srv]:// URI
   username: text('username'),
-  passwordEncrypted: blob('password_encrypted'),             // AES-256-GCM, null for SQLite, optional for Trino
+  passwordEncrypted: blob('password_encrypted'),             // AES-256-GCM, null for SQLite, optional for Trino/MongoDB
   filePath: text('file_path'),                               // SQLite only
   ssl: integer('ssl', { mode: 'boolean' }).notNull().default(false),
+  // Driver-specific, non-secret settings (Snowflake warehouse / role), as JSON.
+  options: text('options', { mode: 'json' }).$type<Record<string, string>>(),
   color: text('color'),
   environment: text('environment'),
   visibility: text('visibility', { enum: ['private', 'public'] }).notNull().default('private'),

@@ -10,6 +10,9 @@ import faviconMongodb from '@/assets/favicon-mongodb.svg'
 import faviconOracle from '@/assets/favicon-oracle.svg'
 import faviconSqlite from '@/assets/favicon-sqlite.svg'
 import faviconTrino from '@/assets/favicon-trino.svg'
+import faviconMssql from '@/assets/favicon-mssql.svg'
+import faviconSnowflake from '@/assets/favicon-snowflake.svg'
+import faviconRedis from '@/assets/favicon-redis.svg'
 
 const faviconByDriver: Record<string, string> = {
   postgresql: faviconPostgresql,
@@ -18,6 +21,9 @@ const faviconByDriver: Record<string, string> = {
   oracle: faviconOracle,
   sqlite: faviconSqlite,
   trino: faviconTrino,
+  mssql: faviconMssql,
+  snowflake: faviconSnowflake,
+  redis: faviconRedis,
 }
 
 const envColor: Record<string, string> = {

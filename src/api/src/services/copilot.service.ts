@@ -11,6 +11,7 @@ import copilotI18n, { type CopilotLocale } from '../i18n/copilot.i18n.js'
 
 export type SchemaTable = {
   name: string
+  comment?: string | null | undefined
   columns: Array<{ name: string; dataType: string; nullable: boolean; primaryKey: boolean }>
 }
 
@@ -85,6 +86,121 @@ const DIALECT_LABELS: Record<string, string> = {
   oracle: 'Oracle',
   sqlite: 'SQLite',
   trino: 'Trino (SQL ANSI, moteur fédéré)',
+  mongodb: 'MongoDB (mongosh)',
+  mssql: 'SQL Server (T-SQL)',
+  snowflake: 'Snowflake',
+  redis: 'Redis (redis-cli)',
+}
+
+type DialectRules = { rulesTitle: string; rules: string[] }
+
+/** Dialect rules of the SQL engines whose syntax models most often get wrong. */
+const SQL_DIALECT_PROMPT: Partial<Record<string, Record<CopilotLocale, DialectRules>>> = {
+  mssql: {
+    fr: {
+      rulesTitle: 'Spécificités SQL Server (T-SQL)',
+      rules: [
+        'Pas de LIMIT : utilise `SELECT TOP (n)`, ou `ORDER BY … OFFSET m ROWS FETCH NEXT n ROWS ONLY` (OFFSET exige un ORDER BY).',
+        'Identifiants entre crochets (`[ma table]`), tables qualifiées `schema.table` (`dbo` par défaut).',
+        "Chaînes Unicode préfixées de N (`N'texte'`). Concaténation avec `+` ou `CONCAT()`.",
+        '`GETDATE()` / `SYSDATETIME()`, `DATEADD`, `DATEDIFF`, `FORMAT`, `ISNULL`/`COALESCE`, `STRING_AGG`, `TRY_CAST`.',
+        'Types : `NVARCHAR(n)`/`NVARCHAR(MAX)`, `INT IDENTITY(1,1)`, `BIT`, `DATETIME2`, `DECIMAL(p,s)`, `UNIQUEIDENTIFIER`.',
+        "Pas de booléen dans un SELECT : `CASE WHEN … THEN 1 ELSE 0 END`. Pas d'ILIKE : la collation décide de la casse.",
+        'Upsert avec `MERGE`, ou `UPDATE` puis `INSERT … WHERE NOT EXISTS`.',
+      ],
+    },
+    en: {
+      rulesTitle: 'SQL Server (T-SQL) specifics',
+      rules: [
+        'No LIMIT: use `SELECT TOP (n)`, or `ORDER BY … OFFSET m ROWS FETCH NEXT n ROWS ONLY` (OFFSET requires an ORDER BY).',
+        'Quote identifiers with brackets (`[my table]`), qualify tables as `schema.table` (`dbo` by default).',
+        "Prefix Unicode strings with N (`N'text'`). Concatenate with `+` or `CONCAT()`.",
+        '`GETDATE()` / `SYSDATETIME()`, `DATEADD`, `DATEDIFF`, `FORMAT`, `ISNULL`/`COALESCE`, `STRING_AGG`, `TRY_CAST`.',
+        'Types: `NVARCHAR(n)`/`NVARCHAR(MAX)`, `INT IDENTITY(1,1)`, `BIT`, `DATETIME2`, `DECIMAL(p,s)`, `UNIQUEIDENTIFIER`.',
+        'No boolean in a SELECT list: `CASE WHEN … THEN 1 ELSE 0 END`. No ILIKE: the collation decides case sensitivity.',
+        'Upsert with `MERGE`, or `UPDATE` then `INSERT … WHERE NOT EXISTS`.',
+      ],
+    },
+  },
+  snowflake: {
+    fr: {
+      rulesTitle: 'Spécificités Snowflake',
+      rules: [
+        'Les identifiants non quotés sont stockés en MAJUSCULES : ne mets des guillemets doubles que pour un nom en casse mixte ou avec des caractères spéciaux.',
+        'Tables qualifiées `base.schema.table` quand elles sortent de la base et du schéma courants.',
+        '`LIMIT n OFFSET m`, `QUALIFY` pour filtrer sur une fonction de fenêtre, `ILIKE` disponible.',
+        'Données semi-structurées (VARIANT) : `col:champ::string`, `LATERAL FLATTEN(input => col)`, `PARSE_JSON`, `OBJECT_CONSTRUCT`.',
+        'Dates : `CURRENT_TIMESTAMP()`, `DATEADD`, `DATEDIFF`, `DATE_TRUNC`, `TO_DATE`, `TO_TIMESTAMP_NTZ`.',
+        'Chaque requête consomme des crédits de warehouse : évite les `SELECT *` sur de grandes tables et filtre au plus tôt.',
+        "Pas d'index : ne propose ni CREATE INDEX ni indication de requête (hint).",
+      ],
+    },
+    en: {
+      rulesTitle: 'Snowflake specifics',
+      rules: [
+        'Unquoted identifiers are stored in UPPERCASE: only use double quotes for mixed-case names or names with special characters.',
+        'Qualify tables as `database.schema.table` when they live outside the current database and schema.',
+        '`LIMIT n OFFSET m`, `QUALIFY` to filter on a window function, `ILIKE` is available.',
+        'Semi-structured data (VARIANT): `col:field::string`, `LATERAL FLATTEN(input => col)`, `PARSE_JSON`, `OBJECT_CONSTRUCT`.',
+        'Dates: `CURRENT_TIMESTAMP()`, `DATEADD`, `DATEDIFF`, `DATE_TRUNC`, `TO_DATE`, `TO_TIMESTAMP_NTZ`.',
+        'Every query spends warehouse credits: avoid `SELECT *` on large tables and filter as early as possible.',
+        'No indexes: never suggest CREATE INDEX or query hints.',
+      ],
+    },
+  },
+}
+
+type RedisPromptStrings = DialectRules & {
+  role: string
+  keysLabel: string
+  instructions: string[]
+}
+
+const REDIS_PROMPT: Record<CopilotLocale, RedisPromptStrings> = {
+  fr: {
+    role: 'Tu es le copilot de dblumi pour Redis, un assistant expert en bases de données.',
+    keysLabel: 'Préfixes de clés',
+    rulesTitle: 'Spécificités Redis',
+    rules: [
+      "Les préfixes ci-dessus sont déduits d'un échantillon de clés (séparateur `:`) : Redis n'a ni tables ni colonnes.",
+      'Les commandes suivent la syntaxe redis-cli : `HGETALL user:42`, `SET "clé avec espace" valeur`. Une commande par ligne.',
+      'Pour parcourir des clés, utilise `SCAN 0 MATCH user:* COUNT 1000` — jamais `KEYS`, qui bloque le serveur.',
+      'Choisis la commande selon le type de la clé (`TYPE`) : GET, HGETALL/HGET, LRANGE, SMEMBERS, ZRANGE … WITHSCORES, XRANGE.',
+      'Pas de MULTI/EXEC, de SUBSCRIBE, de MONITOR ni de script Lua sauf demande explicite.',
+    ],
+    instructions: [
+      "Quand l'utilisateur demande une opération, génère des commandes redis-cli valides.",
+      'Utilise les préfixes de clés listés ci-dessus.',
+      'Entoure les commandes d’un bloc ```redis ... ``` pour qu’elles soient facilement identifiables.',
+      "Si l'utilisateur pose une question sur l'onglet actif, réponds dans ce contexte.",
+      "Si l'utilisateur demande une explication, explique de manière concise.",
+      'Si la demande est ambiguë, demande des précisions plutôt que de deviner.',
+      'Ne génère JAMAIS de commandes destructives (FLUSHDB, FLUSHALL, DEL en masse, CONFIG SET) sauf demande explicite.',
+      'Sois concis. Pas de préambule inutile.',
+    ],
+  },
+  en: {
+    role: 'You are the Redis copilot of dblumi, an expert database assistant.',
+    keysLabel: 'Key prefixes',
+    rulesTitle: 'Redis specifics',
+    rules: [
+      'The prefixes above are inferred from a sample of keys (`:` separator): Redis has no tables and no columns.',
+      'Commands use redis-cli syntax: `HGETALL user:42`, `SET "key with space" value`. One command per line.',
+      'To browse keys, use `SCAN 0 MATCH user:* COUNT 1000` — never `KEYS`, which blocks the server.',
+      'Pick the command from the key type (`TYPE`): GET, HGETALL/HGET, LRANGE, SMEMBERS, ZRANGE … WITHSCORES, XRANGE.',
+      'No MULTI/EXEC, SUBSCRIBE, MONITOR or Lua scripts unless explicitly asked.',
+    ],
+    instructions: [
+      'When the user asks for an operation, generate valid redis-cli commands.',
+      'Use the key prefixes listed above.',
+      'Wrap the commands in a ```redis ... ``` block so they are easy to identify.',
+      'If the user asks a question about the active tab, answer in that context.',
+      'If the user asks for an explanation, explain concisely.',
+      'If the request is ambiguous, ask for clarification rather than guessing.',
+      'NEVER generate destructive commands (FLUSHDB, FLUSHALL, mass DEL, CONFIG SET) unless explicitly asked.',
+      'Be concise. No unnecessary preamble.',
+    ],
+  },
 }
 
 type TrinoPromptStrings = {
@@ -151,6 +267,86 @@ const TRINO_PROMPT: Record<CopilotLocale, TrinoPromptStrings> = {
   },
 }
 
+type MongoPromptStrings = {
+  role: string
+  optional: string
+  rulesTitle: string
+  rules: string[]
+  instructions: string[]
+}
+
+const MONGO_PROMPT: Record<CopilotLocale, MongoPromptStrings> = {
+  fr: {
+    role: 'Tu es le copilot de dblumi pour MongoDB, un assistant expert en bases de données.',
+    optional: 'absent de certains documents',
+    rulesTitle: 'Spécificités MongoDB',
+    rules: [
+      "Le schéma ci-dessus est déduit d'un échantillon de documents : un champ peut manquer ou changer de type d'un document à l'autre.",
+      'Les commandes suivent la syntaxe mongosh : `db.<collection>.find({…})`, `db.<collection>.aggregate([…])`, `db.<collection>.countDocuments({…})`, `db.<collection>.distinct(…)`.',
+      "Pour un nom de collection contenant des caractères spéciaux, utilise `db.getCollection('nom')`.",
+      'Types : `ObjectId("…")`, `ISODate("…")`, `NumberLong("…")`, `NumberDecimal("…")`, `UUID("…")`, et les expressions régulières `/motif/i`.',
+      'Aucune variable, fonction, boucle, `use` ni `print` : une seule expression `db.…` par bloc.',
+      'Pour les regroupements, jointures (`$lookup`) et calculs, utilise un pipeline `aggregate`.',
+      "dblumi pagine lui-même les résultats : n'ajoute `.limit()` que si la question porte sur un nombre précis de documents.",
+    ],
+    instructions: [
+      'Quand l’utilisateur demande une requête, génère une commande mongosh valide.',
+      'Utilise les noms exacts des collections et des champs du schéma ci-dessus.',
+      'Entoure chaque commande d’un bloc ```javascript ... ``` pour qu’elle soit facilement identifiable.',
+      "Si l'utilisateur pose une question sur l'onglet actif, réponds dans ce contexte.",
+      "Si l'utilisateur demande une explication, explique de manière concise.",
+      'Si la requête est ambiguë, demande des précisions plutôt que de deviner.',
+      'Privilégie les requêtes qui exploitent les index.',
+      'Ne génère JAMAIS de commandes destructives (drop, dropDatabase, deleteMany({}), updateMany({}, …)) sauf demande explicite.',
+      'Sois concis. Pas de préambule inutile.',
+    ],
+  },
+  en: {
+    role: 'You are the MongoDB copilot of dblumi, an expert database assistant.',
+    optional: 'missing from some documents',
+    rulesTitle: 'MongoDB specifics',
+    rules: [
+      'The schema above is inferred from a sample of documents: a field may be missing, or change type, from one document to the next.',
+      'Commands use mongosh syntax: `db.<collection>.find({…})`, `db.<collection>.aggregate([…])`, `db.<collection>.countDocuments({…})`, `db.<collection>.distinct(…)`.',
+      "For a collection name with special characters, use `db.getCollection('name')`.",
+      'Types: `ObjectId("…")`, `ISODate("…")`, `NumberLong("…")`, `NumberDecimal("…")`, `UUID("…")`, and regular expressions `/pattern/i`.',
+      'No variables, functions, loops, `use` or `print`: exactly one `db.…` expression per block.',
+      'For grouping, joins (`$lookup`) and computations, use an `aggregate` pipeline.',
+      'dblumi paginates results itself: only add `.limit()` when the question asks for a specific number of documents.',
+    ],
+    instructions: [
+      'When the user asks for a query, generate a valid mongosh command.',
+      'Use the exact names of collections and fields from the schema above.',
+      'Wrap each command in a ```javascript ... ``` block so it is easy to identify.',
+      'If the user asks a question about the active tab, answer in that context.',
+      'If the user asks for an explanation, explain concisely.',
+      'If the request is ambiguous, ask for clarification rather than guessing.',
+      'Favour queries that can use indexes.',
+      'NEVER generate destructive commands (drop, dropDatabase, deleteMany({}), updateMany({}, …)) unless explicitly asked.',
+      'Be concise. No unnecessary preamble.',
+    ],
+  },
+}
+
+/**
+ * Upper bound of the schema injected in the prompt. A large database used to
+ * push the prompt past the model's context window (HTTP 400 on every message).
+ */
+const MAX_SCHEMA_PROMPT_CHARS = 60_000
+
+function capSchema(descriptions: string[]): string {
+  const kept: string[] = []
+  let size = 0
+  for (const d of descriptions) {
+    if (size + d.length > MAX_SCHEMA_PROMPT_CHARS) break
+    kept.push(d)
+    size += d.length + 2
+  }
+  const omitted = descriptions.length - kept.length
+  if (omitted > 0) kept.push(`-- … ${omitted} more not listed (schema too large)`)
+  return kept.join('\n\n')
+}
+
 function buildSystemPrompt(
   schema: SchemaTable[],
   functions: FunctionInfo[],
@@ -163,8 +359,20 @@ function buildSystemPrompt(
   const t = copilotI18n[locale]
   const dialect = DIALECT_LABELS[driver] ?? driver
   const isTrino = driver === 'trino'
+  const isMongo = driver === 'mongodb'
+  const isRedis = driver === 'redis'
+  const fence = isMongo ? 'javascript' : isRedis ? 'redis' : 'sql'
 
-  const tableDescriptions = schema.map((tbl) => {
+  const described = schema.map((tbl) => {
+    // Redis "tables" are key prefixes whose columns never change: list the prefixes only.
+    if (isRedis) return `KEYS ${tbl.name}${tbl.comment ? ` — ${tbl.comment}` : ''}`
+    if (isMongo) {
+      // Fields are inferred from sampled documents: "optional" = absent from some.
+      const fields = tbl.columns
+        .map((c) => `  ${c.name}: ${c.dataType}${c.nullable ? ` (${MONGO_PROMPT[locale].optional})` : ''}`)
+        .join('\n')
+      return `COLLECTION ${tbl.name} {\n${fields}\n}`
+    }
     const cols = tbl.columns.map((c) => {
       const parts = [`  ${c.name} ${c.dataType}`]
       if (c.primaryKey) parts.push('PRIMARY KEY')
@@ -172,7 +380,8 @@ function buildSystemPrompt(
       return parts.join(' ')
     }).join('\n')
     return `TABLE ${tbl.name} (\n${cols}\n)`
-  }).join('\n\n')
+  })
+  const tableDescriptions = capSchema(described)
 
   const funcDescriptions = functions.length > 0
     ? `\n\n## ${t.functionsLabel}\n` + functions.map((f) => {
@@ -186,7 +395,7 @@ function buildSystemPrompt(
   let contextSection = ''
   if (context) {
     if (context.tabKind === 'query' && context.sql.trim()) {
-      contextSection = `\n\n## ${t.activeTabQuery}\n${t.activeTabQueryHint}\n\`\`\`sql\n${context.sql}\n\`\`\``
+      contextSection = `\n\n## ${t.activeTabQuery}\n${t.activeTabQueryHint}\n\`\`\`${fence}\n${context.sql}\n\`\`\``
     } else if (context.tabKind === 'table') {
       contextSection = `\n\n## ${t.activeTabTable(context.tabName)}\n${t.activeTabTableHint(context.tabName)}`
     } else if (context.tabKind === 'function') {
@@ -215,20 +424,32 @@ function buildSystemPrompt(
     ? TRINO_PROMPT[locale].noCatalogNote
     : t.schemaKnowledge
 
-  const dialectSection = isTrino
-    ? `\n\n## ${TRINO_PROMPT[locale].rulesTitle}\n` +
-      TRINO_PROMPT[locale].rules.map((line) => `- ${line}`).join('\n')
+  const dialectRules: DialectRules | undefined = isTrino
+    ? TRINO_PROMPT[locale]
+    : isMongo
+    ? MONGO_PROMPT[locale]
+    : isRedis
+    ? REDIS_PROMPT[locale]
+    : SQL_DIALECT_PROMPT[driver]?.[locale]
+  const dialectSection = dialectRules
+    ? `\n\n## ${dialectRules.rulesTitle}\n` + dialectRules.rules.map((line) => `- ${line}`).join('\n')
     : ''
 
-  const instructionLines = t.instructions(dialect).map((line) => `- ${line}`).join('\n')
+  // MongoDB and Redis are not SQL: the generic "generate valid SQL" instructions would contradict their rules.
+  const instructions = isMongo
+    ? MONGO_PROMPT[locale].instructions
+    : isRedis ? REDIS_PROMPT[locale].instructions : t.instructions(dialect)
+  const instructionLines = instructions.map((line) => `- ${line}`).join('\n')
 
   // An empty "## Schema" heading reads to the model as "this database has no
-  // table". Trino-only: every other driver keeps its exact former prompt.
-  const schemaSection = !isTrino || tableDescriptions
-    ? `\n\n## ${t.schemaLabel}\n${tableDescriptions}`
+  // table". Trino/MongoDB/Redis only: every other driver keeps its exact former prompt.
+  const schemaSection = (!isTrino && !isMongo && !isRedis) || tableDescriptions
+    ? `\n\n## ${isRedis ? REDIS_PROMPT[locale].keysLabel : t.schemaLabel}\n${tableDescriptions}`
     : ''
 
-  return `${t.role}
+  const role = isMongo ? MONGO_PROMPT[locale].role : isRedis ? REDIS_PROMPT[locale].role : t.role
+
+  return `${role}
 
 ## ${t.contextLabel}
 ${targetLines.join('\n')}

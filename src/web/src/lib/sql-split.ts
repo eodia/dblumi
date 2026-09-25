@@ -18,7 +18,8 @@ export function splitSqlStatements(sql: string): string[] {
 
   const flush = () => {
     const t = buf.trim()
-    if (t.length > 0) statements.push(t)
+    // `SELECT 1; -- done` is one statement: a piece made only of comments is not a query.
+    if (t.length > 0 && t.replace(/\/\*[\s\S]*?\*\/|--[^\n]*/g, '').trim() !== '') statements.push(t)
     buf = ''
   }
 

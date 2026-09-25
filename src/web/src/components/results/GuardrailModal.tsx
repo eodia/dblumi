@@ -18,16 +18,17 @@ const LEVEL = {
 } as const
 
 export function GuardrailModal() {
-  const { tabs, activeTabId, clearGuardrail, executeQuery } = useEditorStore()
+  const { tabs, activeTabId, clearGuardrail, confirmGuardrail } = useEditorStore()
   const guardrail = tabs.find((t) => t.id === activeTabId)?.result.guardrail ?? null
   if (!guardrail) return null
 
   const cfg = LEVEL[guardrail.level]
   const Icon = cfg.icon
 
+  // Re-runs only the statement that was stopped — confirming a blocked selection
+  // must not run the whole tab, nor replay the statements of a batch that already ran.
   const handleConfirm = () => {
-    clearGuardrail()
-    executeQuery(true)
+    void confirmGuardrail()
   }
 
   return (

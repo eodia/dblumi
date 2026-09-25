@@ -10,6 +10,9 @@
   },
   "packageManager": "pnpm@9.15.0",
   "scripts": {
+    "launch": "node scripts/launch.mjs",
+    "launch:prod": "node scripts/launch.mjs --prod",
+    "launch:check": "node scripts/launch.mjs --check",
     "dev": "concurrently -n api,web -c cyan,green \"pnpm --filter @dblumi/api dev\" \"pnpm --filter @dblumi/web dev\"",
     "build": "pnpm --filter @dblumi/shared build && pnpm --filter @dblumi/web build && pnpm --filter @dblumi/api build",
     "start": "pnpm --filter @dblumi/api start",

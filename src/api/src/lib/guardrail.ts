@@ -8,6 +8,8 @@
  * 4 — Critical (DROP DATABASE, DROP SCHEMA, DROP ALL)
  */
 
+import { mainKeyword, scanOptionsFor, splitStatements, topLevel } from './sql-scan.js'
+
 export type GuardrailLevel = 0 | 1 | 2 | 3 | 4
 
 export type GuardrailResult =
@@ -41,14 +43,19 @@ const SAFE_STARTERS = [
   'PREPARE',
   'DEALLOCATE',
   'RESET',
-  '--',
-  '/*',
+  // Snowflake: list the files of a stage.
+  'LIST',
+  'LS',
+  // Comments are no longer "safe starters": they are blanked before analysis,
+  // so `-- note\nGRANT …` is judged on GRANT.
 ]
 
 const CRITICAL_PATTERNS = [
   /\bDROP\s+(DATABASE|SCHEMA)\b/i,
   /\bDROP\s+ALL\b/i,
   /\bDROP\s+CATALOG\b/i,
+  // T-SQL: stops the whole SQL Server instance.
+  /^SHUTDOWN\b/i,
 ]
 
 const DANGER_PATTERNS = [
@@ -68,9 +75,31 @@ const DANGER_PATTERNS = [
   /\bCALL\s+[\w."]*system\.\w+/i,
 ]
 
-export function detectGuardrail(sql: string): GuardrailResult {
-  const trimmed = sql.trim()
+/**
+ * Level of the most dangerous statement in `sql`. Literals, quoted identifiers
+ * and comments are blanked first: `WHERE note = 'drop table'` is not a DROP,
+ * and `SELECT 1; DROP TABLE t` is judged on its DROP.
+ */
+export function detectGuardrail(sql: string, driver = ''): GuardrailResult {
+  let worst: GuardrailResult = { level: 0 }
+  for (const statement of splitStatements(sql, scanOptionsFor(driver))) {
+    const result = detectStatement(statement.masked, driver)
+    if (result.level > worst.level) worst = result
+  }
+  return worst
+}
+
+/** UPDATE as a statement — not `FOR UPDATE`, `DO UPDATE`, `ON UPDATE`, `KEY UPDATE`. */
+const UPDATE_STATEMENT = /(?<!\b(?:FOR|DO|ON|KEY)\s+)\bUPDATE\b/i
+
+function detectStatement(masked: string, driver: string): GuardrailResult {
+  const trimmed = masked.trim()
   const upper = trimmed.toUpperCase()
+  // `EXPLAIN ANALYZE DELETE …` really deletes: judge the explained statement.
+  const explained = trimmed.replace(/^EXPLAIN\b(?:\s+(?:ANALYZE|VERBOSE|QUERY\s+PLAN(?:\s+FOR)?|PLAN\s+FOR))*\s*(?:\([^)]*\))?/i, '')
+  const keyword = mainKeyword(explained)
+  // WHERE of the statement itself, not of a subquery (`SET a = (SELECT … WHERE …)`).
+  const top = topLevel(explained.toUpperCase())
 
   // Level 4 — critical
   for (const pat of CRITICAL_PATTERNS) {
@@ -106,15 +135,15 @@ export function detectGuardrail(sql: string): GuardrailResult {
     }
   }
 
-  // Level 2 — UPDATE/DELETE without WHERE
-  if (/\bUPDATE\b/i.test(trimmed) && !hasWhereClause(upper)) {
+  // Level 2 — UPDATE/DELETE without WHERE (Oracle also accepts `DELETE t` without FROM)
+  if (keyword === 'UPDATE' && !hasWhereClause(top)) {
     return {
       level: 2,
       message: 'UPDATE sans clause WHERE',
       details: 'Cette requête va modifier toutes les lignes de la table.',
     }
   }
-  if (/\bDELETE\s+FROM\b/i.test(trimmed) && !hasWhereClause(upper)) {
+  if (keyword === 'DELETE' && !hasWhereClause(top)) {
     return {
       level: 2,
       message: 'DELETE sans clause WHERE',
@@ -122,9 +151,10 @@ export function detectGuardrail(sql: string): GuardrailResult {
     }
   }
 
-  // Level 1 — INSERT / UPDATE / DELETE with WHERE
-  if (/\b(INSERT|UPDATE|DELETE)\b/i.test(trimmed)) {
-    const op = trimmed.match(/\b(INSERT|UPDATE|DELETE)\b/i)?.[1]?.toUpperCase() ?? 'Écriture'
+  // Level 1 — INSERT / UPDATE / DELETE with WHERE (also inside a CTE or EXPLAIN ANALYZE)
+  const write = trimmed.match(/\b(INSERT|DELETE|UPSERT|REPLACE\s+INTO)\b/i)?.[1] ?? (UPDATE_STATEMENT.test(trimmed) ? 'UPDATE' : null)
+  if (write) {
+    const op = write.toUpperCase().replace(/\s+INTO$/, '')
     return {
       level: 1,
       message: `${op} — modification de données`,
@@ -135,7 +165,9 @@ export function detectGuardrail(sql: string): GuardrailResult {
   // `USE` — recognised, but confirmed rather than silently run. It re-binds the
   // catalog/schema of the CONNECTION (Trino replies with `X-Trino-Set-Catalog` /
   // `X-Trino-Set-Schema`), so it leaks to every other user of that connection.
+  // The other drivers run it on a dedicated session, closed after the run.
   if (/^USE\b/i.test(trimmed)) {
+    if (driver && driver !== 'trino') return { level: 0 }
     return {
       level: 2,
       message: 'USE — changement de catalogue/schéma',

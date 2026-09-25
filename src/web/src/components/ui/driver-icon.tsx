@@ -5,6 +5,9 @@ import mongodbSvg from '@/assets/icon-mongodb.svg'
 import oracleSvg from '@/assets/icon-oracle.svg'
 import sqliteSvg from '@/assets/icon-sqlite.svg'
 import trinoSvg from '@/assets/icon-trino.svg'
+import mssqlSvg from '@/assets/icon-mssql.svg'
+import snowflakeSvg from '@/assets/icon-snowflake.svg'
+import redisSvg from '@/assets/icon-redis.svg'
 
 const driverIcons: Record<string, string> = {
   postgresql: postgresqlSvg,
@@ -13,6 +16,9 @@ const driverIcons: Record<string, string> = {
   oracle: oracleSvg,
   sqlite: sqliteSvg,
   trino: trinoSvg,
+  mssql: mssqlSvg,
+  snowflake: snowflakeSvg,
+  redis: redisSvg,
 }
 
 function envDotClass(env?: string | null): string {

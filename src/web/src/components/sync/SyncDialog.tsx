@@ -36,6 +36,7 @@ import {
   ChevronsUpDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { driverCaps } from '@/lib/drivers'
 
 type Step = 'configure' | 'syncing' | 'done'
 
@@ -222,11 +223,9 @@ export function SyncDialog({ open, onOpenChange }: Props) {
     staleTime: 5 * 60_000,
   })
   const connections = connData?.connections ?? []
-  // The API refuses sync for SQLite and Trino (400 on both source and target):
+  // The API refuses sync for most drivers (400 on both source and target):
   // keep them out of the pickers instead of failing at the end of the wizard.
-  const syncableConnections = connections.filter(
-    (c) => c.driver !== 'sqlite' && c.driver !== 'trino',
-  )
+  const syncableConnections = connections.filter((c) => driverCaps(c.driver).sync)
   const sourceConn = connections.find((c) => c.id === sourceId)
   const targetConn = connections.find((c) => c.id === targetId)
   const sourceNeedsDb = sourceConn && !sourceConn.database

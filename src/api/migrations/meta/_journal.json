@@ -85,6 +85,13 @@
       "when": 1775683857875,
       "tag": "0011_empty_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790363853563,
+      "tag": "0012_connection_options",
+      "breakpoints": true
     }
   ]
 }
