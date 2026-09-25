@@ -99,6 +99,7 @@ keycloakRouter.get('/callback', async (c) => {
   const profile = await userRes.json() as {
     sub: string
     email?: string
+    email_verified?: boolean
     name?: string
     preferred_username?: string
     given_name?: string
@@ -123,8 +124,20 @@ keycloakRouter.get('/callback', async (c) => {
     .get()
 
   if (!user) {
-    // Try matching by email (user may have registered before)
-    user = await db.select().from(users).where(eq(users.email, email)).get()
+    // Try matching by email (user may have registered before) — only with an
+    // email the realm has verified: a self-service profile could otherwise claim
+    // admin@corp and receive that account's session.
+    const byEmail = await db.select().from(users).where(eq(users.email, email)).get()
+    if (byEmail) {
+      if (profile.email_verified !== true) {
+        return c.redirect(`${config.BASE_URL}/?error=keycloak_email_unverified`)
+      }
+      // Already linked to another Keycloak identity: never re-link silently.
+      if (byEmail.oauthProviderId && byEmail.oauthProviderId !== profile.sub) {
+        return c.redirect(`${config.BASE_URL}/?error=keycloak_account_conflict`)
+      }
+      user = byEmail
+    }
   }
 
   if (user) {

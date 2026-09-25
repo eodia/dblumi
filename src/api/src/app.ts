@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { secureHeaders } from 'hono/secure-headers'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { logger as httpLogger } from 'hono/logger'
 import { health } from './routes/health.js'
@@ -21,6 +22,9 @@ const app = new Hono()
 
 // ── Logging ───────────────────────────────────
 app.use('*', httpLogger())
+
+// ── Security headers (anti-clickjacking, nosniff, HSTS, referrer policy…) ──
+app.use('*', secureHeaders())
 
 // ── CORS (dev only) ───────────────────────────
 if (process.env['NODE_ENV'] !== 'production') {

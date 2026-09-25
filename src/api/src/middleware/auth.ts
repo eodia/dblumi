@@ -35,26 +35,30 @@ export const authMiddleware = createMiddleware<AuthVariables>(async (c, next) =>
     throw new HTTPException(401, { message: 'Token has been revoked' })
   }
 
-  // Password change invalidation: reject tokens issued before password was changed
-  if (payload.iat) {
-    const user = await db
-      .select({ passwordChangedAt: users.passwordChangedAt })
-      .from(users)
-      .where(eq(users.id, payload.sub))
-      .get()
+  // The token lives 7 days: the account must still exist, and its role is read
+  // from the database — a demoted admin must lose admin rights immediately.
+  const user = await db
+    .select({ role: users.role, passwordChangedAt: users.passwordChangedAt })
+    .from(users)
+    .where(eq(users.id, payload.sub))
+    .get()
 
-    if (user?.passwordChangedAt) {
-      const changedAtMs = new Date(user.passwordChangedAt).getTime()
-      const issuedAtMs = payload.iat * 1000
-      if (issuedAtMs < changedAtMs) {
-        throw new HTTPException(401, { message: 'Password has been changed, please log in again' })
-      }
+  if (!user) {
+    throw new HTTPException(401, { message: 'Invalid or expired token' })
+  }
+
+  // Password change invalidation: reject tokens issued before password was changed
+  if (payload.iat && user.passwordChangedAt) {
+    const changedAtMs = new Date(user.passwordChangedAt).getTime()
+    const issuedAtMs = payload.iat * 1000
+    if (issuedAtMs < changedAtMs) {
+      throw new HTTPException(401, { message: 'Password has been changed, please log in again' })
     }
   }
 
   c.set('userId', payload.sub)
   c.set('userEmail', payload.email)
-  c.set('userRole', payload.role)
+  c.set('userRole', user.role)
   c.set('jti', payload.jti)
 
   await next()

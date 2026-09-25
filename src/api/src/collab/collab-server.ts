@@ -54,11 +54,15 @@ async function getOrCreateDoc(queryId: string): Promise<CollabDoc> {
   const ychat = doc.getArray('chat')
   ychat.observe((event) => {
     if (event.changes.added.size > 0) {
+      // The author is the authenticated socket the update came from, never the
+      // `userId` written by the client: a collaborator could post as the owner.
+      const author = collabDoc.connections.get(event.transaction.origin as WebSocket)?.userId
+      if (!author) return
       event.changes.delta.forEach((d: any) => {
         if (d.insert) {
           for (const item of d.insert as any[]) {
-            if (item.userId && item.content) {
-              persistMessage(queryId, item.userId, item.content).catch((err) => {
+            if (typeof item.content === 'string' && item.content) {
+              persistMessage(queryId, author, item.content.slice(0, 4000)).catch((err) => {
                 logger.error({ err, queryId }, 'Failed to persist chat message')
               })
             }
