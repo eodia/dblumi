@@ -1,3 +1,5 @@
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { secureHeaders } from 'hono/secure-headers'
@@ -66,7 +68,11 @@ app.route('/api/v1/sync', dataSyncRouter)
 app.route('/api/docs', docsRouter)
 
 // ── Static files (production) ─────────────────
-app.use('/*', serveStatic({ root: './public' }))
-app.get('*', serveStatic({ path: './public/index.html' }))
+// The built web app lives in src/api/public, next to src/ and dist/: resolved
+// from this module, not from the working directory — the Docker image runs
+// from /app, where './public' does not exist and every page answered 404.
+const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url))
+app.use('/*', serveStatic({ root: PUBLIC_DIR }))
+app.get('*', serveStatic({ path: join(PUBLIC_DIR, 'index.html') }))
 
 export { app }
