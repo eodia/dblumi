@@ -22,16 +22,38 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
       <div class="timeline">
 
+        <article class="milestone shipped">
+          <div class="ms-marker"></div>
+          <div class="ms-content">
+            <span class="ms-tag shipped">Shipped</span>
+            <h2>v0.2.0</h2>
+            <ul>
+              <li>
+                <strong>MongoDB, SQL Server, Snowflake and Redis drivers</strong>
+                <span>Nine databases in one UI — mongosh and redis-cli syntax for the NoSQL ones, key-pair authentication for Snowflake, GO batches for T-SQL</span>
+              </li>
+              <li>
+                <strong>Trino driver</strong>
+                <span>Query federated catalogs, switch catalog and schema from the database selector</span>
+              </li>
+              <li>
+                <strong>Multi-statement scripts</strong>
+                <span>Run a whole script in one session — one result tab per statement, transactions and session settings kept</span>
+              </li>
+              <li>
+                <strong>Mistral copilot provider</strong>
+                <span>Use Mistral models alongside Anthropic, OpenAI, Azure OpenAI and Ollama</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
         <article class="milestone next">
           <div class="ms-marker"></div>
           <div class="ms-content">
             <span class="ms-tag next">Up next</span>
-            <h2>v0.2.0</h2>
+            <h2>v0.3.0</h2>
             <ul>
-              <li>
-                <strong>MongoDB driver</strong>
-                <span>Full support for MongoDB connections — query, browse collections, and explore documents alongside SQL databases</span>
-              </li>
               <li>
                 <strong>MCP server</strong>
                 <span>Expose your schema as a Model Context Protocol server so Claude, GPT, and any AI agent can query your DB with one line of config</span>
@@ -52,12 +74,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
           <div class="ms-marker"></div>
           <div class="ms-content">
             <span class="ms-tag">Planned</span>
-            <h2>v0.3.0</h2>
+            <h2>v0.4.0</h2>
             <ul>
-              <li>
-                <strong>SQL Server driver</strong>
-                <span>Microsoft SQL Server support via tedious — complete with stored procedure browsing</span>
-              </li>
               <li>
                 <strong>Dashboard & charts</strong>
                 <span>Pin query results as live charts and KPIs on a customizable dashboard</span>
@@ -78,11 +96,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
           <div class="ms-marker"></div>
           <div class="ms-content">
             <span class="ms-tag">Planned</span>
-            <h2>v0.4.0</h2>
+            <h2>v0.5.0</h2>
             <ul>
               <li>
-                <strong>Redis & DynamoDB drivers</strong>
-                <span>NoSQL support beyond MongoDB — browse keys, run commands, visualize data structures</span>
+                <strong>DynamoDB driver</strong>
+                <span>Browse tables and items, run PartiQL queries — alongside the MongoDB and Redis drivers</span>
               </li>
               <li>
                 <strong>Webhooks</strong>
@@ -219,6 +237,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     border-radius: 100px;
     padding: 3px 10px;
     margin-bottom: 10px;
+  }
+  .milestone.shipped .ms-marker {
+    background: var(--db-primary, #2DA31E);
+    border-color: var(--db-primary, #2DA31E);
+  }
+  .ms-tag.shipped {
+    color: #fff;
+    background: var(--db-primary, #2DA31E);
   }
   .ms-tag.next {
     color: var(--db-primary, #2DA31E);

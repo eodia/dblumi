@@ -2,13 +2,13 @@
 title: SQL Editor
 ---
 
-The SQL editor is the core of dblumi. It supports PostgreSQL, MySQL, Oracle, SQLite, and Trino with syntax highlighting, auto-complete, and real-time result streaming.
+The SQL editor is the core of dblumi. It supports PostgreSQL, MySQL, SQL Server, Oracle, SQLite, Trino, and Snowflake with syntax highlighting, auto-complete, and real-time result streaming — and speaks mongosh on MongoDB and redis-cli on Redis.
 
 ![SQL editor with syntax highlighting and query results](/dblumi/images/feature-editor.png)
 
 ## Key features
 
-- **Syntax highlighting** for PostgreSQL, MySQL, Oracle, SQLite, and Trino SQL (the PostgreSQL grammar is used for SQLite and Trino)
+- **Syntax highlighting** for PostgreSQL, MySQL, SQL Server (T-SQL), Oracle, SQLite, Trino, and Snowflake SQL (the PostgreSQL grammar is used for SQLite, Trino, and Snowflake), mongosh commands, and redis-cli commands
 - **Auto-complete** for table names, column names, and SQL keywords
 - **Run selection** — select part of a query and run only that
 - **Streaming results** — rows appear as they come, no waiting for the full result set

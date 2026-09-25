@@ -22,16 +22,38 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
       <div class="timeline">
 
+        <article class="milestone shipped">
+          <div class="ms-marker"></div>
+          <div class="ms-content">
+            <span class="ms-tag shipped">Livré</span>
+            <h2>v0.2.0</h2>
+            <ul>
+              <li>
+                <strong>Drivers MongoDB, SQL Server, Snowflake et Redis</strong>
+                <span>Neuf bases dans une seule interface — syntaxe mongosh et redis-cli pour les bases NoSQL, authentification par paire de clés pour Snowflake, lots GO pour T-SQL</span>
+              </li>
+              <li>
+                <strong>Driver Trino</strong>
+                <span>Interroger des catalogues fédérés, changer de catalogue et de schéma depuis le sélecteur de base</span>
+              </li>
+              <li>
+                <strong>Scripts multi-instructions</strong>
+                <span>Exécuter un script entier dans une même session — un onglet de résultat par instruction, transactions et réglages de session conservés</span>
+              </li>
+              <li>
+                <strong>Copilot Mistral</strong>
+                <span>Utiliser les modèles Mistral aux côtés d’Anthropic, OpenAI, Azure OpenAI et Ollama</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
         <article class="milestone next">
           <div class="ms-marker"></div>
           <div class="ms-content">
             <span class="ms-tag next">Prochainement</span>
-            <h2>v0.2.0</h2>
+            <h2>v0.3.0</h2>
             <ul>
-              <li>
-                <strong>Driver MongoDB</strong>
-                <span>Support complet de MongoDB — requêtes, parcours de collections et exploration de documents aux côtés des bases SQL</span>
-              </li>
               <li>
                 <strong>Serveur MCP</strong>
                 <span>Exposer votre schéma comme serveur Model Context Protocol pour que Claude, GPT et tout agent IA interroge votre base en une ligne de config</span>
@@ -52,12 +74,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
           <div class="ms-marker"></div>
           <div class="ms-content">
             <span class="ms-tag">Planifié</span>
-            <h2>v0.3.0</h2>
+            <h2>v0.4.0</h2>
             <ul>
-              <li>
-                <strong>Driver SQL Server</strong>
-                <span>Support de Microsoft SQL Server via tedious — avec exploration des procédures stockées</span>
-              </li>
               <li>
                 <strong>Dashboards et graphiques</strong>
                 <span>Épingler des résultats de requêtes sous forme de graphiques et KPIs sur un tableau de bord personnalisable</span>
@@ -78,11 +96,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
           <div class="ms-marker"></div>
           <div class="ms-content">
             <span class="ms-tag">Planifié</span>
-            <h2>v0.4.0</h2>
+            <h2>v0.5.0</h2>
             <ul>
               <li>
-                <strong>Drivers Redis et DynamoDB</strong>
-                <span>Support NoSQL au-delà de MongoDB — parcours de clés, exécution de commandes, visualisation de structures</span>
+                <strong>Driver DynamoDB</strong>
+                <span>Parcours des tables et des items, requêtes PartiQL — aux côtés des drivers MongoDB et Redis</span>
               </li>
               <li>
                 <strong>Webhooks</strong>
@@ -216,6 +234,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     border-radius: 100px;
     padding: 3px 10px;
     margin-bottom: 10px;
+  }
+  .milestone.shipped .ms-marker {
+    background: var(--db-primary, #2DA31E);
+    border-color: var(--db-primary, #2DA31E);
+  }
+  .ms-tag.shipped {
+    color: #fff;
+    background: var(--db-primary, #2DA31E);
   }
   .ms-tag.next {
     color: var(--db-primary, #2DA31E);

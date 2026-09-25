@@ -13,7 +13,7 @@ title: Introduction
 - **Get AI help** to generate, explain, and optimize queries — using Claude, OpenAI, Azure OpenAI, Mistral, or Ollama
 - **Save and organize** your queries in folders, share them with teammates or groups
 - **Browse your schema** with an interactive table explorer and ERD diagram
-- **Connect to multiple databases** — PostgreSQL, MySQL, Oracle, SQLite, Trino — with per-connection access control
+- **Connect to multiple databases** — PostgreSQL, MySQL, SQL Server, Oracle, SQLite, Trino, Snowflake, MongoDB, Redis — with per-connection access control
 
 ## Who is dblumi for?
 

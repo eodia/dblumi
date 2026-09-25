@@ -23,6 +23,51 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Dernière</span>
+          <h2>v0.2.0 <span class="codename">— Neuf bases</span></h2>
+          <time>Septembre 2026</time>
+        </div>
+
+        <section>
+          <h3>5 nouveaux drivers</h3>
+          <ul>
+            <li><strong>SQL Server</strong> — T-SQL avec lots <code>GO</code>, instances nommées et Azure SQL, procédures et fonctions dans l'explorateur de schéma, import CSV et dump SQL</li>
+            <li><strong>Snowflake</strong> — authentification par mot de passe ou paire de clés, warehouse et rôle par connexion ; le schéma est exploré avec des commandes <code>SHOW</code>, sans réveiller le warehouse</li>
+            <li><strong>MongoDB</strong> — syntaxe mongosh (<code>find</code>, <code>aggregate</code>, écritures, index), analysée et jamais évaluée ; URIs Atlas et replica sets ; import CSV dans les collections</li>
+            <li><strong>Redis</strong> — syntaxe redis-cli, préfixes de clés parcourus comme des tables, clés renommées, expirées et modifiées depuis la grille</li>
+            <li><strong>Trino</strong> — catalogues fédérés, changement de catalogue et de schéma depuis le sélecteur de base</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Éditeur SQL</h3>
+          <ul>
+            <li>Les scripts multi-instructions s'exécutent dans une même session, avec un onglet de résultat par instruction — transactions et réglages de session se comportent comme dans le client natif</li>
+            <li>Le tri et la pagination côté serveur respectent le <code>LIMIT</code> et l'<code>ORDER BY</code> de la requête</li>
+            <li>Sur Snowflake et Redis, le total arrive avec le résultat : aucune seconde requête pour compter les lignes</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Copilot IA</h3>
+          <ul>
+            <li>Fournisseur Mistral</li>
+            <li>Règles de dialecte pour T-SQL, Snowflake, Trino, mongosh et redis-cli, pour des suggestions qui s'exécutent telles quelles</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Sécurité et corrections</h3>
+          <ul>
+            <li>Les garde-fous ignorent les mots-clés dans les chaînes et les commentaires, et jugent chaque instruction d'un script</li>
+            <li><code>FLUSHDB</code> / <code>FLUSHALL</code> sur Redis et <code>deleteMany({})</code> sur MongoDB demandent une confirmation comme un <code>DROP</code> SQL</li>
+            <li>L'état de session (<code>SET</code>, <code>USE</code>, transactions ouvertes, tables temporaires) ne fuit jamais vers les autres utilisateurs d'une connexion partagée</li>
+            <li>Les identifiants trouvés dans les URIs de connexion sont déplacés dans le champ mot de passe chiffré</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.1.0 <span class="codename">— Version initiale</span></h2>
           <time>Avril 2026</time>
         </div>
@@ -202,5 +247,12 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     font-size: 14px;
     color: var(--db-text-soft, #3A3A42);
     margin-bottom: 5px;
+  }
+  .release li code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--db-muted, #F0F0F2);
+    border-radius: 4px;
+    padding: 1px 5px;
   }
 </style>

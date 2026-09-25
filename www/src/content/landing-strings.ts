@@ -200,12 +200,12 @@ const en: LandingStrings = {
   write: {
     label: "SQL Editor",
     headline: "Write SQL {{accent}}fluently.",
-    lead: "A keyboard-first editor that <strong>knows your schema</strong>. Tab-complete columns, joins, and relationships — then multi-tab across <strong>postgres, mysql, oracle, sqlite and trino</strong> in the same window.",
+    lead: "A keyboard-first editor that <strong>knows your schema</strong>. Tab-complete columns, joins, and relationships — then multi-tab across <strong>nine databases — postgres to snowflake, mongodb and redis included</strong> in the same window.",
     bullets: [
       "Schema-aware autocomplete on tables, columns, joins",
       "Multi-tab with per-connection contexts",
-      "5 drivers supported — postgres, mysql, oracle, sqlite, trino",
-      "SQL dump built-in, CSV import on postgres, mysql and oracle",
+      "9 drivers supported — postgres, mysql, sql server, oracle, sqlite, trino, snowflake, mongodb, redis",
+      "SQL dump built-in, CSV import on postgres, mysql, sql server, oracle and mongodb",
     ],
   },
   ask: {
@@ -233,7 +233,7 @@ const en: LandingStrings = {
   bento: {
     eyebrow: "Everything else",
     headline: "All the plumbing, {{accent}}included.",
-    lead: "REST endpoints, MCP server, self-hosting, 5 drivers, ERD, guardrails and i18n — every feature that matters for a production workflow.",
+    lead: "REST endpoints, MCP server, self-hosting, 9 drivers, ERD, guardrails and i18n — every feature that matters for a production workflow.",
     cards: {
       rest: {
         label: "REST API",
@@ -251,9 +251,9 @@ const en: LandingStrings = {
         desc: "Docker Compose in 30 seconds. AGPL-3.0 — every feature, forever free. Your data never leaves your network.",
       },
       drivers: {
-        label: "5 drivers",
-        title: "One UI, {{accent}}five databases.",
-        desc: "Postgres, MySQL, Oracle, SQLite, Trino. Switch between flavours without breaking a sweat.",
+        label: "9 drivers",
+        title: "One UI, {{accent}}nine databases.",
+        desc: "Postgres, MySQL, SQL Server, Oracle, SQLite, Trino, Snowflake — plus MongoDB and Redis in their own syntax. Switch between flavours without breaking a sweat.",
       },
       erd: {
         label: "Schema ERD",
@@ -462,12 +462,12 @@ const fr: LandingStrings = {
   write: {
     label: "Éditeur SQL",
     headline: "Écris du SQL {{accent}}couramment.",
-    lead: "Un éditeur clavier d'abord qui <strong>connaît ton schéma</strong>. Autocomplétion sur les colonnes, jointures et relations — et multi-onglets sur <strong>postgres, mysql, oracle, sqlite et trino</strong> dans la même fenêtre.",
+    lead: "Un éditeur clavier d'abord qui <strong>connaît ton schéma</strong>. Autocomplétion sur les colonnes, jointures et relations — et multi-onglets sur <strong>neuf bases — de postgres à snowflake, mongodb et redis compris</strong> dans la même fenêtre.",
     bullets: [
       "Autocomplétion schema-aware sur tables, colonnes et jointures",
       "Multi-onglets avec contextes par connexion",
-      "5 drivers supportés — postgres, mysql, oracle, sqlite, trino",
-      "Dump SQL inclus, import CSV sur postgres, mysql et oracle",
+      "9 drivers supportés — postgres, mysql, sql server, oracle, sqlite, trino, snowflake, mongodb, redis",
+      "Dump SQL inclus, import CSV sur postgres, mysql, sql server, oracle et mongodb",
     ],
   },
   ask: {
@@ -495,7 +495,7 @@ const fr: LandingStrings = {
   bento: {
     eyebrow: "Tout le reste",
     headline: "Toute la plomberie, {{accent}}incluse.",
-    lead: "REST endpoints, serveur MCP, auto-hébergement, 5 drivers, ERD, guardrails et i18n — toutes les features qui comptent pour un workflow de production.",
+    lead: "REST endpoints, serveur MCP, auto-hébergement, 9 drivers, ERD, guardrails et i18n — toutes les features qui comptent pour un workflow de production.",
     cards: {
       rest: {
         label: "REST API",
@@ -513,9 +513,9 @@ const fr: LandingStrings = {
         desc: "Docker Compose en 30 secondes. AGPL-3.0 — toutes les features, gratuit à jamais. Tes données ne quittent jamais ton réseau.",
       },
       drivers: {
-        label: "5 drivers",
-        title: "Une UI, {{accent}}cinq bases.",
-        desc: "Postgres, MySQL, Oracle, SQLite, Trino. Passe d'une saveur à l'autre sans broncher.",
+        label: "9 drivers",
+        title: "Une UI, {{accent}}neuf bases.",
+        desc: "Postgres, MySQL, SQL Server, Oracle, SQLite, Trino, Snowflake — et MongoDB et Redis dans leur propre syntaxe. Passe d'une saveur à l'autre sans broncher.",
       },
       erd: {
         label: "Schéma ERD",

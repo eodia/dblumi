@@ -13,7 +13,7 @@ title: Introduction
 - **Obtenir l'aide de l'IA** pour generer, expliquer et optimiser vos requetes — avec Claude, OpenAI, Azure OpenAI, Mistral ou Ollama
 - **Sauvegarder et organiser** vos requetes dans des dossiers, les partager avec vos collegues ou groupes
 - **Parcourir votre schema** avec un explorateur de tables interactif et un diagramme ERD
-- **Se connecter a plusieurs bases** — PostgreSQL, MySQL, Oracle, SQLite, Trino — avec un controle d'acces par connexion
+- **Se connecter à plusieurs bases** — PostgreSQL, MySQL, SQL Server, Oracle, SQLite, Trino, Snowflake, MongoDB, Redis — avec un contrôle d'accès par connexion
 
 ## A qui s'adresse dblumi ?
 

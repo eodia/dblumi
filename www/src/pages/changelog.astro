@@ -23,6 +23,51 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Latest</span>
+          <h2>v0.2.0 <span class="codename">— Nine databases</span></h2>
+          <time>September 2026</time>
+        </div>
+
+        <section>
+          <h3>5 New Database Drivers</h3>
+          <ul>
+            <li><strong>SQL Server</strong> — T-SQL with <code>GO</code> batches, named instances and Azure SQL, stored procedures and functions in the schema browser, CSV import and SQL dump</li>
+            <li><strong>Snowflake</strong> — password or key-pair authentication, warehouse and role per connection; the schema is browsed with <code>SHOW</code> commands, without waking up the warehouse</li>
+            <li><strong>MongoDB</strong> — mongosh syntax (<code>find</code>, <code>aggregate</code>, writes, indexes), parsed and never evaluated; Atlas and replica-set URIs; CSV import into collections</li>
+            <li><strong>Redis</strong> — redis-cli syntax, key prefixes browsed as tables, keys renamed, expired and edited from the grid</li>
+            <li><strong>Trino</strong> — federated catalogs, catalog and schema switching from the database selector</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>SQL Editor</h3>
+          <ul>
+            <li>Multi-statement scripts run in one session, with one result tab per statement — transactions and session settings behave as in the native client</li>
+            <li>Server-side sort and paging keep the query's own <code>LIMIT</code> and <code>ORDER BY</code></li>
+            <li>The result total comes with the result on Snowflake and Redis: no second query to count rows</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>AI Copilot</h3>
+          <ul>
+            <li>Mistral provider</li>
+            <li>Dialect rules for T-SQL, Snowflake, Trino, mongosh and redis-cli, so that suggestions run as written</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Safety & Fixes</h3>
+          <ul>
+            <li>Guardrails ignore keywords inside strings and comments, and judge every statement of a script</li>
+            <li>Redis <code>FLUSHDB</code> / <code>FLUSHALL</code> and MongoDB <code>deleteMany({})</code> ask for confirmation like a SQL <code>DROP</code></li>
+            <li>Session state (<code>SET</code>, <code>USE</code>, open transactions, temporary tables) never leaks to other users of a pooled connection</li>
+            <li>Credentials found in connection URIs are moved to the encrypted password field</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.1.0 <span class="codename">— Initial Release</span></h2>
           <time>April 2026</time>
         </div>
@@ -212,5 +257,12 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     font-size: 14px;
     color: var(--db-text-soft, #3A3A42);
     margin-bottom: 5px;
+  }
+  .release li code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--db-muted, #F0F0F2);
+    border-radius: 4px;
+    padding: 1px 5px;
   }
 </style>
