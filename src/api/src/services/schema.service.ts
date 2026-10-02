@@ -406,12 +406,30 @@ export function liveDatabaseOf(connectionId: string, stored?: string | null): st
 const TRINO_MAX_SCHEMAS = 50
 
 /**
+ * Listing a catalog's tables is cheap on Trino: one metastore listing per
+ * schema. Listing its columns is not — `information_schema.columns` loads the
+ * metadata of EVERY table (a Hive metastore round-trip, or an Iceberg/Delta
+ * metadata file read from object storage) and runs the access-control check
+ * per table (Ranger, OPA). On a production datalake that takes minutes, or
+ * fails outright on a single unreadable table, while ordinary queries keep
+ * working because they touch one table. So the table list gets its own query
+ * and a deadline, and columns are best effort on top of it.
+ */
+const TRINO_TABLES_TIMEOUT_MS = 30_000
+const TRINO_COLUMNS_TIMEOUT_MS = 20_000
+/** Past this many column rows the payload is too heavy for the browser anyway. */
+const TRINO_MAX_COLUMN_ROWS = 50_000
+
+/**
  * Trino introspection through the catalog's `information_schema`.
  *
  * Two modes, driven by the connection target ("catalog" or "catalog/schema"):
  *  - pinned schema  -> bare table names (`orders`)
  *  - catalog only   -> qualified names (`default.orders`), because the front-end
  *                      builds `SELECT * FROM ${tableName}` without qualification.
+ *
+ * When columns cannot be read in time, tables are served without them: the
+ * browser still lists them and double-click still runs `SELECT *`.
  *
  * Trino exposes no primary keys, no indexes, no foreign keys and no user routines:
  * those collections are always returned empty.
@@ -425,16 +443,17 @@ async function getTrinoSchema(client: Trino, target?: string | null) {
   }
   const cat = quoteTrinoIdent(catalog)
   const SYSTEM_SCHEMAS = new Set(['information_schema', 'pg_catalog', 'sys'])
+  const listing = { timeoutMs: TRINO_TABLES_TIMEOUT_MS }
 
   let where: string
   let nameExpr: string
   if (schema) {
-    where = `c.table_schema = ${quoteTrinoString(schema)}`
-    nameExpr = 'c.table_name'
+    where = `table_schema = ${quoteTrinoString(schema)}`
+    nameExpr = 'table_name'
   } else {
     // `SHOW SCHEMAS` + `IN (...)` is pushed down to the connector, while a
     // `NOT IN (...)` filter makes Trino enumerate metadata for the whole catalog.
-    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`)
+    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`, undefined, listing)
     const all = shown.data
       .map((r) => String(r[0] ?? ''))
       .filter((s) => s && !SYSTEM_SCHEMAS.has(s.toLowerCase()))
@@ -446,26 +465,25 @@ async function getTrinoSchema(client: Trino, target?: string | null) {
       )
     }
     if (schemas.length === 0) return { tables: [] as SchemaItem[], functions: [] as FunctionRow[] }
-    where = `c.table_schema IN (${schemas.map(quoteTrinoString).join(', ')})`
-    nameExpr = `c.table_schema || '.' || c.table_name`
+    where = `table_schema IN (${schemas.map(quoteTrinoString).join(', ')})`
+    nameExpr = `table_schema || '.' || table_name`
   }
 
-  // A single columns query: every Trino statement costs several HTTP round-trips.
-  const sql = `
-    SELECT ${nameExpr} AS table_name, c.column_name, c.data_type, c.is_nullable,
-           t.table_type, false AS is_primary_key, CAST(NULL AS varchar) AS table_comment
-    FROM ${cat}.information_schema.columns c
-    JOIN ${cat}.information_schema.tables t
-      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
-    WHERE ${where}
-    ORDER BY 1, c.ordinal_position`
-  const result = await runTrino(client, sql)
+  const tables = await runTrino(
+    client,
+    `SELECT ${nameExpr} AS table_name, table_type
+     FROM ${cat}.information_schema.tables
+     WHERE ${where}
+     ORDER BY 1`,
+    undefined,
+    listing,
+  )
 
-  // An empty result is ambiguous: an empty schema, or a schema that does not
-  // exist at all (`information_schema.columns` simply matches nothing). Resolve
-  // it here — only on that path, so the normal case keeps its single query.
-  if (result.rows.length === 0 && schema) {
-    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`)
+  // An empty list is ambiguous: an empty schema, or a schema that does not
+  // exist at all (`information_schema.tables` simply matches nothing). Resolve
+  // it here — only on that path, so the normal case skips the extra query.
+  if (tables.rows.length === 0 && schema) {
+    const shown = await runTrino(client, `SHOW SCHEMAS FROM ${cat}`, undefined, listing)
     const wanted = schema.toLowerCase()
     const known = shown.data.some((r) => String(r[0] ?? '').toLowerCase() === wanted)
     if (!known) {
@@ -475,8 +493,64 @@ async function getTrinoSchema(client: Trino, target?: string | null) {
     }
   }
 
-  const map = groupByTable(result.rows as unknown as SchemaRow[])
-  return { ...mergeForeignKeys(map, []), functions: [] as FunctionRow[] }
+  const map = new Map<string, SchemaItem>()
+  for (const row of tables.rows) {
+    const name = String(row['table_name'])
+    map.set(name, {
+      name,
+      type: row['table_type'] === 'VIEW' ? 'view' : 'table',
+      comment: '',
+      columns: [],
+      indexes: [],
+      foreignKeys: [],
+    })
+  }
+
+  try {
+    const columns = await runTrino(
+      client,
+      `SELECT ${nameExpr} AS table_name, column_name, data_type, is_nullable
+       FROM ${cat}.information_schema.columns
+       WHERE ${where}
+       ORDER BY 1, ordinal_position`,
+      undefined,
+      { timeoutMs: TRINO_COLUMNS_TIMEOUT_MS, maxRows: TRINO_MAX_COLUMN_ROWS },
+    )
+
+    // Rows come ordered by table, so a capped drain cuts the LAST table midway:
+    // leave it without columns rather than show a partial list as complete.
+    const cutTable = columns.truncated ? String(columns.rows.at(-1)?.['table_name']) : null
+    // Some connectors (memory, verified on Trino 483) ignore the schema prefix
+    // and list the whole catalog once per `IN (...)` entry, so the same column
+    // comes back several times.
+    const seen = new Set<string>()
+    for (const row of columns.rows) {
+      const name = String(row['table_name'])
+      if (name === cutTable) continue
+      const key = `${name}\u0000${String(row['column_name'])}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      map.get(name)?.columns.push({
+        name: String(row['column_name']),
+        dataType: String(row['data_type']),
+        nullable: row['is_nullable'] === 'YES',
+        primaryKey: false,
+      })
+    }
+    if (columns.truncated) {
+      logger.warn(
+        { catalog, schema, maxRows: TRINO_MAX_COLUMN_ROWS },
+        'Trino column list truncated — pin a schema on the connection to load every column',
+      )
+    }
+  } catch (err) {
+    logger.warn(
+      { catalog, schema, tables: map.size, err: err instanceof Error ? err.message : String(err) },
+      'Trino column introspection failed — serving table names only',
+    )
+  }
+
+  return { tables: Array.from(map.values()), functions: [] as FunctionRow[] }
 }
 
 export type DbSchema = { tables: SchemaItem[]; functions: FunctionRow[] }
