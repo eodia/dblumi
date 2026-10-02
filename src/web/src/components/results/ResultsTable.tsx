@@ -65,7 +65,7 @@ import { driverCaps } from '@/lib/drivers'
 import { runStatement } from '@/lib/run-statement'
 import { explainError } from '@/stores/copilot.store'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
-import { cn } from '@/lib/utils'
+import { cn, copyText, uuid } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -594,7 +594,7 @@ function TypedField({ col, value, onChange }: { col: QueryColumn; value: string;
     return (
       <div className="flex items-center gap-1.5">
         <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="NULL" className="h-8 text-xs font-mono flex-1" />
-        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0 text-text-muted hover:text-foreground" onClick={() => onChange(crypto.randomUUID())} title="Générer un UUID">
+        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0 text-text-muted hover:text-foreground" onClick={() => onChange(uuid())} title="Générer un UUID">
           <RefreshCcw className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -634,7 +634,7 @@ function RecordSheet({ open, mode, editRow, onClose, columns, driver, keys }: {
       return Object.fromEntries(columns.map((c) => [c.name, cellText(editRow[c.name])]))
     }
     if (mode === 'row') {
-      return Object.fromEntries(columns.filter((c) => isUuidType(c.dataType)).map((c) => [c.name, crypto.randomUUID()]))
+      return Object.fromEntries(columns.filter((c) => isUuidType(c.dataType)).map((c) => [c.name, uuid()]))
     }
     return {}
   }, [mode, editRow, columns])
@@ -1049,14 +1049,7 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
             return val === null || val === undefined ? '' : String(val)
           }).join('\t')
         ).join('\n')
-        void navigator.clipboard.writeText(text)
-        return
-      }
-
-      // Ctrl+V: paste clipboard value to selected cells (table mode only)
-      if (isTableMode && (e.ctrlKey || e.metaKey) && e.key === 'v' && selectedCells.size > 0) {
-        e.preventDefault()
-        void navigator.clipboard.readText().then(pasteToSelectedCells)
+        void copyText(text)
         return
       }
 
@@ -1107,8 +1100,22 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
           ?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
       })
     }
+    // Ctrl+V: paste clipboard value to selected cells (table mode only). Uses the
+    // native paste event rather than navigator.clipboard.readText, which is
+    // unavailable over plain HTTP.
+    const pasteHandler = (e: ClipboardEvent) => {
+      if (editingCell || !isTableMode || selectedCells.size === 0) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], .cm-editor')) return
+      e.preventDefault()
+      pasteToSelectedCells(e.clipboardData?.getData('text/plain') ?? '')
+    }
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    window.addEventListener('paste', pasteHandler)
+    return () => {
+      window.removeEventListener('keydown', handler)
+      window.removeEventListener('paste', pasteHandler)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTableMode, editingCell, rows, orderedColumns, pageSize, selectedCells, setNullSelectedCells, pasteToSelectedCells])
 
@@ -1172,7 +1179,7 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
   const handleCopy = useCallback((fmt: 'csv' | 'json' | 'sql') => {
     const data = selectedRows.length > 0 ? selectedRows : rows
     const text = fmt === 'csv' ? rowsToCsv(data, orderedColumns) : fmt === 'json' ? rowsToJson(data, orderedColumns) : exportAsStatements(driver, tableName || 'table', data, orderedColumns)
-    navigator.clipboard.writeText(text)
+    copyText(text)
   }, [selectedRows, rows, orderedColumns, tableName, driver])
 
   const handleExport = useCallback((fmt: 'csv' | 'json' | 'sql') => {
@@ -1499,17 +1506,17 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
                           if (!selectedCells.has(cellKey(r, cn))) return ''
                           const v = rows[r]?.[cn]; return v === null ? 'NULL' : v === undefined ? '' : String(v)
                         }).join('\t')).join('\n')
-                        navigator.clipboard.writeText(text)
+                        copyText(text)
                       } else {
                         const val = ctxCell?.row === row ? row[ctxCell.colName] : undefined
                         const text = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
-                        navigator.clipboard.writeText(text)
+                        copyText(text)
                       }
                     }
                     const copyRow = () => {
                       const rowsToCopy = isMultiCellSel ? cellSelRows : [row]
                       const text = rowsToCopy.map((r) => orderedColumns.map((c) => { const v = r[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')).join('\n')
-                      navigator.clipboard.writeText(text)
+                      copyText(text)
                     }
                     return (
                       <ContextMenuContent className="w-52">
@@ -1569,18 +1576,18 @@ export function ResultsTable({ onOpenCopilot }: { onOpenCopilot?: () => void }) 
                           const v = rows[r]?.[cn]
                           return v === null ? 'NULL' : v === undefined ? '' : String(v)
                         }).join('\t')).join('\n')
-                        navigator.clipboard.writeText(text)
+                        copyText(text)
                       } else {
                         const val = ctxCell?.row === row ? row[ctxCell.colName] : undefined
                         const text = val === null ? 'NULL' : val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
-                        navigator.clipboard.writeText(text)
+                        copyText(text)
                       }
                     }
 
                     const copyRows = () => {
                       const rowsToCopy = isMultiRowSel ? selectedRows : isMultiCellSel ? cellSelRows : [row]
                       const text = rowsToCopy.map((r) => orderedColumns.map((c) => { const v = r[c.name]; return v === null ? 'NULL' : v === undefined ? '' : String(v) }).join('\t')).join('\n')
-                      navigator.clipboard.writeText(text)
+                      copyText(text)
                     }
 
                     const deleteRows = () => {

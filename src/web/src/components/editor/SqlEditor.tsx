@@ -43,7 +43,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useEditorStore } from '@/stores/editor.store'
 import { useI18n } from '@/i18n'
 import { connectionsApi, type Connection, type SchemaTable, type SchemaFunction } from '@/api/connections'
-import { cn } from '@/lib/utils'
+import { cn, canReadClipboard, copyText } from '@/lib/utils'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -646,7 +646,7 @@ export function SqlEditor({ onSave }: Props) {
     const { from, to } = view.state.selection.main
     const text = view.state.sliceDoc(from, to)
     if (!text) return
-    await navigator.clipboard.writeText(text)
+    await copyText(text)
     view.dispatch({ changes: { from, to, insert: '' } })
     view.focus()
   }, [])
@@ -656,7 +656,7 @@ export function SqlEditor({ onSave }: Props) {
     if (!view) return
     const { from, to } = view.state.selection.main
     const text = from === to ? view.state.doc.toString() : view.state.sliceDoc(from, to)
-    await navigator.clipboard.writeText(text)
+    await copyText(text)
     view.focus()
   }, [])
 
@@ -740,7 +740,7 @@ export function SqlEditor({ onSave }: Props) {
             {t('editor.copy')}
             <ContextMenuShortcut>⌘C</ContextMenuShortcut>
           </ContextMenuItem>
-          <ContextMenuItem onSelect={handlePaste}>
+          <ContextMenuItem onSelect={handlePaste} disabled={!canReadClipboard()}>
             {t('editor.paste')}
             <ContextMenuShortcut>⌘V</ContextMenuShortcut>
           </ContextMenuItem>

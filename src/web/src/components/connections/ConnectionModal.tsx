@@ -21,7 +21,7 @@ import { sharingApi } from '@/api/sharing'
 import { useAuthStore } from '@/stores/auth.store'
 import { useI18n, type TranslationKey } from '@/i18n'
 import { DEFAULT_PORTS, DRIVER_LABELS } from '@/lib/drivers'
-import { cn } from '@/lib/utils'
+import { cn, copyText } from '@/lib/utils'
 
 type Props = {
   open: boolean
@@ -293,7 +293,7 @@ export function ConnectionModal({ open, onClose, editing }: Props) {
 
   const handleCopyString = async () => {
     try {
-      await navigator.clipboard.writeText(buildConnectionString())
+      await copyText(buildConnectionString())
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
