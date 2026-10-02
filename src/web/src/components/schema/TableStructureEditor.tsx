@@ -28,7 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { SlideToConfirm } from '@/components/ui/slide-to-confirm'
 import { ComboboxChips } from '@/components/ui/combobox-chips'
 import { useI18n } from '@/i18n'
-import { cn } from '@/lib/utils'
+import { cn, uuid } from '@/lib/utils'
 import { readSSE } from '@/api/client'
 import type { SchemaTable } from '@/api/connections'
 
@@ -392,7 +392,7 @@ function IndexEditor({ columns, indexes, onIndexesChange }: {
   onIndexesChange: (indexes: IndexDef[]) => void
 }) {
   const addIndex = () => {
-    onIndexesChange([...indexes, { id: crypto.randomUUID(), originalName: null, name: '', columns: [], unique: false, deleted: false }])
+    onIndexesChange([...indexes, { id: uuid(), originalName: null, name: '', columns: [], unique: false, deleted: false }])
   }
 
   const updateIndex = (id: string, patch: Partial<IndexDef>) => {
@@ -543,7 +543,7 @@ function ForeignKeyEditor({ columns, foreignKeys, onForeignKeysChange }: {
 }) {
   const addFK = () => {
     onForeignKeysChange([...foreignKeys, {
-      id: crypto.randomUUID(), originalName: null, name: '', fields: [],
+      id: uuid(), originalName: null, name: '', fields: [],
       referencedDatabase: '', referencedTable: '', referencedFields: [],
       onDelete: 'NO ACTION', onUpdate: 'NO ACTION', deleted: false,
     }])
@@ -601,7 +601,7 @@ export function TableStructureEditor({ table, connectionId, driver, onClose }: P
   // ── Indexes ──────────────────────────────────────
   const [indexes, setIndexes] = useState<IndexDef[]>(() =>
     (table?.indexes ?? []).map((idx) => ({
-      id: crypto.randomUUID(),
+      id: uuid(),
       originalName: idx.name,
       name: idx.name,
       columns: idx.columns,
@@ -613,7 +613,7 @@ export function TableStructureEditor({ table, connectionId, driver, onClose }: P
   // ── Foreign Keys ─────────────────────────────────
   const [foreignKeys, setForeignKeys] = useState<ForeignKeyDef[]>(() =>
     (table?.foreignKeys ?? []).map((fk) => ({
-      id: crypto.randomUUID(),
+      id: uuid(),
       originalName: fk.name,
       name: fk.name,
       fields: fk.fields,

@@ -49,7 +49,7 @@ import { connectionsApi, type Connection, type SchemaTable } from '@/api/connect
 import { useEditorStore } from '@/stores/editor.store'
 import { ConnectionModal } from '@/components/connections/ConnectionModal'
 import { ImportDialog } from '@/components/import/ImportDialog'
-import { cn } from '@/lib/utils'
+import { cn, copyText } from '@/lib/utils'
 import { listTablesQuery, previewQuery } from '@/lib/query-dialect'
 
 type Props = { connections: Connection[] }
@@ -176,7 +176,7 @@ export function SchemaSidebar({ connections }: Props) {
                   <ContextMenuItem
                     className="gap-2 text-xs"
                     onClick={() => {
-                      navigator.clipboard.writeText(
+                      copyText(
                         `${conn.driver}://${conn.username}@${conn.host}:${conn.port}/${conn.database}`,
                       )
                     }}

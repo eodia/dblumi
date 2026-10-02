@@ -1,5 +1,6 @@
 import { toast } from 'sonner'
 import { readSSE } from '@/api/client'
+import { copyText } from './utils'
 
 /**
  * Runs one statement outside of any editor tab (grid edits, sidebar actions),
@@ -29,7 +30,7 @@ export async function runStatement(connectionId: string, sql: string): Promise<s
     toast.error(error, {
       ...(detail ? { description: detail } : {}),
       duration: Infinity,
-      action: { label: 'Copy', onClick: () => void navigator.clipboard.writeText(full) },
+      action: { label: 'Copy', onClick: () => void copyText(full) },
     })
   }
   return error

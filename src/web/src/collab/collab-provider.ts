@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
+import { uuid } from '@/lib/utils'
 
 const COLLAB_COLORS = [
   '#f87171', '#fb923c', '#facc15', '#4ade80',
@@ -75,7 +76,7 @@ export function createCollabInstance(
 
   const sendChatMessage = (content: string) => {
     const msg = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       userId: user.userId,
       userName: user.name,
       avatarUrl: user.avatarUrl,

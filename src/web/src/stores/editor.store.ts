@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { api, readSSE } from '@/api/client'
 import type { DbDriver } from '@/api/connections'
 import { splitStatementsFor, tableQuery } from '@/lib/query-dialect'
+import { copyText, uuid } from '@/lib/utils'
 
 export type QueryStatus = 'idle' | 'running' | 'done' | 'error'
 
@@ -14,7 +15,7 @@ function showSqlErrorToast(message: string, detail?: string) {
     duration: Infinity,
     action: {
       label: 'Copy',
-      onClick: () => navigator.clipboard.writeText(full),
+      onClick: () => copyText(full),
     },
   })
 }
@@ -162,13 +163,13 @@ type EditorState = {
 }
 
 function makeQueryTab(n: number, connectionId: string | null = null): QueryTab {
-  return { id: crypto.randomUUID(), name: `Query ${n}`, kind: 'query', sql: '', originalSql: '', result: emptyResult(), panels: [], activePanelIndex: 0, savedQueryId: null, functionParams: [], connectionId, collaborative: false, unreadChat: 0, filters: [] }
+  return { id: uuid(), name: `Query ${n}`, kind: 'query', sql: '', originalSql: '', result: emptyResult(), panels: [], activePanelIndex: 0, savedQueryId: null, functionParams: [], connectionId, collaborative: false, unreadChat: 0, filters: [] }
 }
 
 function makeTableTab(tableName: string, connectionId: string | null, driver: DbDriver | undefined): QueryTab {
   const sql = tableQuery(driver, tableName)
   return {
-    id: crypto.randomUUID(),
+    id: uuid(),
     name: tableName,
     kind: 'table',
     sql,
@@ -685,7 +686,7 @@ export const useEditorStore = create<EditorState>()(
             return
           }
           const tab: QueryTab = {
-            id: crypto.randomUUID(),
+            id: uuid(),
             name,
             kind: 'function',
             sql: source,

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { settingsApi } from '@/api/settings'
 import { Bot, Send, Copy, Play, Loader2, X, Sparkles, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, copyText } from '@/lib/utils'
 import { useEditorStore } from '@/stores/editor.store'
 import { useCopilotStore, setCopilotMessages, clearCopilotConversation, clearPendingExplain } from '@/stores/copilot.store'
 import { streamCopilot, type CopilotContext } from '@/api/copilot'
@@ -89,7 +89,7 @@ function MessageContent({ content, onInsertSql, t }: { content: string; onInsert
                 <span className="text-[10px] font-mono text-text-muted uppercase tracking-wide">{lang}</span>
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1" title={t('copilot.copySql')}
-                    onClick={() => navigator.clipboard.writeText(sql)}>
+                    onClick={() => copyText(sql)}>
                     <Copy className="h-3 w-3" />
                   </Button>
                   <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1 text-primary" title={t('copilot.insertToEditor')}
