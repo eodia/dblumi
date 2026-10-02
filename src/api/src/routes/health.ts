@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 const health = new Hono()
 
 health.get('/', (c) => {
-  return c.json({ status: 'ok', version: '0.2.1', ts: new Date().toISOString() })
+  return c.json({ status: 'ok', version: '0.2.2', ts: new Date().toISOString() })
 })
 
 export { health }

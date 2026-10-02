@@ -23,6 +23,21 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Latest</span>
+          <h2>v0.2.2</h2>
+          <time>October 2026</time>
+        </div>
+
+        <section>
+          <h3>Fixes</h3>
+          <ul>
+            <li>The Trino schema browser lists the tables of large catalogs again: the table list no longer waits on the metadata of every column, and columns that cannot be read in time are skipped instead of hiding the whole catalog</li>
+            <li>Columns no longer appear twice in the Trino schema browser with some connectors when no schema is pinned on the connection</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.2.1</h2>
           <time>October 2026</time>
         </div>

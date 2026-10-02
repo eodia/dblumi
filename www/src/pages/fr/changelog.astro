@@ -23,6 +23,21 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Dernière</span>
+          <h2>v0.2.2</h2>
+          <time>Octobre 2026</time>
+        </div>
+
+        <section>
+          <h3>Corrections</h3>
+          <ul>
+            <li>Le navigateur de schéma Trino affiche de nouveau les tables des gros catalogues : la liste des tables n'attend plus les métadonnées de chaque colonne, et les colonnes illisibles à temps sont ignorées au lieu de masquer tout le catalogue</li>
+            <li>Les colonnes n'apparaissent plus en double dans le navigateur de schéma Trino avec certains connecteurs, quand aucun schéma n'est choisi sur la connexion</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.2.1</h2>
           <time>Octobre 2026</time>
         </div>
