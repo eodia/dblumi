@@ -23,6 +23,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Dernière</span>
+          <h2>v0.2.1</h2>
+          <time>Octobre 2026</time>
+        </div>
+
+        <section>
+          <h3>Corrections</h3>
+          <ul>
+            <li>L'application fonctionne servie en HTTP simple sur une adresse intranet (sans certificat TLS) : elle ne plante plus au démarrage avec <code>crypto.randomUUID is not a function</code>, et la copie y fonctionne aussi</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.2.0 <span class="codename">— Neuf bases</span></h2>
           <time>Septembre 2026</time>
         </div>

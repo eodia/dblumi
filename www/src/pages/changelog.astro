@@ -23,6 +23,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Latest</span>
+          <h2>v0.2.1</h2>
+          <time>October 2026</time>
+        </div>
+
+        <section>
+          <h3>Fixes</h3>
+          <ul>
+            <li>The web app works when served over plain HTTP on an intranet address (no TLS certificate): it no longer crashes at startup with <code>crypto.randomUUID is not a function</code>, and copying works there too</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.2.0 <span class="codename">— Nine databases</span></h2>
           <time>September 2026</time>
         </div>
