@@ -38,6 +38,7 @@ title: Variables d'environnement
 | `AZURE_OPENAI_DEPLOYMENT` | Non | — | Nom du deploiement Azure OpenAI |
 | `OLLAMA_BASE_URL` | Non | — | URL du serveur Ollama (ex : `http://localhost:11434`) |
 | `OLLAMA_MODEL` | Non | — | Nom du modele Ollama (ex : `codestral`, `llama3.1`) |
+| `AI_PROVIDER_SSL_VERIFY` | Non | `true` | Mettre a `false` pour desactiver la verification des certificats TLS lors des appels au provider IA (proxy d'entreprise ou passerelle interne auto-signes). N'affecte que le copilot, pas les connexions aux bases |
 
 ## SMTP (reinitialisation de mot de passe)
 

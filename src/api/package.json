@@ -36,6 +36,7 @@
     "pino": "^9.6.0",
     "snowflake-sdk": "^3.3.0",
     "trino-client": "^0.2.9",
+    "undici": "^7.30.0",
     "ws": "^8.20.0",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.30",

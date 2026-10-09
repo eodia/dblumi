@@ -30,6 +30,12 @@ const ConfigSchema = z.object({
   AZURE_OPENAI_DEPLOYMENT: z.string().optional(),
   OLLAMA_BASE_URL: z.string().url().optional(),
   OLLAMA_MODEL: z.string().optional(),
+  // Set to false to accept self-signed / untrusted TLS certificates from the AI provider
+  // (corporate proxies, internal gateways). Only affects AI provider calls.
+  AI_PROVIDER_SSL_VERIFY: z
+    .string()
+    .transform((v) => !['false', '0', 'no', 'off'].includes(v.trim().toLowerCase()))
+    .default('true'),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),

@@ -6,6 +6,7 @@ import { db } from '../db/index.js'
 import { users } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
 import { decrypt } from '../lib/crypto.js'
+import { aiFetch } from '../lib/ai-fetch.js'
 import { parseTrinoTarget } from '../lib/trino.js'
 import copilotI18n, { type CopilotLocale } from '../i18n/copilot.i18n.js'
 
@@ -469,7 +470,7 @@ async function* streamAnthropic(
   systemPrompt: string,
   messages: CopilotMessage[],
 ): AsyncGenerator<StreamChunk> {
-  const client = new Anthropic({ apiKey })
+  const client = new Anthropic({ apiKey, fetch: aiFetch() })
   try {
     const stream = client.messages.stream({
       model: config.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514',
@@ -542,6 +543,7 @@ export async function* streamCopilotResponse(
     const client = new OpenAI({
       baseURL: `${config.OLLAMA_BASE_URL}/v1`,
       apiKey: 'ollama',
+      fetch: aiFetch(),
     })
     const model = config.OLLAMA_MODEL ?? 'llama3.2'
     yield* streamOpenAIClient(client, model, systemPrompt, messages)
@@ -549,7 +551,7 @@ export async function* streamCopilotResponse(
   }
 
   if (provider === 'openai') {
-    const client = new OpenAI({ apiKey: config.OPENAI_API_KEY! })
+    const client = new OpenAI({ apiKey: config.OPENAI_API_KEY!, fetch: aiFetch() })
     const model = config.OPENAI_MODEL ?? 'gpt-4o'
     yield* streamOpenAIClient(client, model, systemPrompt, messages)
     return
@@ -558,6 +560,7 @@ export async function* streamCopilotResponse(
   if (provider === 'azure-openai') {
     const client = new AzureOpenAI({
       apiKey: config.AZURE_OPENAI_API_KEY!,
+      fetch: aiFetch(),
       endpoint: config.AZURE_OPENAI_ENDPOINT!,
       deployment: config.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o',
       apiVersion: '2024-08-01-preview',
@@ -572,6 +575,7 @@ export async function* streamCopilotResponse(
     const client = new OpenAI({
       baseURL: 'https://api.mistral.ai/v1',
       apiKey: config.MISTRAL_API_KEY!,
+      fetch: aiFetch(),
     })
     const model = config.MISTRAL_MODEL ?? 'mistral-large-latest'
     yield* streamOpenAIClient(client, model, systemPrompt, messages)
@@ -619,6 +623,7 @@ Target columns: ${JSON.stringify(targetColumns.map((c) => ({ name: c.name, type:
     const client = new OpenAI({
       baseURL: `${config.OLLAMA_BASE_URL}/v1`,
       apiKey: 'ollama',
+      fetch: aiFetch(),
     })
     const model = config.OLLAMA_MODEL ?? 'llama3.2'
     const res = await client.chat.completions.create({
@@ -628,7 +633,7 @@ Target columns: ${JSON.stringify(targetColumns.map((c) => ({ name: c.name, type:
     })
     responseText = res.choices[0]?.message?.content ?? '[]'
   } else if (provider === 'openai') {
-    const client = new OpenAI({ apiKey: config.OPENAI_API_KEY! })
+    const client = new OpenAI({ apiKey: config.OPENAI_API_KEY!, fetch: aiFetch() })
     const model = config.OPENAI_MODEL ?? 'gpt-4o'
     const res = await client.chat.completions.create({
       model,
@@ -639,6 +644,7 @@ Target columns: ${JSON.stringify(targetColumns.map((c) => ({ name: c.name, type:
   } else if (provider === 'azure-openai') {
     const client = new AzureOpenAI({
       apiKey: config.AZURE_OPENAI_API_KEY!,
+      fetch: aiFetch(),
       endpoint: config.AZURE_OPENAI_ENDPOINT!,
       deployment: config.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o',
       apiVersion: '2024-08-01-preview',
@@ -655,6 +661,7 @@ Target columns: ${JSON.stringify(targetColumns.map((c) => ({ name: c.name, type:
     const client = new OpenAI({
       baseURL: 'https://api.mistral.ai/v1',
       apiKey: config.MISTRAL_API_KEY!,
+      fetch: aiFetch(),
     })
     const model = config.MISTRAL_MODEL ?? 'mistral-large-latest'
     const res = await client.chat.completions.create({
@@ -665,7 +672,7 @@ Target columns: ${JSON.stringify(targetColumns.map((c) => ({ name: c.name, type:
     responseText = res.choices[0]?.message?.content ?? '[]'
   } else {
     const apiKey = await resolveAnthropicKey(userId)
-    const client = new Anthropic({ apiKey })
+    const client = new Anthropic({ apiKey, fetch: aiFetch() })
     const res = await client.messages.create({
       model: config.ANTHROPIC_MODEL ?? 'claude-sonnet-4-20250514',
       max_tokens: 2048,
