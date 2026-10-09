@@ -23,6 +23,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Dernière</span>
+          <h2>v0.2.3</h2>
+          <time>Octobre 2026</time>
+        </div>
+
+        <section>
+          <h3>Améliorations</h3>
+          <ul>
+            <li>Nouvelle variable d'environnement <code>AI_PROVIDER_SSL_VERIFY</code> : mettez-la à <code>false</code> pour joindre un provider IA derrière un proxy d'entreprise ou une passerelle interne au certificat auto-signé. Seul le copilot ignore la vérification du certificat, les connexions aux bases ne sont pas concernées</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.2.2</h2>
           <time>Octobre 2026</time>
         </div>

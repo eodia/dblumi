@@ -23,6 +23,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <article class="release">
         <div class="release-hdr">
           <span class="tag">Latest</span>
+          <h2>v0.2.3</h2>
+          <time>October 2026</time>
+        </div>
+
+        <section>
+          <h3>Improvements</h3>
+          <ul>
+            <li>New <code>AI_PROVIDER_SSL_VERIFY</code> environment variable: set it to <code>false</code> to reach an AI provider behind a corporate proxy or internal gateway with a self-signed certificate. Only the copilot skips the certificate check; database connections are unaffected</li>
+          </ul>
+        </section>
+      </article>
+
+      <article class="release">
+        <div class="release-hdr">
           <h2>v0.2.2</h2>
           <time>October 2026</time>
         </div>
